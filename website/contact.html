@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+        <link rel = "icon" type = "logo.png" href = "logo.png">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenCalc – Contact</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    header nav a.active { color: #1e40af; font-weight: 600; }
+    input, textarea { border: 1px solid #d1d5db; border-radius: 0.5rem; padding: 0.5rem; width: 100%; }
+    input:focus, textarea:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+<!-- Header -->
+<header class="bg-white shadow sticky top-0 z-50">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+    <h1 class="text-3xl font-extrabold text-blue-600">OpenCalc</h1>
+    <nav class="space-x-6 text-base font-medium">
+      <a href="index.html" class="text-gray-700 hover:text-blue-600">Accueil</a>
+      <a href="documentation.html" class="text-gray-700 hover:text-blue-600">Documentation</a>
+      <a href="downloads.html" class="text-gray-700 hover:text-blue-600">Téléchargements</a>
+      <a href="blog.html" class="text-gray-700 hover:text-blue-600">Actualités</a>
+      <a href="contact.html" class="text-blue-600 font-semibold">Contact</a>
+    </nav>
+  </div>
+</header>
+
+<!-- Hero / Intro -->
+<section class="py-24 text-center fade-up">
+  <div class="max-w-3xl mx-auto px-6 bg-white rounded-3xl shadow-md">
+    <h2 class="text-4xl font-bold mb-4 text-blue-600">Contact & Contribution</h2>
+    <p class="text-gray-600 mb-6">Vous souhaitez tester OpenCalc dans votre établissement, contribuer au projet ou simplement nous écrire ?</p>
+  </div>
+</section>
+
+<!-- Formulaire Formspree -->
+<section class="py-12 fade-up">
+  <div class="max-w-3xl mx-auto px-6 bg-white rounded-3xl shadow-md p-10">
+    <form action="https://formspree.io/f/xblzrpgp" method="POST" class="space-y-6">
+      <div>
+        <label for="name" class="block mb-2 font-semibold">Nom</label>
+        <input type="text" id="name" name="Nom" placeholder="Votre nom" required>
+      </div>
+      <div>
+        <label for="email" class="block mb-2 font-semibold">Email</label>
+        <input type="email" id="email" name="Email" placeholder="votre@email.com" required>
+      </div>
+      <div>
+        <label for="subject" class="block mb-2 font-semibold">Sujet</label>
+        <input type="text" id="subject" name="Sujet" placeholder="Objet de votre message" required>
+      </div>
+      <div>
+        <label for="message" class="block mb-2 font-semibold">Message</label>
+        <textarea id="message" name="Message" rows="6" placeholder="Votre message..." required></textarea>
+      </div>
+      <button type="submit" class="bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 transition">Envoyer</button>
+    </form>
+    <p class="mt-4 text-gray-500 text-sm">Les messages seront envoyés directement sur l’email configuré dans Formspree.</p>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="py-8 bg-gray-100 text-center text-gray-600 text-sm">
+  © 2025 OpenCalc — Calculatrice scientifique libre & open source pour l’éducation
+</footer>
+
+<script>
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) entry.target.classList.add('visible');
+  });
+}, { threshold: 0.2 });
+document.querySelectorAll('.fade-up').forEach(sec => observer.observe(sec));
+</script>
+
+</body>
+</html>

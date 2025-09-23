@@ -1,0 +1,300 @@
+<html lang="fr">
+<head>
+      <link rel = "icon" type = "logo.png" href = "logo.png">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenCalc – La calculatrice libre pour les lycéens</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .fade-up {
+      opacity: 0;
+      transform: translateY(40px);
+      transition: all 0.8s ease-out;
+    }
+    .fade-up.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .slide-left {
+      opacity: 0;
+      transform: translateX(-40px);
+      transition: all 0.8s ease-out;
+    }
+    .slide-left.visible {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    .slide-right {
+      opacity: 0;
+      transform: translateX(40px);
+      transition: all 0.8s ease-out;
+    }
+    .slide-right.visible {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    header nav a.active {
+      color: #1e40af;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+  <!-- Header -->
+  <header class="bg-white shadow sticky top-0 z-50 " >
+    <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+      <h1 class="text-3xl font-extrabold text-blue-600">OpenCalc</h1>
+      <nav class="space-x-6 text-base font-medium">
+        <a href="#features" class="text-gray-700 hover:text-blue-600">Fonctionnalités</a>
+        <a href="#open-source" class="text-gray-700 hover:text-blue-600">Open Source</a>
+        <a href="#components" class="text-gray-700 hover:text-blue-600">Composants</a>
+        <a href="#use-cases" class="text-gray-700 hover:text-blue-600">Usages</a>
+        <a href="#timeline" class="text-gray-700 hover:text-blue-600">Chronologie</a>
+        <a href="#team" class="text-gray-700 hover:text-blue-600">Équipe</a>
+        <a href="#contact" class="text-gray-700 hover:text-blue-600">Contact</a>
+        <div class="relative inline-block text-left">
+          <button onclick="document.getElementById('dropdown').classList.toggle('hidden')" class="inline-flex justify-center w-full px-4 py-2 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+            Menu
+            <svg class="-mr-1 ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 011.08 1.04l-4.25 4.25a.75.75 0 01-1.08 0L5.23 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+            </svg>
+          </button>
+          <div id="dropdown" class="hidden absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+            <div class="py-1" role="menu">
+              <a href="#features" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Fonctionnalités</a>
+              <a href="#open-source" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Open Source</a>
+              <a href="#components" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Composants</a>
+              <a href="#use-cases" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Usages</a>
+              <a href="#timeline" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Chronologie</a>
+              <a href="#team" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Équipe</a>
+              <a href="#contact" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Contact</a>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section style="background-image: url(code.png); width: 100%;    background-attachment: fixed;   background-size:     cover;                      /* <------ */
+    background-repeat:   no-repeat;
+    background-position: center center;  " id="hero" class="py-24 text-center fade-up">
+    <div  class="max-w-4xl mx-auto px-6" style="background-color: white;border-radius: 20px 10px 50px;background-blend-mode: color  ;  ">
+      
+      <h2 class="text-5xl font-bold mb-4" style="color: rgb(7 99 235 ">La calculatrice scientifique libre<br>pensée pour les lycéens</h2>
+      <p class="text-lg text-gray-600">OpenCalc est une calculatrice open source, économique et conçue pour l'apprentissage, l'expérimentation et la compréhension des maths et de l’électronique.</p>
+    </div>
+
+  </section>
+
+  <!-- Fonctionnalités -->
+  <section id="features" class="py-24 bg-white fade-up">
+    <div class="max-w-6xl mx-auto px-6">
+      <h3 class="text-4xl font-bold mb-12 text-center">Fonctionnalités clés</h3>
+      <div class="grid md:grid-cols-3 gap-12">
+        <div class="text-center" style="  display: grid;
+  place-items: center; /* centre horizontalement et verticalement */
+  height: 300px;">
+
+<h4 class="text-xl font-semibold mb-2">Mode examen</h4>
+          <img width=40%   src="https://upload.wikimedia.org/wikipedia/commons/c/c1/France_road_sign_B1.svg"/>
+
+          <p class="text-gray-600">Certifiée pour les épreuves officielles avec un mode sécurisé activable physiquement.</p>
+        </div>
+        <div class="text-center" style="  display: grid;
+  place-items: center; /* centre horizontalement et verticalement */
+  height: 300px;">          <h4 class="text-xl font-semibold mb-2">Programmable en Python</h4>
+            <img width=40%   src="https://www.python.org/static/community_logos/python-powered-h.svg"/>
+
+          <p class="text-gray-600">Éditeur intégré pour créer des scripts et automatiser les calculs.</p>
+        </div>
+        <div class="text-center" style="  display: grid;
+  place-items: center; /* centre horizontalement et verticalement */
+  height: 300px;">          <h4 class="text-xl font-semibold mb-2">Batterie rechargeable</h4>
+            <img width=40%   style="  image-rendering: pixelated;"src="batterie.webp"/>
+
+          <p class="text-gray-600">Jusqu’à 30h d’autonomie sur batterie Li-ion standard.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Open Source -->
+  <section id="open-source" class="py-24 bg-blue-50 fade-up">
+    <div class="max-w-4xl mx-auto px-6 text-center">
+      <h3 class="text-4xl font-bold mb-4">Entièrement open source</h3>
+      <p class="text-lg text-gray-600">Code, schémas électroniques, plans de boîtier : tout est accessible pour apprendre, modifier ou améliorer la calculatrice.</p>
+    </div>
+  </section>
+  <!-- Usages -->
+  <section id="use-cases" class="py-24 bg-white fade-up">
+    <div class="max-w-6xl mx-auto px-6">
+      <h3 class="text-4xl font-bold mb-12 text-center">Cas d’usage</h3>
+      <div class="grid md:grid-cols-3 gap-12">
+        <div class="text-center">
+          <h4 class="text-xl font-semibold mb-2">Lycées et examens</h4>
+          <p class="text-gray-600">Conforme aux exigences de l’éducation nationale et facile à prendre en main.</p>
+        </div>
+        <div class="text-center">
+          <h4 class="text-xl font-semibold mb-2">Hackathons et bidouille</h4>
+          <p class="text-gray-600">Un terrain de jeu idéal pour l’apprentissage de l’électronique et du code embarqué.</p>
+        </div>
+        <div class="text-center">
+          <h4 class="text-xl font-semibold mb-2">Projets pédagogiques</h4>
+          <p class="text-gray-600">Peut être montée, démontée, documentée et adaptée à volonté.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+<section id="scroll-animation">
+  <div class="scroll-wrapper">
+    <div class="viewer">
+      <img id="sequence" src="1.png" alt="Frame 1" />
+    </div>
+    <div class="scroll-space"></div>
+  </div>
+</section>
+<style>
+/* SECTION avec animation dans son espace */
+#scroll-animation {
+  position: relative;
+  width: 100%;
+  height: 400vh; /* Zone scrollable de 2x la hauteur de l'écran */
+}
+
+/* Container de l'animation fixée dans la section */
+.scroll-wrapper {
+
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e5e7eb;
+  z-index: 1;
+}
+
+/* Image au centre */
+.viewer img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+</style>
+<script>
+
+  const frameCount = 100;
+  const imageElement = document.querySelector('#sequence');
+
+  // Précharge des images
+  const preloadImages = () => {
+    for (let i = 1; i <= frameCount; i++) {
+      const img = new Image();
+      img.src = `/img/00${i}.png`;
+    }
+  };
+
+  const section = document.getElementById('scroll-animation');
+
+  function updateImage() {
+    const rect = section.getBoundingClientRect();
+    const sectionTop = rect.top;
+    const sectionHeight = section.offsetHeight;
+
+    if (sectionTop <= 0 && Math.abs(sectionTop) <= sectionHeight - window.innerHeight) {
+      const scrollFraction = Math.abs(sectionTop) / (sectionHeight - window.innerHeight);
+      const frameIndex = Math.min(frameCount - 1, Math.floor(scrollFraction * frameCount));
+      imageElement.src = `img/00${frameIndex + 1}.png`;
+    }
+  }
+
+  window.addEventListener('scroll', updateImage);
+  window.addEventListener('load', preloadImages);
+</script>
+
+</script>
+  <!-- Chronologie -->
+  <section id="timeline" class="py-24 bg-blue-50 fade-up">
+    <div class="max-w-4xl mx-auto px-6">
+      <h3 class="text-4xl font-bold mb-12 text-center">Chronologie du projet</h3>
+      <div class="space-y-10">
+        <div class="relative pl-10">
+          <div class="absolute left-0 top-1.5 w-3 h-3 bg-blue-600 rounded-full"></div>
+          <h4 class="text-xl font-semibold">Juillet 2024 – L’idée germe</h4>
+          <p class="text-gray-600">Constat du manque d’alternatives open source aux calculatrices traditionnelles.</p>
+        </div>
+        <div class="relative pl-10">
+          <div class="absolute left-0 top-1.5 w-3 h-3 bg-blue-600 rounded-full"></div>
+          <h4 class="text-xl font-semibold">Octobre 2024 - Septembre 2025 – Premier prototype</h4>
+          <p class="text-gray-600">Développement des premiers logiciels et conception du circuit imprimé et de coques de prototype</p>
+        </div>
+        <div class="relative pl-10">
+          <div class="absolute left-0 top-1.5 w-3 h-3 bg-blue-600 rounded-full"></div>
+          <h4 class="text-xl font-semibold">Septembre 2025 – Version beta</h4>
+          <p class="text-gray-600">Impression en 3D d'une coque et création d'une version utilisable par un utilisateur finale</p>
+        </div>
+        <div class="relative pl-10">
+          <div class="absolute left-0 top-1.5 w-3 h-3 bg-blue-600 rounded-full"></div>
+          <h4 class="text-xl font-semibold">2025 – Lancement public</h4>
+          <p class="text-gray-600">Distribution à grande échelle dans plusieurs établissements partenaires.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Équipe -->
+  <section id="team" class="py-24 fade-up">
+    <div class="max-w-6xl mx-auto px-6 text-center">
+      <h3 class="text-4xl font-bold mb-12">Qui est derrière OpenCalc ?</h3>
+      <div class="grid md:grid-cols-3 gap-12">
+        <div>
+          <img src="Feunixi.webp" alt="Feunixi" class="w-32 rounded-full mx-auto mb-4">
+          <h4 class="text-xl font-semibold">Feunixi</h4>
+          <p class="text-gray-600">Designer</p>
+        </div>
+        <div>
+          <img src="donut.png" alt="Gabriel" class="w-32 h-32 rounded-full mx-auto mb-4">
+          <h4 class="text-xl font-semibold">Gabriel</h4>
+          <p class="text-gray-600">Développeur</p>
+        </div>
+        
+      </div>
+    </div>
+  </section>
+
+  <!-- Contact -->
+  <section id="contact" class="py-24 bg-blue-50 fade-up">
+    <div class="max-w-4xl mx-auto px-6 text-center">
+      <h3 class="text-4xl font-bold mb-4">Contact & contribution</h3>
+      <p class="text-lg text-gray-600 mb-8">Vous souhaitez tester OpenCalc dans votre établissement, contribuer au projet ou tout simplement nous écrire ?</p>
+      <a href="contact.html" class="inline-block bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 transition">Envoyer un email</a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="py-8 bg-gray-100 text-center text-gray-600 text-sm">
+    © 2025 OpenCalc — Calculatrice scientifique libre & open source pour l’éducation
+  </footer>
+
+  <script>
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          document.querySelectorAll('header nav a').forEach(link => {
+            link.classList.toggle('active', link.getAttribute('href') === '#' + entry.target.id);
+          });
+        }
+      });
+    }, { threshold: 0.2 });
+    document.querySelectorAll('section[id]').forEach(sec => observer.observe(sec));
+  </script>
+</body>
+</html>
