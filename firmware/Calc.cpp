@@ -52,7 +52,7 @@ fill_box ** history = (fill_box **)malloc(sizeof(fill_box *)* (HISTORY_SIZE+1));
     case DOWN :
         cur_selected=(cur_selected+1)%HISTORY_SIZE;
         break;
-        case OK:{
+        case OK: case ENTER:{
         int l = cur_last_history;
                     cur_last_history=(cur_last_history+1)%HISTORY_SIZE;
 
@@ -84,6 +84,14 @@ fill_box ** history = (fill_box **)malloc(sizeof(fill_box *)* (HISTORY_SIZE+1));
 break;
     case X:
         break;    
+        case BACK:
+        if(history[cur_last_history]->t_size>0){
+            update_fill_box(history[cur_last_history],last_pressed);
+        }
+        else{
+            return 0;
+        }
+        break;
     default:
     update_fill_box(history[cur_last_history],last_pressed);
     

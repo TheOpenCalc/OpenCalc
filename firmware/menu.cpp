@@ -3,6 +3,8 @@
 #include "headers/grapher.h"
 #include "headers/elements.h"
 #include "headers/menu.h"
+#include "headers/sequences.h"
+#include "headers/settings.h"*
 #include "headers/Calc.h"
 #include "headers/ui.h"
 #include <stdio.h>
@@ -25,6 +27,8 @@ void init_keypad() {
 }
 
 int scan_keypad() {
+ 
+
     for (int row = 0; row < ROWS; row++) {
         // Activer la ligne courante (LOW)
         gpio_put(row_pins[row], 0);
@@ -34,7 +38,7 @@ sleep_ms(20);
             if (gpio_get(col_pins[col]) == 0) {  // touche détectée (LOW)
                 // Rétablir la ligne avant de retourner
                 gpio_put(row_pins[row], 1);
-                return row * 6 + col;  // bouton 0 à 35
+                return row * COLS + col;  // bouton 0 à 35
             }
         }    
 
@@ -90,6 +94,9 @@ int main() {
     menu_button[4]->text= "Seque";
     menu_button[4]->t_size=5;
 
+    menu_button[5]->text= "Periodic";
+    menu_button[5]->t_size=8;
+
         fill_screen(BACKGROUND_COLOR);  
     int last_pressed =scan_keypad();
     while (true) {
@@ -122,11 +129,17 @@ int main() {
         case 1:
             Grapher();
             break;
+            case 3:
+            settings();
+            break;
+        case 4 :
+            Sequencer();
+        break;
+
         case 5 :
             display_table();
         break;
 
-    printf("Graph ended");
         break;
         
         default:

@@ -8,8 +8,12 @@
 #include "headers/ui.h"
 #include "headers/menu.h"
 #include "headers/Evaluator.h"
+struct coord_s{
+    int x;
+    int y;
+};
 
-
+typedef struct coord_s coord;
 extern int x_cursor ;
 extern int y_cursor ;
 
@@ -205,7 +209,7 @@ pontentiometer* create_potentiometer(int x,int y, int h, int w, int border,char 
     out->h = h;
     out->w = w;
     out->grad=grad;
-    out->val=0;
+    out->val=1;
     out->name= name;
     out->border = border;
     return out ;
@@ -503,14 +507,14 @@ break;
             break;
         }
                     
-        for(int i = 0 ; i <= in->t_size-in_tsize;i++)
+        /*for(int i = 0 ; i <= in->t_size-in_tsize;i++)
         {
             char temp = in->text[i+in->curso_pos];
             in->text[i+in->curso_pos]=temp1;
             temp1=temp2;
             temp2=temp3;
             temp3=temp;
-        }
+        }*/ //NE FONCTIONNE PAS EN L'ETAT A REPARER
                 
 }
 
@@ -543,16 +547,14 @@ void display_equation( char * in ,int input_size, int x, int y,int SIZE,int curs
 
     for(int i = 0 ; i < input_size;i++){
         if(i==cursor_pos-1){    
-            temp[0]='|';
             x_cursor=x;
             y_cursor=y+5+pos+7;
         }
-        if(is_in(in[i],"0123456789,.+-*)Xx")){
+        if(is_in(in[i],"0123456789,.+-*()/Xx^")){
             temp[0]= in[i];
             draw_char(x,y+5+pos,temp,0X0000,0X0000,SIZE);
             pos+=5.5*SIZE;
-        }
-        if(is_in(in[i],"uvw")){
+        }else if(is_in(in[i],"uvw")){
             temp[0]='a';
             pos+=9.5*SIZE; 
             draw_char(x,y+5+pos,temp,0X0000,0X0000,2);
@@ -564,8 +566,7 @@ void display_equation( char * in ,int input_size, int x, int y,int SIZE,int curs
                 draw_char(x,y+5+pos,sin,0X0000,0X0000,2);
             if(in[i]=='w')
                 draw_char(x,y+5+pos,tan,0X0000,0X0000,2);
-        }
-        if(in[i]=='c'){
+        }else if(in[i]=='c'){
             draw_char(x,y+5+pos,cos,0X0000,0X0000,2);
             pos+=12*SIZE;
         }else if(in[i]=='s'){
@@ -574,7 +575,7 @@ void display_equation( char * in ,int input_size, int x, int y,int SIZE,int curs
         }else if(in[i]=='t'){
             draw_char(x,y+5+pos,tan,0X0000,0X0000,2);
             pos+=13*SIZE;
-        }else if (in[i]=='('){
+        }/*else if (in[i]=='('){
             int j = 1;
             int ind = 1;
             while(i+j<input_size && ind!=0){
@@ -612,7 +613,7 @@ void display_equation( char * in ,int input_size, int x, int y,int SIZE,int curs
                 }
             }
             
-        }else if (in[i]=='p'){
+        }*/else if (in[i]=='p'){
             temp[0]='π';
             draw_char(x,y+5+pos,temp,0X0000,0X0000,2);
             pos+=SIZE*4;
@@ -680,7 +681,6 @@ void display_equation( char * in ,int input_size, int x, int y,int SIZE,int curs
     }
 }
 
-
 void blink_cursor(){
     char * temp = (char *) malloc(sizeof(char)*2);
     
@@ -701,4 +701,53 @@ void draw_img(int * img, int x, int y,int h , int w){
             fill_rect(x+h,j+w,1,1,img[i*w+j]);
         }
     }
+}
+
+/*
+
+coord display_tree_expr(operation *in){
+    operation * el1=(operation *)in->el1;
+    operation * el2=(operation *)in->el1;
+    int pos = 0;
+    switch (in->operator_type)
+    {
+        case '+':
+        display_tree_expr()
+        break;
+    default:
+        break;
+    }
+}
+*/
+
+void display_potentiometer(pontentiometer * in,bool is_selected){
+    if(in == nullptr)
+        return;
+    
+    if(!in->transparent_back){
+        int col = 0;
+        if(!is_selected){
+            col=FRONTGROUND_COLOR;
+        }else
+            col=FRONTGROUND_COLOR_BIS;
+
+       // fill_rect(in->x,in->y,in->w,in->h,FRONTGROUND_COLOR);
+
+     //   fill_rect(in->x+in->border,in->y+in->border,in->w-2*in->border,in->h-2*in->border,col);
+    }
+
+
+    fill_rect(in->x+in->w*0.05,in->y+in->h*0.6,in->h*0.2,in->w*0.9*(((float)in->val/in->grad)),0x00FF);
+
+   /* sf::Vector2f sd(in->w*0.9*(1.0-((float)in->val/in->grad)),in->h*0.2);
+    sf::RectangleShape barreb(sd);
+    barreb.setPosition();
+    barreb.setFillColor(sf::Color::Black);
+    window->draw(barreb);
+*/
+    fill_rect(in->x+in->w*0.05+in->w*0.9*(((float)in->val/in->grad)),in->h*0.2,in->y+in->h*0.6,in->w*0.9*(1.0-((float)in->val/in->grad)),0xF0F0);
+
+
+
+    
 }

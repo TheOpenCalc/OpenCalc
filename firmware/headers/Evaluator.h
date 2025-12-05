@@ -6,6 +6,17 @@ struct token_s{
     double value;
     int h =0;
 };
+
+struct operation_s{
+    char operator_type;
+    void* el1;
+    void* el2;
+};
+
+typedef struct operation_s operation;
+
+
+
 typedef struct token_s token;
 
 int double_to_string_scientific(double in ,char * out);

@@ -9,6 +9,62 @@
 
 
 
+
+double eval(operation *in){
+    operation *el1=(operation *)in->el1;
+    operation *el2=(operation *)in->el2;
+    switch (in->operator_type)
+    {
+        case 'n':
+        return *((double *)(el1));
+    break;
+    case '+':
+        return (eval(el1)+eval(el2));
+    break;
+    case '-':
+        return (eval(el1)-eval(el2));
+    break;
+    case '*':
+        return (eval(el1)*eval(el2));
+    break;
+    case '/':
+        return (eval(el1)/eval(el2));
+    break;
+    
+    case 'c':
+        return (cos(eval((el1))));
+    break;
+    case 's':
+        return (sin(eval(el1)));
+    break;
+    case 't':
+        return (tan(eval(el1)));
+    break;
+
+    case 'u':
+        return (acos(eval((el1))));
+    break;
+    case 'v':
+        return (asin(eval(el1)));
+    break;
+    case 'w':
+        return (atan(eval(el1)));
+    break;
+
+
+    case 'R':
+        return (sqrt(eval((el1))));
+    break;
+    case '^':
+        return (pow(eval(el1),eval(el2)));
+    break;
+    default:
+        break;
+    }
+}
+
+
+
 int double_to_string_scientific(double in ,char * out){
 
 
@@ -39,8 +95,16 @@ int double_to_string_scientific(double in ,char * out){
 
                         }
                         out[i+k]= buffer[i];
-                        
                     }
+                    for(int i = j-1;i>=0 && out[i]=='0';i--){
+                        out[i]='\0';
+                        s--;
+                    }
+                    if(out[s-1]=='.'){
+                        out[s-1]='\0';
+                        s--;
+                    }
+                    
                     return s;
 }
 bool is_in(char test,char* arr){

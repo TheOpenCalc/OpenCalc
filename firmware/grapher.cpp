@@ -58,7 +58,7 @@ void wu_line(int y0, int x0, int y1, int x1, uint16_t color) {
     }
 }
 
-void graph(double cursor_pos ,token * function,double x_min,double x_max,double y_min, double y_max,int n, uint16_t color,bool is_selected ){
+void graph(double cursor_pos ,token * function,double x_min,double x_max,double y_min, double y_max,int n, uint16_t color,bool is_selected,bool fill_between_points ){
     double pas = (x_max-x_min)/SCREEN_WIDTH;
     
     token * tokenized_expression = shunting_yard(function,n);
@@ -67,13 +67,23 @@ void graph(double cursor_pos ,token * function,double x_min,double x_max,double 
     
    double last = (evaluate_npi(tokenized_expression,yarded,pos,'X')-y_min)/(y_max-y_min)*SCREEN_HEIGHT;
    double y =0;
-   
-   for(int i = 0 ; i < SCREEN_WIDTH;i++){
+   int k =0;
+    if(fill_between_points)
+        k=1;
+    else
+        k=SCREEN_WIDTH/(x_max-x_min);
+
+   for(int i = 0 ; i < SCREEN_WIDTH;i+=k){
         y = evaluate_npi(tokenized_expression,yarded,pos,'X');
 
         if(y==NAN){
             
+        if(fill_between_points){
         pos+=pas;
+        }
+        else{
+            pos++;
+        }
         last=NAN;
     
         }else{
@@ -83,10 +93,13 @@ void graph(double cursor_pos ,token * function,double x_min,double x_max,double 
         double h = (y_max-y_min);
         double display_y = (y-y_min)/h*SCREEN_HEIGHT;
         //printf("%f / %f / %f\n",pos,y,display_y);
-        float dh=abs(last-display_y);
-
-        if(last<320 && last >0 && display_y>0 && display_y<320)
-            wu_line((i-1),last,i,display_y,color);
+        if(fill_between_points){
+            if(last<320 && last >0 && display_y>0 && display_y<320){
+                wu_line((i-1),last,i,display_y,color);
+            }
+        }else{
+            fill_rect(display_y-2,i-2,3,3,color);
+        }
 
         pos+=pas;
         last=display_y;
@@ -94,7 +107,7 @@ void graph(double cursor_pos ,token * function,double x_min,double x_max,double 
        
         
     }if(is_selected){
-        text_box * t = create_text_box(0,220,20,160,2,false);
+        text_box * t = create_text_box(0,0,20,160,2,false);
         char * temp= (char * )malloc(sizeof(char)*100);
         int s_temp = double_to_string_scientific(cursor_pos,temp);
      
@@ -107,7 +120,7 @@ void graph(double cursor_pos ,token * function,double x_min,double x_max,double 
         free(temp);
         display_text_box(t,0,false);
 
-        text_box * tb = create_text_box(160,220,20,160,2,false);
+        text_box * tb = create_text_box(160,0,20,160,2,false);
        char * tempb= (char * )malloc(sizeof(char)*100);
         int s_tempb = double_to_string_scientific(evaluate_npi(tokenized_expression,yarded,cursor_pos,'X'),tempb);
 
@@ -233,11 +246,8 @@ int Grapher(){
                     selected_fill_box=-1;
                     }
                     break;
-        case X:
-                    printf("AAA");
-                    arr_fill_box[selected_fill_box]->text[arr_fill_box[selected_fill_box]->t_size++]='X';
-        break;
-        default:
+      
+                    default:
         if(show_graph){
             if (last_pressed==PLUS){
                         x_min *= 2;
@@ -272,7 +282,7 @@ int Grapher(){
                     int tokenized_size =0;
                     token * tokenized = parse_string_to_token(arr_fill_box[i]->text,arr_fill_box[i]->t_size,&tokenized_size);
                     token * out = shunting_yard(tokenized,tokenized_size);
-                    graph(cursor_pos,tokenized,x_min,x_max,y_min,y_max,tokenized_size,   palet[i%14],i==selected_fill_box);
+                    graph(cursor_pos,tokenized,x_min,x_max,y_min,y_max,tokenized_size,   palet[i%14],i==selected_fill_box,true);
                 }
             }
         }

@@ -33,7 +33,7 @@ int Sequencer(){
     
     text_box * Graph = create_text_box(160,220,20,160,1,false);
     text_box * Formula = create_text_box(0,220,20,160,1,false);
-    Graph->text="Graph";
+    Graph->text="Sequ";
     Graph->t_size=5;
     Formula->text="Formula";
     Formula->t_size=7;
@@ -165,7 +165,7 @@ int Sequencer(){
                     int tokenized_size =0;
                     token * tokenized = parse_string_to_token(arr_fill_box[i]->text,arr_fill_box[i]->t_size,&tokenized_size);
                     token * out = shunting_yard(tokenized,tokenized_size);
-                    graph(cursor_pos,tokenized,x_min,x_max,y_min,y_max,tokenized_size,   palet[i%14],i==selected_fill_box);
+                    graph(cursor_pos,tokenized,x_min,x_max,y_min,y_max,tokenized_size,   palet[i%14],i==selected_fill_box, false);
                 }
             }
         }

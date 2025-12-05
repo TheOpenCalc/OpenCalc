@@ -106,15 +106,15 @@ const uint8_t font5x7[] = {
 #define PIN_SCK    18
 #define PIN_MOSI   19
 
-#define ROWS 6
-#define COLS 6
+#define ROWS 8
+#define COLS 5
 
 #define BACKGROUND_COLOR 0xf7de
 #define FRONTGROUND_COLOR 0xdefb
 #define FRONTGROUND_COLOR_BIS 0xce79
 
-const int row_pins[ROWS] = { 0, 1, 2, 3, 4, 5 };  // GPIO 0–5 : lignes (output)
-const int col_pins[COLS] = { 6, 7, 8, 9, 10, 11 }; // GPIO 6–11 : colonnes (input)
+const int row_pins[ROWS] = { 8, 9, 10, 11 ,12,13,14,15};  // GPIO 0–5 : lignes (output)
+const int col_pins[COLS] = { 0, 1, 2, 3, 4}; // GPIO 6–11 : colonnes (input)
 
 const int HISTORY_SIZE = 50;
 
@@ -158,42 +158,51 @@ int max(int a,int b);
 
 
 enum touches  {
-    DOWN,
-    UP,
-    RIGHT,
-    LEFT,
-    OK,
-    CLOSING_PARENTHESIS,
-    TWO,
-    FIVE,
-    EIGHT,
-    MINUS,
-    TIMES,
-    OPENING_PARENTHESIS,
+        ZERO,
+    COMA,
+    PI,
+    NOT2,
+    ENTER,
     ONE,
-    FOUR,
-    SEVEN,
-    PLUS,
-    DIVIDE,
-    LN,
-    ZERO,
+    TWO,
     THREE,
+    PLUS,
+    TIMES,
+    FOUR,
+    FIVE,
     SIX,
+  MINUS,
+    DIVIDE,
+    SEVEN,
+    EIGHT,
     NINE,
-    BACK,
-    E,
+    OPENING_PARENTHESIS,
+    CLOSING_PARENTHESIS,
     COS,
     SIN,
     TAN,
     SQRT,
     POW,
-    X,
-    COMA,
+     LN,
+    BACK,
+    E,
+    DOWN,
+    RIGHT,
+     X,
     PASS1,
     PASS2,
+ LEFT,
+    OK,
+
     PASS3,
     SECOND,
-    PI
+    PASS4,
+    UP,
+   
+    
+  
+   
+   
 };
 void ili_cmd(uint8_t cmd) ;
 void ili_data(uint8_t data) ;
@@ -219,5 +228,10 @@ text_box* create_text_box(int x,int y, int h, int w, int border,bool transparent
 void display_fill_box(fill_box * in,int shift_y,bool is_selected,int pos,char prefix);
 void draw_char(uint16_t x, uint16_t y, char * c, uint16_t color, uint16_t bg, uint8_t size) ;
 void blink_cursor();
+void display_potentiometer(pontentiometer * in,bool is_selected);
+pontentiometer* create_potentiometer(int x,int y, int h, int w, int border,char * name,int grad,bool transparent_back);
+
+void increment_potentiometer(pontentiometer* p );
+void decrement_potentiometer(pontentiometer* p );
 
 #endif

@@ -65,14 +65,28 @@ void display_table(){
         }
     }
     int last_pressed=scan_keypad();
-
+text_box * data = create_text_box(5,200,40,40,2,true);
     while(true){
-        
-    for(int i = 0 ; i <32;i++){
+if(C-((shift/31))<5){
+                        fill_rect(105,5,128 ,160,BACKGROUND_COLOR);
+}else{
+                fill_rect(105,175,128 ,160,BACKGROUND_COLOR);
+
+}        
+    for(int i = max(C-10,0) ; i < min(C+10,32);i++){
         for(int j =0;j<hauteur[i];j++){
                     
             display_text_box(table[i][j],0,C==i && L==j);
         }
+    }
+
+if(C-((shift/31))>5){   
+        fill_rect(105,175,128 ,160,0);
+       
+    } else{
+
+                fill_rect(105,5,128 ,160,0);
+
     }
     last_pressed=scan_keypad();
     while(last_pressed==-1){
@@ -85,8 +99,8 @@ void display_table(){
         return;
         break;
     case RIGHT:
-    C=min(C+1,31    );
-    L= min(hauteur[C]-1,L);
+        C=min(C+1,31    );
+        L= min(hauteur[C]-1,L);
             break;
     case LEFT:
     C=max(0,C-1);
@@ -102,6 +116,7 @@ void display_table(){
     default:
         break;
     }
+    
     if(shift+300<31*C){
         fill_screen(BACKGROUND_COLOR);  
         shift+=31;
@@ -121,6 +136,5 @@ void display_table(){
             }
         }
     }
-
     }
 }
