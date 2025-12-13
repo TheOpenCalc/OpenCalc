@@ -193,8 +193,35 @@ int Grapher(){
     double y_max = 5;
     double cursor_pos = 0;
     int          last_pressed=scan_keypad();
+                                           fill_screen(BACKGROUND_COLOR);  
+
     while(1){
-        fill_screen(BACKGROUND_COLOR);  // Bleu
+             if(!show_graph){
+
+        for(int i = std::max(first_display,0);i<first_display+6;i++){
+            display_fill_box(arr_fill_box[i],160-(i-std::max(first_display,0))*41,i==selected_fill_box,i,'f');
+        }
+
+        }else{
+            axis();
+            for(int i = 0 ; i<100;i++){  
+                printf("%i %i\n",i, (int)(arr_fill_box[i]!=nullptr));   
+                if(arr_fill_box[i]!=nullptr){      
+                    int yarded = count_yarded(arr_fill_box[i]->text);
+                    int tokenized_size =0;
+                    token * tokenized = parse_string_to_token(arr_fill_box[i]->text,arr_fill_box[i]->t_size,&tokenized_size);
+                    token * out = shunting_yard(tokenized,tokenized_size);
+                    graph(cursor_pos,tokenized,x_min,x_max,y_min,y_max,tokenized_size,   palet[i%14],i==selected_fill_box,true);
+                }
+            }
+        }
+        display_text_box(Formula,0,!show_graph && selected_fill_box==-1);
+        display_text_box(Graph,0,show_graph&& selected_fill_box==-1);
+     
+         last_pressed=scan_keypad();
+    while(last_pressed==-1){
+        last_pressed =scan_keypad();
+    }
         std::printf("%i\n",(int)show_graph);
         switch (last_pressed)
         {
@@ -231,17 +258,22 @@ int Grapher(){
         break;
         case RIGHT:
            if(show_graph && selected_fill_box!=-1){
+
                         cursor_pos+=(x_max-x_min)/100;
                     }else{
+                                           fill_screen(BACKGROUND_COLOR);  
+
                     selected_fill_box=-1;
                     show_graph=true;
-                    printf("GOOD");
                     }  
         break;
         case LEFT:
            if(show_graph && selected_fill_box!=-1){
+            
                         cursor_pos-=(x_max-x_min)/100;
                     }else {
+                               fill_screen(BACKGROUND_COLOR);  
+
                     show_graph=false;
                     selected_fill_box=-1;
                     }
@@ -267,32 +299,7 @@ int Grapher(){
             break;
         }
 
-        if(!show_graph){
-
-        for(int i = std::max(first_display,0);i<first_display+6;i++){
-            display_fill_box(arr_fill_box[i],160-(i-std::max(first_display,0))*41,i==selected_fill_box,i,'f');
-        }
-
-        }else{
-            axis();
-            for(int i = 0 ; i<100;i++){  
-                printf("%i %i\n",i, (int)(arr_fill_box[i]!=nullptr));   
-                if(arr_fill_box[i]!=nullptr){      
-                    int yarded = count_yarded(arr_fill_box[i]->text);
-                    int tokenized_size =0;
-                    token * tokenized = parse_string_to_token(arr_fill_box[i]->text,arr_fill_box[i]->t_size,&tokenized_size);
-                    token * out = shunting_yard(tokenized,tokenized_size);
-                    graph(cursor_pos,tokenized,x_min,x_max,y_min,y_max,tokenized_size,   palet[i%14],i==selected_fill_box,true);
-                }
-            }
-        }
-        display_text_box(Formula,0,!show_graph && selected_fill_box==-1);
-        display_text_box(Graph,0,show_graph&& selected_fill_box==-1);
-        
-         last_pressed=scan_keypad();
-    while(last_pressed==-1){
-        last_pressed =scan_keypad();
-    }
+      
     sleep_ms(150);
 
     }

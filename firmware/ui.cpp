@@ -284,7 +284,7 @@ void display_fill_box(fill_box * in,int shift_y,bool is_selected,int pos,char pr
         fill_rect(in-> y+shift_y, in-> x, in-> h, in-> w, 0xfff0) ;
 
     
-    display_equation(in->text,in->t_size,in->y+shift_y,in->x,2,is_selected ? in->curso_pos : -10);
+    display_equation(in->text,100,in->y+shift_y,in->x+(prefix == ' ' ? 0 : 55),2,is_selected ? in->curso_pos : -10);
 
  
 
@@ -297,13 +297,13 @@ void display_fill_box(fill_box * in,int shift_y,bool is_selected,int pos,char pr
         t[2]='x';
         t[3]=')';
         t[4]='=';
-        display_equation(t,6/*+log(pos)*/,in->y+shift_y,in->x-30,2,is_selected ? in->curso_pos : -10);
+        display_equation(t,5/*+log(pos)*/,in->y+shift_y,in->x,2,is_selected ? in->curso_pos : -10);
     }if(prefix=='u'){
 
         char*t = (char*)malloc(sizeof(char*)*2);
         t[0]='u'+pos;
         t[1]='=';        
-        display_equation(t,6/*+log(pos)*/,in->y+shift_y,in->x-5,2,is_selected ? in->curso_pos : -10);
+        display_equation(t,2/*+log(pos)*/,in->y+shift_y,in->x,2,is_selected ? in->curso_pos : -10);
         char * n =(char *)malloc(sizeof(char));
         n[0]='n';
         draw_char(in->x-3,in->y,n,0x0000,0x0000,1);
@@ -341,6 +341,13 @@ void update_fill_box(fill_box *in,int event){
             
                             in->curso_pos++;
 in->t_size++;
+break;
+            case EQUAL:
+            in->text[in->curso_pos]='=';
+            
+                            in->curso_pos++;
+in->t_size++;
+            
         break;
         case FOUR:
             in->text[in->curso_pos]='4';
@@ -550,7 +557,7 @@ void display_equation( char * in ,int input_size, int x, int y,int SIZE,int curs
             x_cursor=x;
             y_cursor=y+5+pos+7;
         }
-        if(is_in(in[i],"0123456789,.+-*()/Xx^")){
+        if(is_in(in[i],"0123456789,.+-*()/Xx^=fghijk")){
             temp[0]= in[i];
             draw_char(x,y+5+pos,temp,0X0000,0X0000,SIZE);
             pos+=5.5*SIZE;
@@ -692,15 +699,7 @@ void blink_cursor(){
     } else{
         draw_char(x_cursor,y_cursor ,temp,BACKGROUND_COLOR ,BACKGROUND_COLOR,2);
     };
-    free(temp); 
-}
-
-void draw_img(int * img, int x, int y,int h , int w){
-    for(int i = 0 ; i < h ; i ++){
-        for(int j = 0 ; j < w ; i++){
-            fill_rect(x+h,j+w,1,1,img[i*w+j]);
-        }
-    }
+    
 }
 
 /*

@@ -4,7 +4,8 @@
 #include "headers/elements.h"
 #include "headers/menu.h"
 #include "headers/sequences.h"
-#include "headers/settings.h"*
+#include "headers/settings.h"
+#include "Solver.h"
 #include "headers/Calc.h"
 #include "headers/ui.h"
 #include <stdio.h>
@@ -98,11 +99,18 @@ int main() {
     menu_button[5]->t_size=8;
 
         fill_screen(BACKGROUND_COLOR);  
-    int last_pressed =scan_keypad();
+
     while (true) {
-   
-    display_battery(222,286, 2);
+       for(int i = 0 ; i < 6 ; i ++){
+        display_text_box(menu_button[i],0,i==select_item_menu);
+    }
+display_battery(222,286, 2);
     draw_char(230,160-9*5,"Main menu",0x0000,BACKGROUND_COLOR,2);
+    
+         int last_pressed=scan_keypad();
+    while(last_pressed==-1){
+        last_pressed =scan_keypad();
+    }
     switch (last_pressed)
     {
     case DOWN: //down
@@ -125,10 +133,14 @@ int main() {
         {
         case 0:
             Calc();
-            break;
+        break;
         case 1:
             Grapher();
-            break;
+        break;
+        case 2:
+        Solver();
+        break;
+        
             case 3:
             settings();
             break;
@@ -145,22 +157,16 @@ int main() {
         default:
             break;
         }
+        fill_screen(BACKGROUND_COLOR);
     break;
 
     default:
         break;
     }
+
     if(select_item_menu<0)
                     select_item_menu+=6;
-    for(int i = 0 ; i < 6 ; i ++){
-        display_text_box(menu_button[i],0,i==select_item_menu);
-    }
-
-         last_pressed=scan_keypad();
-    while(last_pressed==-1){
-        last_pressed =scan_keypad();
-    }
-    sleep_ms(150);
+ 
 
     }
 }
