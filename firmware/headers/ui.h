@@ -189,7 +189,7 @@ enum touches  {
     DOWN,
     RIGHT,
      X,
-    PASS1,
+    EQUAL,
     PASS2,
  LEFT,
     OK,
