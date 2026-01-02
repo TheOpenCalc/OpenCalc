@@ -220,7 +220,7 @@ typedef struct pontentiometer_s pontentiometer;
 fill_box* create_fill_box(int x,int y, int h, int w, int border);
 
 void axis();
-void update_fill_box(fill_box *in,int event);
+void update_fill_box(fill_box *in,int event,bool snd);
 void display_equation( char * in ,int input_size, int x, int y,int SIZE,int cursor_pos);
 
 void display_text_box(text_box * in,int shift_y,bool is_selected);

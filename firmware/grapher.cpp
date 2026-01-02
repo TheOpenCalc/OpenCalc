@@ -150,7 +150,7 @@ void graph(double cursor_pos ,token * function,double x_min,double x_max,double 
 
 
 int Grapher(){
-
+    bool snd = false;
     
     text_box * Graph = create_text_box(160,220,20,160,1,false);
     text_box * Formula = create_text_box(0,220,20,160,1,false);
@@ -225,6 +225,9 @@ int Grapher(){
         std::printf("%i\n",(int)show_graph);
         switch (last_pressed)
         {
+                    case SECOND:
+        toggle(&snd);
+        break;
         case BACK:
             if(!show_graph && arr_fill_box[selected_fill_box]->t_size >0){
                             arr_fill_box[selected_fill_box]->t_size--;
@@ -294,7 +297,7 @@ int Grapher(){
             }
         }else
         if (selected_fill_box>=0 && !show_graph) {
-    update_fill_box(arr_fill_box[selected_fill_box],last_pressed);
+    update_fill_box(arr_fill_box[selected_fill_box],last_pressed,snd);
                    }
             break;
         }

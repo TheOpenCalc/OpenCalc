@@ -97,14 +97,8 @@ double *solve(double **input, int nb_var, int nb_eq)
             }
         }
     }
-    printf("\n\n");
 
-    for (int i = 0; i < nb_var; i++)
-    {
-        printf("%f \n", solution[i]);
-    }
-
-    return input[0];
+    return solution;
 }
 void printdouble2D(double **input, int L, int H)
 {
@@ -119,7 +113,8 @@ void printdouble2D(double **input, int L, int H)
 }
 int Solver()
 {
-
+    stdio_init_all();
+    bool snd = false;
     srand(time(NULL));
     double **c = (double **)malloc(sizeof(double *) * 5);
     for (int i = 0; i < 5; i++)
@@ -163,29 +158,29 @@ int Solver()
     bool show_solution = false;
 
     double cursor_pos = 0;
- 
+
     fill_screen(BACKGROUND_COLOR);
 
     while (1)
     {
-           int last_pressed = scan_keypad();
-    if (!show_solution)
-    {
+        int last_pressed = scan_keypad();
+        if (!show_solution)
+        {
 
-        for (int i = std::max(first_display, 0); i < first_display + 6; i++)
-        {
-            display_fill_box(arr_fill_box[i], 160 - (i - std::max(first_display, 0)) * 41, i == selected_fill_box, -1, ' ');
+            for (int i = std::max(first_display, 0); i < first_display + 6; i++)
+            {
+                display_fill_box(arr_fill_box[i], 160 - (i - std::max(first_display, 0)) * 41, i == selected_fill_box, -1, ' ');
+            }
         }
-    }
-    else
-    {
-        for (int i = std::max(first_display, 0); i < first_display + 6; i++)
+        else
         {
-            display_fill_box(arr_solution[i], 160 - (i - std::max(first_display, 0)) * 41, i == selected_fill_box, -1, ' ');
+            for (int i = std::max(first_display, 0); i < first_display + 6; i++)
+            {
+                display_fill_box(arr_solution[i], 160 - (i - std::max(first_display, 0)) * 41, i == selected_fill_box, -1, ' ');
+            }
         }
-    }
-    display_text_box(Equations, 0, !show_solution && selected_fill_box == -1);
-    display_text_box(Solution, 0, show_solution && selected_fill_box == -1);
+        display_text_box(Equations, 0, !show_solution && selected_fill_box == -1);
+        display_text_box(Solution, 0, show_solution && selected_fill_box == -1);
         last_pressed = scan_keypad();
         while (last_pressed == -1)
         {
@@ -235,50 +230,76 @@ int Solver()
             }
             break;
         case RIGHT:
-            
+        {
+            int NB_VAR = 2;
+            int NB_EQ = 2;
+            show_solution = true;
 
-                show_solution = true;
-                for (int i = 0; i < 29; i++)
+            double **mat = init_2d_Mat(20, 10, 0);
+
+            for (int i = 0; i <= NB_EQ; i++)
+            {
+                if (arr_fill_box[i] != nullptr)
                 {
-                    if (arr_fill_box[i] != nullptr)
+                    int k = 0;
+                    while (k < arr_fill_box[i]->t_size && arr_fill_box[i]->text[k] != '=')
                     {
-                        int k = 0;
-                        while (k<arr_fill_box[i]->t_size && arr_fill_box[i]->text[k] != '=' )
-                        {
-                            k++;
-                        }
-                        int tokenized_size;
-                        int tokenized_sizeb;
+                        k++;
+                    }
+                    int tokenized_size = 0;
 
+                    for (int letter = 0; letter < NB_VAR; letter++)
+                    {
                         token *t = parse_string_to_token(arr_fill_box[i]->text, k, &tokenized_size);
 
-                        token *tb = parse_string_to_token((char *)(arr_fill_box[i]->text)[k+1],arr_fill_box[i]->t_size-k-1 , &tokenized_sizeb);
-
                         token *out = shunting_yard(t, tokenized_size);
-                        token *outb = shunting_yard(tb, tokenized_sizeb);   
 
-                        double temp = evaluate_npi(out,tokenized_size, 1,'X');
-                        
-                        double tempb = evaluate_npi(outb,tokenized_sizeb, 1,'X');
-
+                        double temp = evaluate_npi(out, tokenized_size, 1, 'A'+letter)-evaluate_npi(out, tokenized_size, 0, 'A'+letter);
                         arr_solution[i]->t_size = double_to_string_scientific(temp, (arr_solution[i]->text));
-                        arr_solution[i+1]->t_size = double_to_string_scientific(tempb, (arr_solution[i+1]->text));
 
+                        int tokenized_sizeb = 0;
+                        token *tb = parse_string_to_token(&((arr_fill_box[i]->text)[k + 1]), arr_fill_box[i]->t_size - k - 1, &tokenized_sizeb);
+                        token *outb = shunting_yard(tb, tokenized_sizeb);
+                        double tempb = evaluate_npi(outb, tokenized_sizeb, 1, 'A' + letter)-evaluate_npi(outb, tokenized_sizeb, 0, 'A' + letter);
+
+                        mat[i][letter] = temp - tempb;
+                        
                     }
-                }
-            
+                    token *t = parse_string_to_token(arr_fill_box[i]->text, k, &tokenized_size);
 
-            break;
+                    token *out = shunting_yard(t, tokenized_size);
+
+                    double temp = evaluate_npi(out, tokenized_size, 0, 'A');
+
+                    arr_solution[i]->t_size = double_to_string_scientific(temp, (arr_solution[i]->text));
+
+                    int tokenized_sizeb =0;
+                    token *tb = parse_string_to_token(&((arr_fill_box[i]->text)[k + 1]), arr_fill_box[i]->t_size - k - 1, &tokenized_sizeb);
+                    token *outb = shunting_yard(tb, tokenized_sizeb);
+                    double tempb = evaluate_npi(outb, tokenized_sizeb, 0, 'A');
+                    mat[i][NB_VAR ] = tempb - temp;
+                }
+            }
+
+
+             double * sol = solve(mat,NB_VAR,NB_EQ);
+            for (int i = 0; i < NB_VAR; i++)
+            {
+                     arr_solution[i]->t_size = double_to_string_scientific(sol[i], (arr_solution[i]->text));
+            }
+        }
+        break;
         case LEFT:
             show_solution = false;
 
             break;
-
+        case SECOND:
+            toggle(&snd);
         default:
-            update_fill_box(arr_fill_box[selected_fill_box], last_pressed);
+            update_fill_box(arr_fill_box[selected_fill_box], last_pressed, snd);
             break;
         }
 
-        sleep_ms(150);
+        sleep_ms(50);
     }
 }

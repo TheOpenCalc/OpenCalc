@@ -9,7 +9,7 @@
 #include <cstdlib>
 int Calc (){
 
-    
+bool snd = false;
 fill_box ** history = (fill_box **)malloc(sizeof(fill_box *)* (HISTORY_SIZE+1));
     for(int i = 0 ; i <= HISTORY_SIZE; i ++){
         history[i]=create_fill_box(0,0,40,320,2);
@@ -45,7 +45,10 @@ fill_box ** history = (fill_box **)malloc(sizeof(fill_box *)* (HISTORY_SIZE+1));
 
     
     switch (last_pressed)
-    {
+    {       
+    case SECOND:
+        toggle(&snd);
+        break;
     case UP:
         cur_selected=(cur_selected-1)%HISTORY_SIZE;
         break;
@@ -86,14 +89,14 @@ break;
         break;    
         case BACK:
         if(history[cur_last_history]->t_size>0){
-            update_fill_box(history[cur_last_history],last_pressed);
+            update_fill_box(history[cur_last_history],last_pressed,snd);
         }
         else{
             return 0;
         }
         break;
     default:
-    update_fill_box(history[cur_last_history],last_pressed);
+    update_fill_box(history[cur_last_history],last_pressed,snd);
     
     
         break;

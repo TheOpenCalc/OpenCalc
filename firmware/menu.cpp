@@ -51,8 +51,24 @@ sleep_ms(20);
     return -1; // aucune touche
 }
 
+void toggle (bool * snd){
+    *snd = !(*snd);
+    return;
+}
+
+double ** init_2d_Mat(int L,int H,double default_value){
+    double ** a  =  (double **) malloc(sizeof(double *)*H);
+    for(int i = 0 ; i < H;i++){
+        a[i]=(double *) malloc(sizeof(double)*L);
+        for(int j = 0;j<L;j++){
+            a[i][j]=default_value;
+        }
+    }
+    return a;
+}
+
 int main() {
-    stdio_init_all();
+   stdio_init_all();
 
     gpio_init(PIN_CS); gpio_set_dir(PIN_CS, GPIO_OUT);
     gpio_init(PIN_DC); gpio_set_dir(PIN_DC, GPIO_OUT);
@@ -64,6 +80,7 @@ int main() {
 
     ili_init();
     init_keypad();
+
     text_box ** menu_button = (text_box **) malloc(sizeof(text_box **)* 6);
     int select_item_menu = 0;
 
@@ -113,6 +130,7 @@ display_battery(222,286, 2);
     }
     switch (last_pressed)
     {
+
     case DOWN: //down
         select_item_menu=(select_item_menu+3)%6;
     break;

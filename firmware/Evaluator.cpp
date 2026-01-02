@@ -155,6 +155,7 @@ bool higher_priority(char a,char b){
 token* shunting_yard(token * input, int n){
     char * function = (char*)"lrcstuvw";
     char * operato = (char*)"+-*/^";
+    char * letters = (char*)"ABCDEFGHIJKLMNOPQRSTUVWYZ";
     token * output =(token*) malloc(sizeof(token)*20);
     if(output==NULL){
         printf("YYAA");
@@ -163,7 +164,7 @@ token* shunting_yard(token * input, int n){
     stack Operator_stack;
     init(&Operator_stack,n);
     for(int i = 0 ; i < n;i++){
-        if(input[i].type == 'n' || input [i].type == 'X' ||input [i].type == 'e'||input [i].type == 'p'){
+        if(is_in(input[i].type,letters) || input[i].type == 'n' || input [i].type == 'X' ||input [i].type == 'e'||input [i].type == 'p'){
             output[output_size].value= input[i].value;
             output[output_size].type= input[i].type;
             
@@ -282,7 +283,7 @@ double evaluate_npi(token* in,int n, double x,int letter){
                 break;
             case 'e':
                 push(&nb_stack,a);
-                a=2,71828182845904523536;   
+                a=2.71828182845904523536;   
                 break;
            
             default:
@@ -447,7 +448,7 @@ token * parse_string_to_token(char* in, int n, int * tokenized_size){ // suppose
             out[out_size].type= in[i];
             out_size++;
         }
-        else if (in[i]<='z' && 'a'<=in[i]){
+        else if (in[i]<='Z' && 'A'<=in[i]){
             out[out_size].value= in[i]-'a';
             out[out_size].type='X';
             out_size++;
