@@ -3,6 +3,7 @@
 #include "headers/sequences.h"
 #include <math.h>
 #include "headers/menu.h"
+#include <algorithm>
 #include <stdlib.h>
 
 #include "pico/stdlib.h"
