@@ -1,3 +1,9 @@
 node_modules/
 dist/
 .DS_Store
+
+# Compiled WASM files (build from source with ./firmware/wasm/build_wasm.sh)
+src/wasm/opencalc.js
+src/wasm/opencalc.wasm
+public/opencalc.js
+public/opencalc.wasm
