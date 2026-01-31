@@ -1,7 +1,8 @@
 #include <vector>
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
-#include <bits/stdc++.h>
+#include <cstdlib>
+#include <cstdint>
 #include <string.h>
 #include <string>
 
@@ -864,9 +865,11 @@ void display_equation(char *in, int input_size, int x, int y, int SIZE, int curs
          }*/
         else if (in[i] == 'p')
         {
-            temp[0] = 'π';
+            temp[0] = 'p';
             draw_char(x, y + 5 + pos, temp, 0X0000, 0X0000, 2);
-            pos += SIZE * 4;
+            temp[0] = 'i';
+            draw_char(x, y + 5 + pos + 5, temp, 0X0000, 0X0000, 2);
+            pos += SIZE * 5;
         }
         else if (in[i] == 'e')
         {
