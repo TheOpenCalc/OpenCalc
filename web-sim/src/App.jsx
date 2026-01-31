@@ -149,8 +149,10 @@ export default function App() {
         const ctx = canvas.getContext('2d', { alpha: false });
         ctx.fillStyle = '#f0f0e8';
         ctx.fillRect(0, 0, 320, 240);
-        // Draw logo to fill entire screen
-        ctx.drawImage(logo, 0, 0, 320, 240);
+        // Center the logo (not stretched)
+        const x = (320 - logo.width) / 2;
+        const y = (240 - logo.height) / 2;
+        ctx.drawImage(logo, x, y);
       }
     };
   }, []);
@@ -165,8 +167,10 @@ export default function App() {
         const ctx = canvas.getContext('2d', { alpha: false });
         ctx.fillStyle = '#f0f0e8';
         ctx.fillRect(0, 0, 320, 240);
-        // Draw logo to fill entire screen
-        ctx.drawImage(logoRef.current, 0, 0, 320, 240);
+        // Center the logo (not stretched)
+        const x = (320 - logoRef.current.width) / 2;
+        const y = (240 - logoRef.current.height) / 2;
+        ctx.drawImage(logoRef.current, x, y);
       }
     }
   }, [showSplash]);
