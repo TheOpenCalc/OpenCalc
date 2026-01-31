@@ -13,6 +13,7 @@
 int x_cursor = 0;
 int y_cursor = 0;
 
+#ifndef OPENCALC_WASM
 void init_keypad() {
     for (int r = 0; r < ROWS; r++) {
         gpio_init(row_pins[r]);
@@ -28,7 +29,7 @@ void init_keypad() {
 }
 
 int scan_keypad() {
- 
+
 
     for (int row = 0; row < ROWS; row++) {
         // Activer la ligne courante (LOW)
@@ -41,7 +42,7 @@ sleep_ms(20);
                 gpio_put(row_pins[row], 1);
                 return row * COLS + col;  // bouton 0 à 35
             }
-        }    
+        }
 
 
         // Désactiver la ligne (remettre HIGH)
@@ -50,6 +51,7 @@ sleep_ms(20);
 
     return -1; // aucune touche
 }
+#endif
 
 void toggle (bool * snd){
     *snd = !(*snd);

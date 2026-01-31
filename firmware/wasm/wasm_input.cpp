@@ -4,6 +4,11 @@
 #include "pico/stdlib.h"
 #include "headers/menu.h"
 
+// Framebuffer for screen rendering (320x240, RGB565)
+#define FB_WIDTH 320
+#define FB_HEIGHT 240
+static uint16_t g_framebuffer[FB_WIDTH * FB_HEIGHT];
+
 // Simple fixed-size ring buffer for key events.
 static const int kQueueSize = 64;
 static int g_key_queue[kQueueSize];
@@ -26,6 +31,23 @@ EMSCRIPTEN_KEEPALIVE void opencalc_key_down(int key) {
     g_key_queue[g_key_tail] = key;
     g_key_tail = (g_key_tail + 1) % kQueueSize;
 }
+
+EMSCRIPTEN_KEEPALIVE uint16_t* opencalc_framebuffer() {
+    return g_framebuffer;
+}
+
+EMSCRIPTEN_KEEPALIVE int opencalc_fb_width() {
+    return FB_WIDTH;
+}
+
+EMSCRIPTEN_KEEPALIVE int opencalc_fb_height() {
+    return FB_HEIGHT;
+}
+}
+
+// Expose framebuffer to other modules (ui.cpp)
+uint16_t* opencalc_get_framebuffer() {
+    return g_framebuffer;
 }
 
 void init_keypad() {

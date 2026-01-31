@@ -6,6 +6,10 @@
 #include <string.h>
 #include <string>
 
+#ifdef OPENCALC_WASM
+#include "wasm/stubs/wasm_framebuffer.h"
+#endif
+
 #include "headers/ui.h"
 #include "headers/menu.h"
 #include "headers/Evaluator.h"
@@ -60,6 +64,12 @@ void ili_init()
 
 void fill_screen(uint16_t color)
 {
+#ifdef OPENCALC_WASM
+    uint16_t* fb = opencalc_get_framebuffer();
+    for (int i = 0; i < FB_WIDTH * FB_HEIGHT; ++i) {
+        fb[i] = color;
+    }
+#else
     ili_cmd(0x2A);
     ili_data(0);
     ili_data(0);
@@ -82,10 +92,29 @@ void fill_screen(uint16_t color)
         spi_write_blocking(spi0, data, 2);
     }
     gpio_put(PIN_CS, 1);
+#endif
 }
 
 void fill_rect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color)
 {
+#ifdef OPENCALC_WASM
+    // Bounds checking
+    if (x >= FB_HEIGHT || y >= FB_WIDTH) return;
+    if (x + w > FB_HEIGHT) w = FB_HEIGHT - x;
+    if (y + h > FB_WIDTH) h = FB_WIDTH - y;
+
+    uint16_t* fb = opencalc_get_framebuffer();
+    for (uint16_t row = 0; row < w; ++row) {
+        for (uint16_t col = 0; col < h; ++col) {
+            // Map coordinates: the display seems rotated
+            int px = (FB_HEIGHT - 1 - x - row);
+            int py = y + col;
+            if (px >= 0 && px < FB_HEIGHT && py >= 0 && py < FB_WIDTH) {
+                fb[py * FB_HEIGHT + px] = color;
+            }
+        }
+    }
+#else
     if ((x >= SCREEN_HEIGHT) || (y >= SCREEN_WIDTH))
         return;
     if ((x + w - 1) >= SCREEN_HEIGHT)
@@ -133,6 +162,7 @@ void fill_rect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color)
     }
 
     gpio_put(PIN_CS, 1);
+#endif
 }
 
 void draw_char(uint16_t x, uint16_t y, char *c, uint16_t color, uint16_t bg, uint8_t size)
