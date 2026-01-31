@@ -13,6 +13,7 @@
 int x_cursor = 0;
 int y_cursor = 0;
 
+#ifndef OPENCALC_WASM
 void init_keypad() {
     for (int r = 0; r < ROWS; r++) {
         gpio_init(row_pins[r]);
@@ -50,6 +51,8 @@ sleep_ms(20);
 
     return -1; // aucune touche
 }
+#endif
+
 
 void toggle (bool * snd){
     *snd = !(*snd);

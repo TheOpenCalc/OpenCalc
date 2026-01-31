@@ -1,13 +1,25 @@
 #include <vector>
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
-#include <bits/stdc++.h>
+#include <cmath>
+#include <cstdlib>
 #include <string.h>
 #include <string>
 
 #include "headers/ui.h"
 #include "headers/menu.h"
 #include "headers/Evaluator.h"
+#ifdef OPENCALC_WASM
+#include <emscripten/emscripten.h>
+static uint16_t g_framebuffer[SCREEN_HEIGHT * SCREEN_WIDTH];
+
+extern "C" {
+EMSCRIPTEN_KEEPALIVE uint16_t *opencalc_framebuffer() { return g_framebuffer; }
+EMSCRIPTEN_KEEPALIVE int opencalc_fb_width() { return SCREEN_WIDTH; }
+EMSCRIPTEN_KEEPALIVE int opencalc_fb_height() { return SCREEN_HEIGHT; }
+}
+#endif
+
 struct coord_s
 {
     int x;
@@ -20,30 +32,51 @@ extern int y_cursor;
 
 void ili_cmd(uint8_t cmd)
 {
+#ifdef OPENCALC_WASM
+    (void)cmd;
+    return;
+#else
     gpio_put(PIN_DC, 0);
     gpio_put(PIN_CS, 0);
     spi_write_blocking(spi0, &cmd, 1);
     gpio_put(PIN_CS, 1);
+#endif
 }
+
 
 void ili_data(uint8_t data)
 {
+#ifdef OPENCALC_WASM
+    (void)data;
+    return;
+#else
     gpio_put(PIN_DC, 1);
     gpio_put(PIN_CS, 0);
     spi_write_blocking(spi0, &data, 1);
     gpio_put(PIN_CS, 1);
+#endif
 }
+
 
 void ili_reset()
 {
+#ifdef OPENCALC_WASM
+    return;
+#else
     gpio_put(PIN_RST, 0);
     sleep_ms(50);
     gpio_put(PIN_RST, 1);
     sleep_ms(50);
+#endif
 }
+
 
 void ili_init()
 {
+#ifdef OPENCALC_WASM
+    fill_screen(BACKGROUND_COLOR);
+    return;
+#else
     ili_reset();
     ili_cmd(0x01);
     sleep_ms(5);
@@ -55,10 +88,17 @@ void ili_init()
     ili_cmd(0x11);
     sleep_ms(120);
     ili_cmd(0x29);
+#endif
 }
+
 
 void fill_screen(uint16_t color)
 {
+#ifdef OPENCALC_WASM
+    for (int i = 0; i < SCREEN_HEIGHT * SCREEN_WIDTH; ++i) {
+        g_framebuffer[i] = color;
+    }
+#else
     ili_cmd(0x2A);
     ili_data(0);
     ili_data(0);
@@ -81,10 +121,30 @@ void fill_screen(uint16_t color)
         spi_write_blocking(spi0, data, 2);
     }
     gpio_put(PIN_CS, 1);
+#endif
 }
+
 
 void fill_rect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color)
 {
+#ifdef OPENCALC_WASM
+    if ((x >= SCREEN_HEIGHT) || (y >= SCREEN_WIDTH))
+        return;
+    if ((x + w - 1) >= SCREEN_HEIGHT)
+        w = SCREEN_HEIGHT - x;
+    if ((y + h - 1) >= SCREEN_WIDTH)
+        h = SCREEN_WIDTH - y;
+
+    for (uint16_t row = x; row < x + w; ++row)
+    {
+        uint16_t mapped_row = (uint16_t)(SCREEN_HEIGHT - 1 - row);
+        uint32_t base = (uint32_t)mapped_row * SCREEN_WIDTH;
+        for (uint16_t col = y; col < y + h; ++col)
+        {
+            g_framebuffer[base + col] = color;
+        }
+    }
+#else
     if ((x >= SCREEN_HEIGHT) || (y >= SCREEN_WIDTH))
         return;
     if ((x + w - 1) >= SCREEN_HEIGHT)
@@ -132,7 +192,9 @@ void fill_rect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color)
     }
 
     gpio_put(PIN_CS, 1);
+#endif
 }
+
 
 void draw_char(uint16_t x, uint16_t y, char *c, uint16_t color, uint16_t bg, uint8_t size)
 {
@@ -864,7 +926,11 @@ void display_equation(char *in, int input_size, int x, int y, int SIZE, int curs
          }*/
         else if (in[i] == 'p')
         {
+#ifdef OPENCALC_WASM
+            temp[0] = 'p';
+#else
             temp[0] = 'π';
+#endif
             draw_char(x, y + 5 + pos, temp, 0X0000, 0X0000, 2);
             pos += SIZE * 4;
         }

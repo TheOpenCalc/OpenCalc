@@ -3,6 +3,7 @@
 #include  "headers/grapher.h"
 #include <math.h>
 #include "headers/menu.h"
+#include <algorithm>
 #include <stdlib.h>
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
