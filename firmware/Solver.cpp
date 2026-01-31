@@ -8,7 +8,6 @@
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
 
-#include <algorithm>
 #include <cstdio>
 #include "headers/Solver.h"
 #include <stdio.h>
