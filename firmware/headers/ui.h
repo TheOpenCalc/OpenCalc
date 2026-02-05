@@ -113,52 +113,52 @@ const uint8_t font5x7[] = {
 #define FRONTGROUND_COLOR 0xdefb
 #define FRONTGROUND_COLOR_BIS 0xce79
 
-const int row_pins[ROWS] = { 8, 9, 10, 11 ,12,13,14,15};  // GPIO 0–5 : lignes (output)
-const int col_pins[COLS] = { 0, 1, 2, 3, 4}; // GPIO 6–11 : colonnes (input)
+const int row_pins[ROWS] = {8, 9, 10, 11, 12, 13, 14, 15};  // GPIO 0–5 : lignes (output)
+const int col_pins[COLS] = {0, 1, 2, 3, 4}; // GPIO 6–11 : colonnes (input)
 
 const int HISTORY_SIZE = 50;
 
 const int SCREEN_HEIGHT = 240;
 const int SCREEN_WIDTH = 320;
 
-struct fill_box_s{
+struct fill_box_s {
     int border;
     char *text;
     int t_size;
-    int x,y;
-    int h,w;
+    int x, y;
+    int h, w;
     int curso_pos;
     uint16_t color;
 };
 
 
-struct text_box_s{
+struct text_box_s {
     int border;
     char *text;
     int t_size;
-    int x,y;
-    int h,w;
+    int x, y;
+    int h, w;
     bool transparent;
     uint16_t col;
 };
 
-struct pontentiometer_s{
+struct pontentiometer_s {
     int border;
-    int x,y;
-    int h,w;
+    int x, y;
+    int h, w;
     int grad;
-    char * name;
+    char *name;
     int val;
     bool transparent_back;
 };
 
-int min(int a,int b);
+int min(int a, int b);
 
-int max(int a,int b);
+int max(int a, int b);
 
 
-enum touches  {
-        ZERO,
+enum touches {
+    ZERO,
     COMA,
     PI,
     NOT2,
@@ -171,7 +171,7 @@ enum touches  {
     FOUR,
     FIVE,
     SIX,
-  MINUS,
+    MINUS,
     DIVIDE,
     SEVEN,
     EIGHT,
@@ -183,55 +183,68 @@ enum touches  {
     TAN,
     SQRT,
     POW,
-     LN,
+    LN,
     BACK,
     E,
     DOWN,
     RIGHT,
-     X,
+    X,
     EQUAL,
     PASS2,
- LEFT,
+    LEFT,
     OK,
-
     PASS3,
     SECOND,
     PASS4,
     UP,
-   
-    
-  
-   
-   
 };
-void ili_cmd(uint8_t cmd) ;
-void ili_data(uint8_t data) ;
-void ili_reset() ;
-void ili_init() ;
-void fill_screen(uint16_t color) ;
-void fill_rect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color) ;
-void draw_char(uint16_t x, uint16_t y, char * c, uint16_t color, uint16_t bg, uint8_t size);
 
-void display_battery(uint16_t x, uint16_t y, int level );
+void ili_cmd(uint8_t cmd);
+
+void ili_data(uint8_t data);
+
+void ili_reset();
+
+void ili_init();
+
+void fill_screen(uint16_t color);
+
+void fill_rect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color);
+
+void draw_char(uint16_t x, uint16_t y, char *c, uint16_t color, uint16_t bg, uint8_t size);
+
+void display_battery(uint16_t x, uint16_t y, int level);
 
 typedef struct fill_box_s fill_box;
+
 typedef struct text_box_s text_box;
+
 typedef struct pontentiometer_s pontentiometer;
-fill_box* create_fill_box(int x,int y, int h, int w, int border);
+
+fill_box *create_fill_box(int x, int y, int h, int w, int border);
 
 void axis();
-void update_fill_box(fill_box *in,int event,bool snd);
-void display_equation( char * in ,int input_size, int x, int y,int SIZE,int cursor_pos);
 
-void display_text_box(text_box * in,int shift_y,bool is_selected);
-text_box* create_text_box(int x,int y, int h, int w, int border,bool transparent);
-void display_fill_box(fill_box * in,int shift_y,bool is_selected,int pos,char prefix);
-void draw_char(uint16_t x, uint16_t y, char * c, uint16_t color, uint16_t bg, uint8_t size) ;
+void update_fill_box(fill_box *in, int event, bool snd);
+
+void display_equation(char *in, int input_size, int x, int y, int SIZE, int cursor_pos);
+
+void display_text_box(text_box *in, int shift_y, bool is_selected);
+
+text_box *create_text_box(int x, int y, int h, int w, int border, bool transparent);
+
+void display_fill_box(fill_box *in, int shift_y, bool is_selected, int pos, char prefix);
+
+void draw_char(uint16_t x, uint16_t y, char *c, uint16_t color, uint16_t bg, uint8_t size);
+
 void blink_cursor();
-void display_potentiometer(pontentiometer * in,bool is_selected);
-pontentiometer* create_potentiometer(int x,int y, int h, int w, int border,char * name,int grad,bool transparent_back);
 
-void increment_potentiometer(pontentiometer* p );
-void decrement_potentiometer(pontentiometer* p );
+void display_potentiometer(pontentiometer *in, bool is_selected);
+
+pontentiometer *create_potentiometer(int x, int y, int h, int w, int border, char *name, int grad, bool transparent_back);
+
+void increment_potentiometer(pontentiometer *p);
+
+void decrement_potentiometer(pontentiometer *p);
 
 #endif

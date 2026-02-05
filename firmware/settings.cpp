@@ -11,49 +11,40 @@ void settings()
     int cursor_pos = 0;
     int last_pressed = scan_keypad();
     int max_size = 0;
-    while (true)
-    {
-
-        switch (last_pressed)
-        {
-        case DOWN:
+    while (true) {
+        switch (last_pressed) {
+        case DOWN :
             cursor_pos = min(max_size, cursor_pos + 1);
             break;
-        case UP:
+        case UP :
             cursor_pos = max(0, cursor_pos - 1);
             break;
-        case RIGHT:
-            switch (cursor_pos)
-            {
-            case 0:
+        case RIGHT :
+            switch (cursor_pos) {
+            case 0 :
                 increment_potentiometer(luminosity);
                 break;
-
-            default:
+            default :
                 break;
             }
-        case LEFT:
-            switch (cursor_pos)
-            {
-            case 0:
+        case LEFT :
+            switch (cursor_pos) {
+            case 0 :
                 decrement_potentiometer(luminosity);
                 break;
-
-            default:
+            default :
                 break;
             }
             break;
-
-        case BACK:
+        case BACK :
             return;
             break;
-        default:
+        default :
             break;
         }
     }
     last_pressed = scan_keypad();
-    while (last_pressed == -1)
-    {
+    while (last_pressed == -1) {
         last_pressed = scan_keypad();
     }
     sleep_ms(150);
