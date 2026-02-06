@@ -14,64 +14,6 @@
 int x_cursor = 0;
 int y_cursor = 0;
 
-#ifndef OPENCALC_WASM
-
-void init_keypad()
-{
-    for (int r = 0; r < ROWS; r++) {
-        gpio_init(row_pins[r]);
-        gpio_set_dir(row_pins[r], GPIO_OUT);
-        gpio_put(row_pins[r], 1); // inactif (HIGH)
-    }
-
-    for (int c = 0; c < COLS; c++) {
-        gpio_init(col_pins[c]);
-        gpio_set_dir(col_pins[c], GPIO_IN);
-        gpio_pull_up(col_pins[c]); // pull-up activé
-    }
-}
-
-int scan_keypad()
-{
-    for (int row = 0; row < ROWS; row++) {
-        // Activer la ligne courante (LOW)
-        gpio_put(row_pins[row], 0);
-        sleep_ms(20);
-        // Lire chaque colonne
-        for (int col = 0; col < COLS; col++) {
-            if (gpio_get(col_pins[col]) == 0) {  // touche détectée (LOW)
-                // Rétablir la ligne avant de retourner
-                gpio_put(row_pins[row], 1);
-                return row * COLS + col;  // bouton 0 à 35
-            }
-        }    
-
-        // Désactiver la ligne (remettre HIGH)
-        gpio_put(row_pins[row], 1);
-    }
-    return -1; // aucune touche
-}
-
-#endif
-
-void toggle (bool *snd)
-{
-    *snd = !(*snd);
-    return;
-}
-
-double **init_2d_Mat(int L, int H, double default_value)
-{
-    double **a = (double**) malloc(sizeof(double*) * H);
-    for (int i = 0; i < H; i++) {
-        a[i] = (double*) malloc(sizeof(double) * L);
-        for(int j = 0; j < L; j++) {
-            a[i][j] = default_value;
-        }
-    }
-    return a;
-}
-
 int main()
 {
     stdio_init_all();
@@ -127,7 +69,7 @@ int main()
 
     while (true) {
         for (int i = 0; i < 6; i++) {
-            display_text_box(menu_button[i], 0, i == select_item_menu);
+            display_text_box(menu_button[i], 0, -77, i == select_item_menu);
         }
         display_battery(222, 286, 2);
         draw_char(230, 160 - 9 * 5, "Main menu", 0x0000, BACKGROUND_COLOR, 2);

@@ -166,8 +166,9 @@ int Sequencer()
                 }
             }
         }
-        display_text_box(Formula, 0, !show_graph && selected_fill_box == -1);
-        display_text_box(Graph, 0, show_graph && selected_fill_box == -1);
+
+        display_text_box(Formula,0,0,!show_graph && selected_fill_box==-1);
+        display_text_box(Graph,0,0,show_graph&& selected_fill_box==-1);
         
         last_pressed = scan_keypad();
         while (last_pressed == -1) {

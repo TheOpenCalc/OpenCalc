@@ -2,6 +2,9 @@
 #define UI_H
 #include <stdint.h>
 
+#include "Tools.h"
+
+
 const uint8_t font5x7[] = {
   0x00,0x00,0x00,0x00,0x00, // ' '
   0x00,0x00,0x5F,0x00,0x00, // '!'
@@ -106,15 +109,11 @@ const uint8_t font5x7[] = {
 #define PIN_SCK    18
 #define PIN_MOSI   19
 
-#define ROWS 8
-#define COLS 5
 
 #define BACKGROUND_COLOR 0xf7de
 #define FRONTGROUND_COLOR 0xdefb
 #define FRONTGROUND_COLOR_BIS 0xce79
 
-const int row_pins[ROWS] = {8, 9, 10, 11, 12, 13, 14, 15};  // GPIO 0–5 : lignes (output)
-const int col_pins[COLS] = {0, 1, 2, 3, 4}; // GPIO 6–11 : colonnes (input)
 
 const int HISTORY_SIZE = 50;
 
@@ -132,14 +131,16 @@ struct fill_box_s {
 };
 
 
-struct text_box_s {
+struct text_box_s{
     int border;
     char *text;
     int t_size;
-    int x, y;
-    int h, w;
+    int x,y;
+    int h,w;
+    int display_text_size;
     bool transparent;
     uint16_t col;
+    char allign ;
 };
 
 struct pontentiometer_s {
@@ -157,8 +158,9 @@ int min(int a, int b);
 int max(int a, int b);
 
 
-enum touches {
-    ZERO,
+
+enum touches  {
+        ZERO,
     COMA,
     PI,
     NOT2,
@@ -171,7 +173,7 @@ enum touches {
     FOUR,
     FIVE,
     SIX,
-    MINUS,
+  MINUS,
     DIVIDE,
     SEVEN,
     EIGHT,
@@ -183,20 +185,30 @@ enum touches {
     TAN,
     SQRT,
     POW,
-    LN,
+     LN,
     BACK,
     E,
     DOWN,
     RIGHT,
-    X,
-    EQUAL,
-    PASS2,
-    LEFT,
+     X,
+    TOOLS,
+        EQUAL,
+ LEFT,
     OK,
     PASS3,
     SECOND,
     PASS4,
-    UP,
+    UP,   
+    END_KEYS,
+    FACT,
+    COSH,
+    SINH,
+    TANH,
+    ACOSH,
+    ASINH,
+    ATANH,
+    
+   
 };
 
 void ili_cmd(uint8_t cmd);
@@ -229,7 +241,7 @@ void update_fill_box(fill_box *in, int event, bool snd);
 
 void display_equation(char *in, int input_size, int x, int y, int SIZE, int cursor_pos);
 
-void display_text_box(text_box *in, int shift_y, bool is_selected);
+void display_text_box(text_box *in, int shift_y, int shift_text, bool is_selected);
 
 text_box *create_text_box(int x, int y, int h, int w, int border, bool transparent);
 
@@ -246,5 +258,11 @@ pontentiometer *create_potentiometer(int x, int y, int h, int w, int border, cha
 void increment_potentiometer(pontentiometer *p);
 
 void decrement_potentiometer(pontentiometer *p);
+
+int menu_tools();
+
+int menu_proba();
+
+int menu_trigo();
 
 #endif

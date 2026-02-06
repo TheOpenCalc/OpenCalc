@@ -6,6 +6,8 @@
 #include "hardware/spi.h"
 #include <stdio.h>
 #include <cstdlib>
+#include "Tools.h"
+
 
 int Calc()
 {

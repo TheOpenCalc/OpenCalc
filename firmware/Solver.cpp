@@ -164,8 +164,8 @@ int Solver()
             }
         }
 
-        display_text_box(Equations, 0, !show_solution && selected_fill_box == -1);
-        display_text_box(Solution, 0, show_solution && selected_fill_box == -1);
+        display_text_box(Equations, 0,0, !show_solution && selected_fill_box == -1);
+        display_text_box(Solution,0, 0, show_solution && selected_fill_box == -1);
         last_pressed = scan_keypad();
 
         while (last_pressed == -1) {

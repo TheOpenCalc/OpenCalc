@@ -74,7 +74,7 @@ void display_table()
         }        
         for (int i = max(C - 10, 0); i < min(C + 10, 32); i++) {
             for (int j = 0; j < hauteur[i]; j++) {
-                display_text_box(table[i][j], 0, C == i && L == j);
+              display_text_box(table[i][j],0,0,C==i && L==j);
             }
         }
         
