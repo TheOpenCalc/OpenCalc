@@ -10,16 +10,19 @@ static int g_key_queue[kQueueSize];
 static int g_key_head = 0;
 static int g_key_tail = 0;
 
-static bool queue_is_empty() {
+static bool queue_is_empty()
+{
     return g_key_head == g_key_tail;
 }
 
-static bool queue_is_full() {
+static bool queue_is_full()
+{
     return ((g_key_tail + 1) % kQueueSize) == g_key_head;
 }
 
 extern "C" {
-EMSCRIPTEN_KEEPALIVE void opencalc_key_down(int key) {
+EMSCRIPTEN_KEEPALIVE void opencalc_key_down(int key)
+{
     if (queue_is_full()) {
         return;
     }
@@ -28,11 +31,13 @@ EMSCRIPTEN_KEEPALIVE void opencalc_key_down(int key) {
 }
 }
 
-void init_keypad() {
+void init_keypad()
+{
     // No-op in the web build; input comes from JS.
 }
 
-int scan_keypad() {
+int scan_keypad()
+{
     if (queue_is_empty()) {
         // Yield to the browser; keeps busy loops from freezing the page.
         sleep_ms(16);
