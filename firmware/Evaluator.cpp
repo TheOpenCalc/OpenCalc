@@ -7,58 +7,20 @@
 #include "headers/stack.h"
 #include "headers/Evaluator.h"
 
-double eval(operation *in)
+double fact_r(double in)
 {
-    operation *el1 = (operation*) in->el1;
-    operation *el2 = (operation*) in->el2;
-    switch (in->operator_type)
-    {
-    case 'n' :
-        return *((double*) (el1));
-        break;
-    case '+' :
-        return (eval(el1) + eval(el2));
-        break;
-    case '-' :
-        return (eval(el1) - eval(el2));
-        break;
-    case '*' :
-        return (eval(el1) * eval(el2));
-        break;
-    case '/' :
-        return (eval(el1) / eval(el2));
-        break;
-    case 'c' :
-        return (cos(eval(el1)));
-        break;
-    case 's' :
-        return (sin(eval(el1)));
-        break;
-    case 't' :
-        return (tan(eval(el1)));
-        break;
-    case 'u' :
-        return (acos(eval(el1)));
-        break;
-    case 'v' :
-        return (asin(eval(el1)));
-        break;
-    case 'w' :
-        return (atan(eval(el1)));
-        break;
-    case 'R' :
-        return (sqrt(eval(el1)));
-        break;
-    case '^' :
-        return (pow(eval(el1), eval(el2)));
-        break;
-    default:
-        break;
-    }
+    if (in == 0)
+        return 1;
+    return fact_r(in - 1) * in;
 }
 
-
-
+double fact(double in)
+{
+    if (in - (int)in > 0.05 || in < 0)
+        return 0;
+    else
+        return (double)fact_r((int)in);
+}
 int double_to_string_scientific(double in, char *out)
 {
     char buffer[256];
@@ -135,7 +97,7 @@ int count_yarded(token *in, int n)
 
 bool higher_priority(char a, char b)
 {
-    if (a == '^') {
+    if (a == '^'|| a=='!') {
         return true;
     }
     if (b == '^') {
@@ -152,7 +114,7 @@ bool higher_priority(char a, char b)
 
 token *shunting_yard(token *input, int n)
 {
-    char *function = (char*) "lrcstuvw";
+    char *function = (char*) "lrcstuvwfghijk!";
     char *operato = (char*) "+-*/^";
     char *letters = (char*) "ABCDEFGHIJKLMNOPQRSTUVWYZ";
     token *output = (token*) malloc(sizeof(token) * 20);
@@ -272,6 +234,27 @@ double evaluate_npi(token *in, int n, double x, int letter)
             case 'w' :
                 a = atan(a);
                 break;
+            case 'f':
+                a = cosh(a);
+                break;
+            case 'g':
+                a = sinh(a);
+                break;
+            case 'h':
+                a = tanh(a);
+                break;
+            case 'i':
+                a = acosh(a);
+                break;
+            case 'j':
+                a = asinh(a);
+                break;
+            case 'k':
+                a = atanh(a);
+                break;
+            case '!':
+                a = fact(a);
+                break;
             case 'p' :
                 push(&nb_stack, a);
                 a = 3.14159265358979323846264338327;
@@ -361,10 +344,31 @@ double evaluate_npi(token *in, int n)
                 push(&nb_stack, a);
                 a = 2.71828182845904523536;   
                 break;
+            case 'f':
+                a = cosh(a);
+                break;
+            case 'g':
+                a = sinh(a);
+                break;
+            case 'h':
+                a = tanh(a);
+                break;
+            case 'i':
+                a = acosh(a);
+                break;
+            case 'j':
+                a = asinh(a);
+                break;
+            case 'k':
+                a = atanh(a);
+                break;
+            case '!':
+                a = fact(a);
+                break;
             default :
                 break;
             }
-            push(&nb_stack, a);
+            	push(&nb_stack, a);
         }  
     }
     a = peek(&nb_stack);
@@ -391,10 +395,18 @@ token *parse_string_to_token(char *in, int n, int *tokenized_size)
         *tokenized_size = 1;
         return out;
     }
-    token *out = (token*) malloc(sizeof(token) * n);
+    int OUT_S = n;
+    for (int i = 0; i < n; i++)
+    {
+        if (in[i] == '!')
+        {
+            OUT_S += 2;
+        }
+    }
+    token *out = (token *)malloc(sizeof(token) * (OUT_S));
     int out_size = 0;
     char *nb = (char*) "0123456789";
-    char *funop = (char*) "+-*/rcstuvwel)pX=^";
+    char *funop = (char*) "+-*/rcstuvwfghijkel)pX=^";
     token cur;
     cur.value = 0;
     cur.type = 'n';
@@ -412,6 +424,40 @@ token *parse_string_to_token(char *in, int n, int *tokenized_size)
                 out[out_size].type = 'n';
                 cur.value = 0;
                 out_size++;
+            }
+        }
+        
+        if (in[i] == '!')
+        {
+            int pronf = 0;
+            int k = out_size - 1;
+            do
+            {
+                if (out[k].type == '(')
+                    pronf++;
+                if (out[k].type == ')')
+                    pronf--;
+                k--;
+            } while (k > 0 && pronf != 0);
+
+            if (k == out_size - 2)
+            { // nombre juste avant la factorielle
+
+                token temp;
+                temp.h = out[out_size - 1].h;
+                temp.type = out[out_size - 1].type;
+                temp.value = out[out_size - 1].value;
+                out[out_size - 1].type = '!';
+                out[out_size - 1].value = (int)'!' - 'a';
+                out[out_size].type = '(';
+                out[out_size].value = (int)'(' - 'a';
+
+                out[out_size + 1].type = temp.type;
+                out[out_size + 1].value = temp.value;
+
+                out[out_size + 2].type = ')';
+                out[out_size + 2].value = (int)')' - 'a';
+                out_size += 3;
             }
         }
         if (i < n && in[i] == ',' || in[i] == '.') {

@@ -32,7 +32,7 @@ void display_table()
             table[i][j]->w = 30;
             table[i][j]->border = 0;
             table[i][j]->text = (char*) malloc(sizeof(char) * 3);
-            table[i][j]->t_size = 2;
+            table[i][j]->t_size = 1;
 
             if (k < 6) {
                 table[i][j]->col = 0xf000;
@@ -59,7 +59,7 @@ void display_table()
             }
 
             if (k < 118) {
-                table[i][j]->text = name[k];
+                table[i][j]->text = (char*)malloc(sizeof(char)*2);
             }
             k++;
         }
@@ -74,7 +74,7 @@ void display_table()
         }        
         for (int i = max(C - 10, 0); i < min(C + 10, 32); i++) {
             for (int j = 0; j < hauteur[i]; j++) {
-                display_text_box(table[i][j], 0, C == i && L == j);
+              display_text_box(table[i][j],0,0,C==i && L==j);
             }
         }
         

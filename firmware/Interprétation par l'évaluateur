@@ -1,0 +1,65 @@
+Interprétation par l'évaluateur des caractères ascii:
+
+!: Factoriel
+"
+#
+$
+%
+&
+'
+(): Parenthèses
+*:Multiplication
++:Adition
+,:Virgule
+-:Soustraction:
+.:Virgule
+/:Division
+
+0123456789:Chiffres
+:
+;
+<
+=
+>: Egalite
+?
+@
+ABCDEFGHIJKLMNOPQRSTUVWXYZ:Inconnues équations
+[
+\
+]
+^: Puissances
+_
+`
+a
+b
+c: Cosinus
+d
+e: e =2.71
+f :Cosinus h
+g: Sinus h
+h: tangente h
+i : ArcCosinus h
+j : ArcSinus h
+k : ArcTangente h
+l: log neperien
+m
+n
+o
+p: Pi 3.1415
+q
+r: racinne carré
+s: Sinus
+t: tangente
+u: ArcCosinus
+v: ArcSinus
+w: ArcTangente
+x
+y
+z
+{
+|
+}
+~
+
+
+9 function remaining ;

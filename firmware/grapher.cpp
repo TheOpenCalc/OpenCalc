@@ -128,7 +128,7 @@ void graph(double cursor_pos, token *function, double x_min, double x_max, doubl
         t->text[1] = ':';
         t->text[2] = ' ';
         free(temp);
-        display_text_box(t, 0, false);
+        display_text_box(t, 0, 0, false);
 
         text_box *tb = create_text_box(160, 0, 20, 160, 2, false);
         char *tempb = (char*) malloc(sizeof(char) * 100);
@@ -142,7 +142,8 @@ void graph(double cursor_pos, token *function, double x_min, double x_max, doubl
         tb->text[1] = ':';
         tb->text[2] = ' ';
         free(tempb);
-        display_text_box(tb, 0, false);
+        display_text_box(tb, 0, 0, false);
+
 
         // sf::Vector2f s(6.0f, 6.0f);
         // sf::RectangleShape rect(s);
@@ -219,8 +220,9 @@ int Grapher()
                 }
             }
         }
-        display_text_box(Formula, 0, !show_graph && selected_fill_box == -1);
-        display_text_box(Graph, 0, show_graph && selected_fill_box == -1);
+
+        display_text_box(Formula,0,0,!show_graph && selected_fill_box==-1);
+        display_text_box(Graph,0,0,show_graph&& selected_fill_box==-1);
      
         last_pressed=scan_keypad();
         while (last_pressed == -1) {

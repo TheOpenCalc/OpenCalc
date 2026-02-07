@@ -6,6 +6,8 @@
 #include "hardware/spi.h"
 #include <stdio.h>
 #include <cstdlib>
+#include "Tools.h"
+
 
 int Calc()
 {
@@ -40,7 +42,7 @@ int Calc()
             last_pressed = scan_keypad();
         }
 
-        sleep_ms(150);
+        sleep_ms(50);
 
         switch (last_pressed) {
         case SECOND :
@@ -92,6 +94,10 @@ int Calc()
                 return 0;
             }
             break;
+          case TOOLS:{
+            
+            update_fill_box(history[cur_last_history],menu_tools(),snd);
+        }
         default:
             update_fill_box(history[cur_last_history], last_pressed,snd);
             break;

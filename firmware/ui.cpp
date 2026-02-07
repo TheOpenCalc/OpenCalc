@@ -224,6 +224,7 @@ void draw_char(uint16_t x, uint16_t y, char *c, uint16_t color, uint16_t bg, uin
     }
 }
 
+
 void display_battery(uint16_t x, uint16_t y, int level)
 {
     fill_rect(x + 1, y + 1, 6 * level, 13, 0x1dc0);
@@ -286,6 +287,8 @@ fill_box *create_fill_box(int x, int y, int h, int w, int border)
 text_box *create_text_box(int x, int y, int h, int w, int border, bool transparent)
 {
     text_box *out = (text_box*) malloc(sizeof(text_box));
+    out->allign = 'c';
+    out->display_text_size = 1;
     out->transparent = transparent;
     out->x = x;
     out->y = y;
@@ -304,7 +307,7 @@ text_box *create_text_box(int x, int y, int h, int w, int border, bool transpare
 
 pontentiometer *create_potentiometer(int x, int y, int h, int w, int border, char *name, int grad, bool transparent_back)
 {
-    pontentiometer *out = (pontentiometer*) malloc(sizeof(pontentiometer));
+    pontentiometer *out = (pontentiometer *)malloc(sizeof(pontentiometer));
     out->transparent_back = transparent_back;
     out->x = x;
     out->y = y;
@@ -319,28 +322,33 @@ pontentiometer *create_potentiometer(int x, int y, int h, int w, int border, cha
 
 void increment_potentiometer(pontentiometer *p)
 {
+    printf("%i %i\n", p->val, p->grad);
     p->val = min(p->val + 1, p->grad);
+    printf("%i %i\n", p->val, p->grad);
 }
 
 void decrement_potentiometer(pontentiometer *p)
 {
     p->val = max(p->val - 1, 0);
 }
-
-void display_text_box(text_box *in, int shift_y, bool is_selected)
+void display_text_box(text_box *in, int shift_y, int shift_text, bool is_selected)
 {
-    if (in == nullptr) {
+    printf("L: %c\n", in->allign);
+    if (in == nullptr)
         return;
+
+    if (!is_selected)
+        fill_rect(in->y + 1 + shift_y, in->x + 1, in->h - 2, in->w - 2, in->col);
+    else
+        fill_rect(in->y + shift_y, in->x, in->h, in->w, 0xfff0);
+    if (in->allign == 'c')
+    {
+        draw_char(in->y + shift_text + shift_y + in->h - 10, (in->w - in->t_size * 5) / 2 + in->x, in->text, 0x0000, 0xFF, in->display_text_size);
     }
-
-    if (!is_selected) {
-        fill_rect(in->y, in->x, in->h, in->w, in->col);
-    } else {
-        fill_rect(in->y, in->x, in->h, in->w, 0xfff0);
+    else if (in->allign == 'r')
+    {
+        draw_char(in->y + shift_text + shift_y + in->h - 10, in->x + 4, in->text, 0x0000, 0xFF, in->display_text_size);
     }
-
-    draw_char(in->y + shift_y + in->h - 10, (in->w - in->t_size * 7) / 2 + in->x, in->text, 0x0000, 0xFF, 1);
-
     fill_rect(in->y + shift_y, in->x + 2, 1, in->w - 4, 0x0000);
     fill_rect(in->y + shift_y + 2, in->x, in->h - 4, 1, 0x0000);
 
@@ -359,25 +367,78 @@ void display_text_box(text_box *in, int shift_y, bool is_selected)
     fill_rect(in->y + shift_y + 1, in->x + in->w - 2, 1, 1, 0x0000);
 
     fill_rect(in->y + shift_y + in->h - 2, in->x + in->w - 2, 1, 1, 0x0000);
-    /*   sf::Vector2f s(in->w, in->h);
+    /*   sf::Vector2f s(in->w,in->h);
         sf::RectangleShape border(s);
-        border.setPosition(in->x, in->y+shift_y);
+        border.setPosition(in->x,in->y+shift_y);
         border.setFillColor(sf::Color::Black);
 
-        sf::Vector2f sb(in->w-2 * in->border, in->h-2 * in->border);
+        sf::Vector2f sb(in->w-2*in->border,in->h-2*in->border);
         sf::RectangleShape inside(sb);
-        inside.setPosition(in->x + in->border, in->y + in->border + shift_y);
-        if (!in->transparent) {
-            if (!is_selected) {
+        inside.setPosition(in->x+in->border,in->y+in->border+shift_y);
+        if(!in->transparent){
+            if(!is_selected){
                 inside.setFillColor(sf::Color::White);
-            } else {
-                inside.setFillColor(sf::Color{190, 190, 190});
-            }
+            }else
+                inside.setFillColor(sf::Color{ 190, 190, 190});
             window->draw(border);
             window->draw(inside);
         }
 
         */
+}
+
+
+void draw_buffer(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t *buffer)
+{
+    if ((x >= SCREEN_HEIGHT) || (y >= SCREEN_WIDTH))
+        return;
+    if ((x + w - 1) >= SCREEN_HEIGHT)
+        w = SCREEN_HEIGHT - x;
+    if ((y + h - 1) >= SCREEN_WIDTH)
+        h = SCREEN_WIDTH - y;
+
+    // Définir la zone de dessin
+    ili_cmd(0x2A); // Set column address
+    ili_data(x >> 8);
+    ili_data(x & 0xFF);
+    ili_data((x + w - 1) >> 8);
+    ili_data((x + w - 1) & 0xFF);
+
+    ili_cmd(0x2B); // Set row address
+    ili_data(y >> 8);
+    ili_data(y & 0xFF);
+    ili_data((y + h - 1) >> 8);
+    ili_data((y + h - 1) & 0xFF);
+
+    ili_cmd(0x2C); // Memory write
+
+    gpio_put(PIN_DC, 1);
+    gpio_put(PIN_CS, 0);
+
+// Envoyer le buffer en batch pour ne pas saturer la mémoire
+#define BUF_PIXELS 1024
+    static uint8_t spi_buf[BUF_PIXELS * 2];
+
+    int total_pixels = w * h;
+    int idx = 0;
+
+    while (total_pixels > 0)
+    {
+        int batch = (total_pixels > BUF_PIXELS) ? BUF_PIXELS : total_pixels;
+
+        // Convertir les pixels du buffer 16 bits en tableau d'octets pour SPI
+        for (int i = 0; i < batch; ++i)
+        {
+            uint16_t color = buffer[idx++];
+            spi_buf[2 * i] = color >> 8;
+            spi_buf[2 * i + 1] = color & 0xFF;
+        }
+
+        spi_write_blocking(spi0, spi_buf, batch * 2);
+        total_pixels -= batch;
+    }
+
+    gpio_put(PIN_CS, 1);
 }
 
 void display_fill_box(fill_box *in, int shift_y, bool is_selected, int pos, char prefix)
@@ -565,6 +626,72 @@ void update_fill_box(fill_box *in, int event, bool snd)
                 in->text[in->t_size] = '\0';
             }
             break;
+               case FACT:
+
+                in->text[in->curso_pos] = '!';
+                in->curso_pos++;
+
+                in->t_size++;
+                break;
+            case COSH:
+
+                in->text[in->curso_pos] = 'f';
+                in->text[in->curso_pos + 1] = '(';
+                in->text[in->curso_pos + 2] = ')';
+                in->curso_pos += 2;
+
+                in->t_size += 3;
+                break;
+
+            case SINH:
+
+                in->text[in->curso_pos] = 'g';
+                in->text[in->curso_pos + 1] = '(';
+                in->text[in->curso_pos + 2] = ')';
+                in->curso_pos += 2;
+
+                in->t_size += 3;
+                break;
+
+            case TANH:
+
+                in->text[in->curso_pos] = 'h';
+                in->text[in->curso_pos + 1] = '(';
+                in->text[in->curso_pos + 2] = ')';
+                in->curso_pos += 2;
+
+                in->t_size += 3;
+                break;
+
+            case ACOSH:
+
+                in->text[in->curso_pos] = 'i';
+                in->text[in->curso_pos + 1] = '(';
+                in->text[in->curso_pos + 2] = ')';
+                in->curso_pos += 2;
+
+                in->t_size += 3;
+                break;
+
+            case ASINH:
+
+                in->text[in->curso_pos] = 'j';
+                in->text[in->curso_pos + 1] = '(';
+                in->text[in->curso_pos + 2] = ')';
+                in->curso_pos += 2;
+
+                in->t_size += 3;
+                break;
+
+            case ATANH:
+
+                in->text[in->curso_pos] = 'k';
+                in->text[in->curso_pos + 1] = '(';
+                in->text[in->curso_pos + 2] = ')';
+                in->curso_pos += 2;
+
+                in->t_size += 3;
+                break;
         default:
             break;
         }
@@ -724,6 +851,72 @@ void update_fill_box(fill_box *in, int event, bool snd)
                 in->text[in->t_size] = '\0';
             }
             break;
+               case FACT:
+
+                in->text[in->curso_pos] = '!';
+                in->curso_pos++;
+
+                in->t_size++;
+                break;
+            case COSH:
+
+                in->text[in->curso_pos] = 'f';
+                in->text[in->curso_pos + 1] = '(';
+                in->text[in->curso_pos + 2] = ')';
+                in->curso_pos += 2;
+
+                in->t_size += 3;
+                break;
+
+            case SINH:
+
+                in->text[in->curso_pos] = 'g';
+                in->text[in->curso_pos + 1] = '(';
+                in->text[in->curso_pos + 2] = ')';
+                in->curso_pos += 2;
+
+                in->t_size += 3;
+                break;
+
+            case TANH:
+
+                in->text[in->curso_pos] = 'h';
+                in->text[in->curso_pos + 1] = '(';
+                in->text[in->curso_pos + 2] = ')';
+                in->curso_pos += 2;
+
+                in->t_size += 3;
+                break;
+
+            case ACOSH:
+
+                in->text[in->curso_pos] = 'i';
+                in->text[in->curso_pos + 1] = '(';
+                in->text[in->curso_pos + 2] = ')';
+                in->curso_pos += 2;
+
+                in->t_size += 3;
+                break;
+
+            case ASINH:
+
+                in->text[in->curso_pos] = 'j';
+                in->text[in->curso_pos + 1] = '(';
+                in->text[in->curso_pos + 2] = ')';
+                in->curso_pos += 2;
+
+                in->t_size += 3;
+                break;
+
+            case ATANH:
+
+                in->text[in->curso_pos] = 'k';
+                in->text[in->curso_pos + 1] = '(';
+                in->text[in->curso_pos + 2] = ')';
+                in->curso_pos += 2;
+
+                in->t_size += 3;
+                break;
         default :
             break;
         }
@@ -770,23 +963,33 @@ void display_equation(char *in, int input_size, int x, int y, int SIZE, int curs
             x_cursor = x;
             y_cursor = y + 5 + pos + 7;
         }
-        if (is_in(in[i], "0123456789,.+-*()/Xx^=fghijkABCDEFGHIJKLMNOPQRSTUVWYZ")) {
+        if (is_in(in[i], "0123456789,.+-*()/Xx^=ABCDEFGHIJKLMNOPQRSTUVWYZ!")) {
             temp[0] = in[i];
             draw_char(x, y + 5 + pos, temp, 0X0000, 0X0000, SIZE);
             pos += 5.5 * SIZE;
-        } else if (is_in(in[i], "uvw")) {
+        } else if (is_in(in[i], "uvwijkfghcst")) {
+        if (is_in(in[i],"uvwijk")){
             temp[0] = 'a';
-            pos += 9.5 * SIZE;
             draw_char(x, y + 5 + pos, temp, 0X0000, 0X0000, 2);
-            pos += 6 * SIZE;
-            if (in[i] == 'u') {
+            pos += 5.5 * SIZE;
+            }
+            if (is_in(in[i],"cfui")) {
                 draw_char(x, y + 5 + pos, cos, 0X0000, 0X0000, 2);
             }
-            if (in[i] == 'v') {
+            if (is_in(in[i], "sgvj")) {
                 draw_char(x, y + 5 + pos, sin, 0X0000, 0X0000, 2);
             }
-            if (in[i] == 'w') {
+            if (is_in(in[i] ,"twhk")) {
                 draw_char(x, y + 5 + pos, tan, 0X0000, 0X0000, 2);
+            }
+            if(is_in(in[i],"uvwcst")){
+              pos+=15.5*SIZE;
+            }
+            else if(is_in(in[i],"ijkfgh")){
+              pos+=15.5*SIZE;
+                      temp[0] = 'h';
+            draw_char(x, y + 5 + pos, temp, 0X0000, 0X0000, 2);
+            pos += 5.5 * SIZE;
             }
         } else if (in[i] == 'c') {
             draw_char(x, y + 5 + pos, cos, 0X0000, 0X0000, 2);
@@ -833,7 +1036,7 @@ void display_equation(char *in, int input_size, int x, int y, int SIZE, int curs
              }
          }*/
         else if (in[i] == 'p') {
-#ifdef OPENCALC_WASM
+#ifdef OPENCALC_WASM      /// Pourquoi ????
             temp[0] = 'p';
 #else
             temp[0] = 'π';
@@ -863,11 +1066,6 @@ void display_equation(char *in, int input_size, int x, int y, int SIZE, int curs
                 display_equation(&in[i + 2], j - 3, x + pos, y - 3, 2, cursor_pos);
                 i += j - 1;
                 pos += SIZE * 4 * (j - 2);
-                // sf::RectangleShape rectangle(sf::Vector2f(120, 50));
-                // rectangle.setSize(sf::Vector2f(8 * (j - 2), 2));
-                // rectangle.setPosition({x + 5, y + 4});
-                // rectangle.setFillColor(sf::Color(20, 20, 20));
-                // window->draw(rectangle);
             }
         } else if (in[i] == 'l') {
             pos += 2;
@@ -916,49 +1114,322 @@ void blink_cursor()
     };
 }
 
-/*
-
-coord display_tree_expr(operation *in)
+void draw_image(int x, int y, int h, int w, uint16_t *img, uint16_t bck)
 {
-    operation *el1 = (operation*) in->el1;
-    operation *el2 = (operation*) in->el1;
-    int pos = 0;
-    switch (in->operator_type) {
-    case '+' :
-        display_tree_expr()
-        break;
-    default :
-        break;
+    for (int i = 0; i < w; i++)
+    {
+        for (int j = 0; j < h; j++)
+        {
+            if (img[i * h + j] != bck)
+                fill_rect(x + h - i, y + j, 1, 1, img[i * h + j]);
+        }
     }
 }
-*/
+
 
 void display_potentiometer(pontentiometer *in, bool is_selected)
+
 {
-    if (in == nullptr) {
+    if (in == nullptr)
         return;
+
+    if (!in->transparent_back)
+    {
+        int col = 0;
+        if (!is_selected)
+        {
+            col = FRONTGROUND_COLOR;
+        }
+        else
+            col = FRONTGROUND_COLOR_BIS;
+
     }
 
-    if (!in->transparent_back){
-        int col = 0;
-        if (!is_selected){
-            col = FRONTGROUND_COLOR;
-        } else {
-            col = FRONTGROUND_COLOR_BIS;
+
+    draw_char(in->x + in->h + 15, in->y, in->name, 0x0000, BACKGROUND_COLOR, 1);
+    fill_rect(in->x, in->y, 1, in->w, 0X0000);
+    fill_rect(in->x + in->h - 1, in->y, 1, in->w, 0X0000);
+    fill_rect(in->x, in->y, in->h, 1, 0X0000);
+    fill_rect(in->x, in->y + in->w - 1, in->h, 1, 0X0000);
+
+    fill_rect(in->x + 1, max(in->y, in->y + in->w * (((float)in->val / in->grad)) - 1), in->h - 2, in->w - in->w * (((float)in->val / in->grad)) + 1, 0x632c);
+    fill_rect(in->x + 1, in->y + 1, in->h - 2, in->w * (((float)in->val / in->grad)) - 2, 0xffc0);
+}
+
+int menu_tools()
+{
+    text_box **items = (text_box **)malloc(sizeof(text_box *) * 6);
+    printf("aaeeaII");
+
+    for (int i = 0; i < 6; i++)
+    {
+        items[i] = create_text_box(32, i * 30, 30, 256, 0, false);
+        printf("aaaII %i\n", i);
+    }
+    items[0]->text = "Probabilites";
+    items[1]->text = "Matrices";
+    items[2]->text = "Arithmétique";
+    items[3]->text = "Trigonométrie";
+    items[4]->text = "Nombres decimaux";
+    items[5]->text = "Constantes";
+
+    items[0]->t_size = 12;
+    items[1]->t_size = 8;
+
+    items[2]->t_size = 12;
+    items[3]->t_size = 13;
+    items[4]->t_size = 16;
+    items[5]->t_size = 10;
+
+    items[0]->allign = 'r';
+    items[1]->allign = 'r';
+    items[2]->allign = 'r';
+    items[3]->allign = 'r';
+    items[4]->allign = 'r';
+    items[5]->allign = 'r';
+
+    int pos = 0;
+    int selected = 0;
+    int last_pressed = scan_keypad();
+
+    while (true)
+    {
+        for (int i = pos; i < pos + 4; i++)
+        {
+            display_text_box(items[i], pos * -30, 0, i == selected);
+        }
+        last_pressed = scan_keypad();
+        while (last_pressed == -1)
+        {
+            last_pressed = scan_keypad();
         }
 
-        // fill_rect(in->x, in->y, in->w, in->h, FRONTGROUND_COLOR);
+        switch (last_pressed)
+        {
+        case UP:
+            selected = min(4, selected + 1);
 
-        // fill_rect(in->x + in->border, in->y + in->border, in->w - 2 * in->border, in->h - 2 * in->border, col);
+            if (selected - pos >= 4)
+            {
+                pos = min(pos + 1, 1);
+            }
+            break;
+        case DOWN:
+            selected = max(0, selected - 1);
+
+            pos = min(selected, pos);
+
+            break;
+        case BACK:
+        {
+            return END_KEYS;
+        }
+        case OK:
+            switch (selected)
+            {
+            case 0:
+                return (menu_proba());
+                break;
+            case 3:
+                return (menu_trigo());
+            default:
+                break;
+            }
+            break;
+        default:
+
+            break;
+        }
     }
 
-    fill_rect(in->x + in->w * 0.05, in->y + in->h * 0.6, in->h * 0.2, in->w * 0.9 * (((float)in->val / in->grad)), 0x00FF);
+    return END_KEYS;
+}
 
-    /* sf::Vector2f sd(in->w * 0.9 * (1.0 - ((float)in->val / in->grad)), in->h * 0.2);
-     sf::RectangleShape barreb(sd);
-     barreb.setPosition();
-     barreb.setFillColor(sf::Color::Black);
-     window->draw(barreb);
- */
-    fill_rect(in->x + in->w * 0.05 + in->w * 0.9 * (((float)in->val / in->grad)), in->h * 0.2, in->y + in->h * 0.6, in->w * 0.9 * (1.0 - ((float)in->val / in->grad)), 0xF0F0);
+int menu_proba()
+{
+    text_box **items = (text_box **)malloc(sizeof(text_box *) * 3);
+    fill_rect(0, 32, 120, 256, 0x311f);
+    printf("aaeeaII");
+
+    for (int i = 0; i < 3; i++)
+    {
+        items[i] = create_text_box(60, i * 30, 30, 200, 2, false);
+        printf("aaaII %i\n", i);
+    }
+    items[0]->text = "Factorielle n!";
+    items[1]->text = "k parmis n ";
+    items[2]->text = "permutation(n,k)";
+
+    items[0]->t_size = 12;
+    items[1]->t_size = 8;
+
+    items[2]->t_size = 12;
+
+    items[0]->allign = 'r';
+    items[1]->allign = 'r';
+    items[2]->allign = 'r';
+
+    int pos = 0;
+    int selected = 0;
+    int last_pressed = scan_keypad();
+    printf("aaaII\n");
+    while (true)
+    {
+        for (int i = pos; i < pos + 4; i++)
+        {
+            display_text_box(items[i], pos * -30, 0, i == selected);
+            printf("aaaIzzzzI %i\n", i);
+        }
+        last_pressed = scan_keypad();
+        while (last_pressed == -1)
+        {
+            last_pressed = scan_keypad();
+        }
+        printf("aaaII\n");
+
+        switch (last_pressed)
+        {
+        case UP:
+            selected = min(4, selected + 1);
+
+            if (selected - pos >= 4)
+            {
+                pos = min(pos + 1, 1);
+            }
+            break;
+        case DOWN:
+            selected = max(0, selected - 1);
+
+            pos = min(selected, pos);
+
+            break;
+        case BACK:
+        {
+            return END_KEYS;
+        }
+        case OK:
+            switch (selected)
+            {
+            case 0:
+
+                return FACT;
+                break;
+
+            default:
+                break;
+            }
+            break;
+        default:
+
+            break;
+        }
+    }
+    return END_KEYS;
+}
+
+
+int menu_trigo()
+{
+    text_box **items = (text_box **)malloc(sizeof(text_box *) * 6);
+    fill_rect(0, 32, 120, 256, 0x311f);
+    printf("aaeeaII");
+
+    for (int i = 0; i < 6; i++)
+    {
+        items[i] = create_text_box(60, i * 30, 30, 200, 2, false);
+        printf("aaaII %i\n", i);
+    }
+    items[0]->text = "cosinus hyperbolique";
+    items[1]->text = "sinus hyperbolique";
+    items[2]->text = "tangente hyperbolique";
+
+    items[3]->text = "arccosinus hyperbolique";
+    items[4]->text = "arcsinus hyperbolique";
+    items[5]->text = "arctangente hyperbolique";
+
+    items[0]->t_size = 20;
+    items[1]->t_size = 18;
+    items[2]->t_size = 21;
+    items[3]->t_size = 23;
+    items[4]->t_size = 21;
+    items[5]->t_size = 24;
+
+    items[0]->allign = 'r';
+    items[1]->allign = 'r';
+    items[2]->allign = 'r';
+    items[3]->allign = 'r';
+    items[4]->allign = 'r';
+    items[5]->allign = 'r';
+
+    int pos = 0;
+    int selected = 0;
+    int last_pressed = scan_keypad();
+    printf("aaaII\n");
+    while (true)
+    {
+        for (int i = pos; i < pos + 4; i++)
+        {
+            display_text_box(items[i], pos * -30, 0, i == selected);
+            printf("aaaIzzzzI %i\n", i);
+        }
+        last_pressed = scan_keypad();
+        while (last_pressed == -1)
+        {
+            last_pressed = scan_keypad();
+        }
+        printf("aaaII\n");
+
+        switch (last_pressed)
+        {
+        case UP:
+            selected = min(5, selected + 1);
+
+            if (selected - pos >= 4)
+            {
+                pos = min(pos + 1, 2);
+            }
+            break;
+        case DOWN:
+            selected = max(0, selected - 1);
+
+            pos = min(selected, pos);
+
+            break;
+        case BACK:
+        {
+            return END_KEYS;
+        }
+        case OK:
+            switch (selected)
+            {
+            case 0:
+
+                return COSH;
+                break;
+            case 1:
+                return SINH;
+                break;
+
+            case 2:
+                return TANH;
+                break;
+            case 3:
+                return ACOSH;
+                break;
+            case 4:
+                return ASINH;
+                break;
+            case 5:
+                return ATANH;
+                break;
+            default:
+                break;
+            }
+            break;
+        default:
+
+            break;
+        }
+    }
+    return END_KEYS;
 }
