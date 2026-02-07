@@ -12,27 +12,24 @@ void display_table()
     int hauteur[33] = {7, 6, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 6, 6, 6, 6, 6, 7};
     text_box ***table = (text_box***) malloc(sizeof(text_box*) * 32);
     int k = 0;
-    char *name[] = {"Fr", "Cs", "Rb", "K", "Na", "Li", "H", "Ra", "Ba", "Sr", "Ca", "Mg", "Be", "Ac", "La", "Th", "Ce",
-                    "Pa", "Pr", "U", "Nd", "Np", "Pm", "Pu", "Sm", "Am", "Eu", "Cm", "Gd", "Bk", "Tb", "Cf", "Dy", "Es",
-                    "Ho", "Fm", "Er", "Md", "Tm", "No", "Yb", "Lr", "Lu", "Y", "Sc", "Rf", "Hf", "Zr", "Ti", "Db", "Ta",
-                    "Nb", "V", "Sg", "W", "Mo", "Cr", "Bh", "Re", "Tc", "Mn", "Hs", "Os", "Ru", "Fe", "Mt", "Ir", "Rh",
+    char *name[] = {"Fr", "Cs", "Rb", "K", "Na", "Li", "H ", "Ra", "Ba", "Sr", "Ca", "Mg", "Be", "Ac", "La", "Th", "Ce",
+                    "Pa", "Pr", "U ", "Nd", "Np", "Pm", "Pu", "Sm", "Am", "Eu", "Cm", "Gd", "Bk", "Tb", "Cf", "Dy", "Es",
+                    "Ho", "Fm", "Er", "Md", "Tm", "No", "Yb", "Lr", "Lu", "Y ", "Sc", "Rf", "Hf", "Zr", "Ti", "Db", "Ta",
+                    "Nb", "V ", "Sg", "W ", "Mo", "Cr", "Bh", "Re", "Tc", "Mn", "Hs", "Os", "Ru", "Fe", "Mt", "Ir", "Rh",
                     "Co", "Ds", "Pt", "Pd", "Ni", "Rg", "Au", "Ag", "Cu", "Cn", "Hg", "Cd", "Zn", "Nh", "Tl", "In", "Ga",
-                    "Al", "B", "Fl", "Pb", "Sn", "Ge", "Si", "C", "Mc", "Bi", "SB", "As", "P", "N", "Lv", "Po", "Te",
-                    "Se", "S", "O", "Ts", "At", "I", "Br", "Cl", "F", "Og", "Rn", "Xe", "Kr", "Ar", "Ne", "He"};
+                    "Al", "B ", "Fl", "Pb", "Sn", "Ge", "Si", "C ", "Mc", "Bi", "SB", "As", "P ", "N", "Lv", "Po", "Te",
+                    "Se", "S ", "O ", "Ts", "At", "I ", "Br", "Cl", "F ", "Og", "Rn", "Xe", "Kr", "Ar", "Ne", "He"};
     int col = 0;
     int L, C = 0;
     int shift = 0;
     for (int i = 0; i < 32; i++) {
         table[i] = (text_box**) malloc(sizeof(text_box*) * hauteur[i]);
         for (int j = 0; j < hauteur[i]; j++) {
-            table[i][j] = (text_box*) malloc(sizeof(text_box));
-            table[i][j]->x = 31 * i + 10;
-            table[i][j]->y = 31 * j + 10;
-            table[i][j]->h = 30;
-            table[i][j]->w = 30;
-            table[i][j]->border = 0;
-            table[i][j]->text = (char*) malloc(sizeof(char) * 3);
-            table[i][j]->t_size = 1;
+            table[i][j] = create_text_box(31 * i + 10,  31 * j + 10, 30,30,0,false);
+
+
+
+            table[i][j]->t_size = 2;
 
             if (k < 6) {
                 table[i][j]->col = 0xf000;
@@ -59,7 +56,9 @@ void display_table()
             }
 
             if (k < 118) {
-                table[i][j]->text = (char*)malloc(sizeof(char)*2);
+
+                table[i][j]->text=name[k];
+
             }
             k++;
         }
@@ -78,11 +77,11 @@ void display_table()
             }
         }
         
-        if (C - ((shift / 31)) > 5) {
+       /* if (C - ((shift / 31)) > 5) {
             fill_rect(105, 175, 128, 160, 0);
         } else {
             fill_rect(105, 5, 128, 160, 0);
-        }
+        }*/
         last_pressed = scan_keypad();
         while (last_pressed == -1) {
             last_pressed = scan_keypad();
@@ -129,3 +128,4 @@ void display_table()
         }
     }
 }
+
