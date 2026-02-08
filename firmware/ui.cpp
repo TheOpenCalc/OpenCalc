@@ -387,6 +387,14 @@ void display_text_box(text_box *in, int shift_y, int shift_text, bool is_selecte
         */
 }
 
+void display_text(int x, int y, char * t,int SIZE, int t_size){
+    int pos =0;
+    x+=25;
+    for(int i =0;i<t_size;i++){
+    draw_char(x, y + 5 + pos, t, 0X0000, 0X0000, SIZE);
+            pos += 5.5 * SIZE;
+    }
+}
 
 void draw_buffer(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t *buffer)
 {
@@ -455,19 +463,23 @@ void display_fill_box(fill_box *in, int shift_y, bool is_selected, int pos, char
     display_equation(in->text, 100, in->y + shift_y, in->x + (prefix == ' ' ? 0 : 55), 2, is_selected ? in->curso_pos : -10);
 
     if (prefix == 'f') {
-        char *t = (char*) malloc(sizeof(char*) * 5);
+        char *t = (char*) malloc(sizeof(char*) * 6);
         t[0] = 'f' + pos;
         t[1] = '(';
         t[2] = 'x';
         t[3] = ')';
         t[4] = '=';
-        display_equation(t, 5 /*+log(pos)*/, in->y + shift_y, in->x, 2, is_selected ? in->curso_pos : -10);
+        t[5] = '\0';
+        draw_char( in->y+shift_y+25,in->x, t, 0X0000, 0X0000, 2);
     }
     if (prefix == 'u') {
-        char *t = (char*) malloc(sizeof(char*) * 2);
+        char *t = (char*) malloc(sizeof(char*) * 3);
         t[0] = 'u' + pos;
         t[1] = '=';
-        display_equation(t, 2 /*+log(pos)*/, in->y + shift_y, in->x, 2, is_selected ? in->curso_pos : -10);
+        t[1] = '\0';
+        draw_char( in->y+25,in->x, t, 0X0000, 0X0000, 2);
+
+        // display_equation(t, 2 /*+log(pos)*/, in->y + shift_y, in->x, 2, is_selected ? in->curso_pos : -10);
         char *n = (char*) malloc(sizeof(char));
         n[0] = 'n';
         draw_char(in->x - 3, in->y, n, 0x0000, 0x0000, 1);
