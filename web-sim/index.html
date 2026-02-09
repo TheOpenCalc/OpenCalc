@@ -1,12 +1,99 @@
 <!doctype html>
 <html lang="fr">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OpenCalc Web Simulator</title>
-  </head>
+      <link rel = "icon" type = "logo.png" href = "logo.png">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenCalc – La calculatrice libre pour les lycéens</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .fade-up {
+      opacity: 0;
+      transform: translateY(40px);
+      transition: all 0.8s ease-out;
+    }
+    .fade-up.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .slide-left {
+      opacity: 0;
+      transform: translateX(-40px);
+      transition: all 0.8s ease-out;
+    }
+    .slide-left.visible {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    .slide-right {
+      opacity: 0;
+      transform: translateX(40px);
+      transition: all 0.8s ease-out;
+    }
+    .slide-right.visible {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    header nav a.active {
+      color: #1e40af;
+      font-weight: 600;
+    }
+  </style>
+</head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+  <header class="bg-white shadow sticky top-0 z-50 " >
+    <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+      <h1 class="text-3xl font-extrabold text-blue-600" style ="font-family: 'Inter', sans-serif;" >OpenCalc</h1>
+      <nav class="space-x-7 text-base font-medium">
+        <a href="http://emulateur.opencalc.fr" class="text-gray-700 hover:text-blue-600" style = "font-weight: 900;">Emulateur !</a>
+        <a href="https://www.opencalc.fr#features" class="text-gray-700 hover:text-blue-600">Fonctionnalités</a>
+        <a href="https://www.opencalc.fr#open-source" class="text-gray-700 hover:text-blue-600">Open Source</a>
+        <a href="https://opencalc.fr/spec.html" class="text-gray-700 hover:text-blue-600">Composants</a>
+        <a href="https://www.opencalc.fr#use-cases" class="text-gray-700 hover:text-blue-600">Usages</a>
+        <a href="https://www.opencalc.fr#timeline" class="text-gray-700 hover:text-blue-600">Chronologie</a>
+        <a href="https://www.opencalc.fr#team" class="text-gray-700 hover:text-blue-600">Équipe</a>
+        <a href="https://www.opencalc.fr#contact" class="text-gray-700 hover:text-blue-600">Contact</a>
+        <div class="relative inline-block text-left">
+          <button onclick="document.getElementById('dropdown').classList.toggle('hidden')" class="inline-flex justify-center w-full px-4 py-2 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+            Menu
+            <svg class="-mr-1 ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 011.08 1.04l-4.25 4.25a.75.75 0 01-1.08 0L5.23 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+            </svg>
+          </button>
+          <div id="dropdown" class="hidden absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+            <div class="py-1" role="menu">
+
+              <a href="https://www.opencalc.fr#features" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Fonctionnalités</a>
+              <a href="https://www.opencalc.fr#open-source" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Open Source</a>
+              <a href="https://opencalc.fr/spec.html" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Composants</a>
+              <a href="https://www.opencalc.fr#use-cases" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Usages</a>
+              <a href="https://www.opencalc.fr#timeline" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Chronologie</a>
+              <a href="https://www.opencalc.fr#team" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Équipe</a>
+              <a href="https://www.opencalc.fr#contact" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Contact</a>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </div>
+  </header>
+<table style ="width:100%;">
+<tr style ="width:100%"><td style = "width:50%">
+    <div id="root" >
+      
+          <script  type="module" src="/src/main.jsx"></script>
+      </div>
+      </td>
+      <td >
+        <div style = "margin-bottom:70%">
+          <h2 style = "font-size : 240%; font-weight : bold;text-align:center;">Emulateur en beta</h2> 
+          <p style = "font-size : 80%;text-align:center;" >N'hésitez pas a tester et à nous faire des retours via le discord ou instagram !</p>
+        </div>
+        </td>
+        </tr>
+</table>
   </body>
 </html>
