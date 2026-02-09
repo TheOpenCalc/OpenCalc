@@ -349,6 +349,7 @@ void display_text_box(text_box *in, int shift_y, int shift_text, bool is_selecte
     {
         draw_char(in->y + shift_text + shift_y + in->h - 10, in->x + 4, in->text, 0x0000, 0xFF, in->display_text_size);
     }
+    
     fill_rect(in->y + shift_y, in->x + 2, 1, in->w - 4, 0x0000);
     fill_rect(in->y + shift_y + 2, in->x, in->h - 4, 1, 0x0000);
 
@@ -387,6 +388,14 @@ void display_text_box(text_box *in, int shift_y, int shift_text, bool is_selecte
         */
 }
 
+void display_text(int x, int y, char * t,int SIZE, int t_size){
+    int pos =0;
+    x+=25;
+    for(int i =0;i<t_size;i++){
+    draw_char(x, y + 5 + pos, t, 0X0000, 0X0000, SIZE);
+            pos += 5.5 * SIZE;
+    }
+}
 
 void draw_buffer(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t *buffer)
 {
@@ -455,19 +464,23 @@ void display_fill_box(fill_box *in, int shift_y, bool is_selected, int pos, char
     display_equation(in->text, 100, in->y + shift_y, in->x + (prefix == ' ' ? 0 : 55), 2, is_selected ? in->curso_pos : -10);
 
     if (prefix == 'f') {
-        char *t = (char*) malloc(sizeof(char*) * 5);
+        char *t = (char*) malloc(sizeof(char*) * 6);
         t[0] = 'f' + pos;
         t[1] = '(';
         t[2] = 'x';
         t[3] = ')';
         t[4] = '=';
-        display_equation(t, 5 /*+log(pos)*/, in->y + shift_y, in->x, 2, is_selected ? in->curso_pos : -10);
+        t[5] = '\0';
+        draw_char( in->y+shift_y+25,in->x, t, 0X0000, 0X0000, 2);
     }
     if (prefix == 'u') {
-        char *t = (char*) malloc(sizeof(char*) * 2);
+        char *t = (char*) malloc(sizeof(char*) * 3);
         t[0] = 'u' + pos;
         t[1] = '=';
-        display_equation(t, 2 /*+log(pos)*/, in->y + shift_y, in->x, 2, is_selected ? in->curso_pos : -10);
+        t[1] = '\0';
+        draw_char( in->y+25,in->x, t, 0X0000, 0X0000, 2);
+
+        // display_equation(t, 2 /*+log(pos)*/, in->y + shift_y, in->x, 2, is_selected ? in->curso_pos : -10);
         char *n = (char*) malloc(sizeof(char));
         n[0] = 'n';
         draw_char(in->x - 3, in->y, n, 0x0000, 0x0000, 1);
@@ -476,9 +489,13 @@ void display_fill_box(fill_box *in, int shift_y, bool is_selected, int pos, char
 
 void update_fill_box(fill_box *in, int event, bool snd)
 {
-    char temp1 = in->text[in->curso_pos];
-    char temp2 = in->text[in->curso_pos + 1];
-    char temp3 = in->text[in->curso_pos + 2];
+    int size_after_cursor =0;
+    while(size_after_cursor<100 && in->text[in->curso_pos+size_after_cursor]!='\0')
+        size_after_cursor++;
+    char * temp =(char*) malloc(sizeof(char)*size_after_cursor);
+    for(int i = 0 ; i < size_after_cursor;i++){
+        temp[i]=in->text[in->curso_pos+i];
+    }
     int in_tsize = in->t_size;
     if (snd) {
         switch (event) {
@@ -620,10 +637,25 @@ void update_fill_box(fill_box *in, int event, bool snd)
             in->t_size++;
             break;
         case BACK :
-            in->curso_pos--;
+        
             if (in->t_size > 0) {
+                
+                int size_text_after=0;
+                while(size_text_after<100 && in->text[in->curso_pos+size_after_cursor]!='\0'){
+                    size_after_cursor++;
+                }
+                char * temp = (char *)malloc(sizeof(char)*size_text_after);
+                for(int i =0 ; i < size_after_cursor;i++){
+                    temp[i]=in->text[in->curso_pos+i];
+                }
+
                 in->t_size--;
+                for(int i =0 ; i < size_after_cursor;i++){
+                    in->text[in->curso_pos+i]=temp[i];
+                }
+                free(temp);
                 in->text[in->t_size] = '\0';
+        
             }
             break;
                case FACT:
@@ -921,14 +953,10 @@ void update_fill_box(fill_box *in, int event, bool snd)
             break;
         }
     }
-    /*for (int i = 0; i <= in->t_size - in_tsize; i++) {
-        char temp = in->text[i + in->curso_pos];
-        in->text[i + in->curso_pos] = temp1;
-        temp1 = temp2;
-        temp2 = temp3;
-        temp3 = temp;
-    }*/
-    // FIXME : NE FONCTIONNE PAS EN L'ETAT A REPARER
+    for(int i = 0 ; i < size_after_cursor;i++){
+        in->text[in->curso_pos+i]=temp[i];
+    }
+    free(temp);
 }
 
 void display_equation(char *in, int input_size, int x, int y, int SIZE, int cursor_pos)
@@ -963,7 +991,7 @@ void display_equation(char *in, int input_size, int x, int y, int SIZE, int curs
             x_cursor = x;
             y_cursor = y + 5 + pos + 7;
         }
-        if (is_in(in[i], "0123456789,.+-*()/Xx^=ABCDEFGHIJKLMNOPQRSTUVWYZ!")) {
+        if (is_in(in[i], "0123456789,.+-*()/Xx=ABCDEFGHIJKLMNOPQRSTUVWYZ!")) {
             temp[0] = in[i];
             draw_char(x, y + 5 + pos, temp, 0X0000, 0X0000, SIZE);
             pos += 5.5 * SIZE;
@@ -1000,51 +1028,13 @@ void display_equation(char *in, int input_size, int x, int y, int SIZE, int curs
         } else if (in[i] == 't') {
             draw_char(x, y + 5 + pos, tan, 0X0000, 0X0000, 2);
             pos += 13 * SIZE;
-        } /*else if (in[i] == '(') {
-             int j = 1;
-             int ind = 1;
-             while (i + j < input_size && ind != 0) {
-                 if (in[i + j] == '(') {
-                     ind++;
-                 } else if (in[i + j] == ')') {
-                     ind--;
-                 }
-                 j++;
-             }
-             if (i + j >= input_size || in[i + j] != '/') {
-                 temp[0] = in[i];
-                 draw_char(x, y + 5 + pos, temp, 0X0000, 0X0000, 2);
-                pos += 9;
-             } else {
-                 display_equation(&in[i + 1], j - 2, x + pos, y - 9, 2, cursor_pos);
-                 i += j + 1;
-                 j = 1;
-                 ind = 1;
-                 while (i + j < input_size && ind != 0) {
-                     if (in[i + j] == '(') {
-                         ind++;
-                     } else if (in[i + j] == ')') {
-                         ind--;
-                     }
-                     j++;
-                 }
-                 if (ind == 0) {
-                     display_equation(&in[i + 1], j - 2, x + pos, y + 7, 2, cursor_pos);
-                     i += j - 1;
-                     pos += SIZE * 4 * j - 14;
-                 }
-             }
-         }*/
+        } 
         else if (in[i] == 'p') {
-#ifdef OPENCALC_WASM      /// Pourquoi ????
+#ifdef OPENCALC_WASM      /// Pourquoi ???? J'ai compris pourquoi
             temp[0] = 'p';
 #else
             temp[0] = 'π';
 #endif
-            draw_char(x, y + 5 + pos, temp, 0X0000, 0X0000, 2);
-            pos += SIZE * 4;
-        } else if (in[i] == 'e') {
-            temp[0] = 'e';
             draw_char(x, y + 5 + pos, temp, 0X0000, 0X0000, 2);
             pos += SIZE * 4;
         } else if (in[i] == 'r') {
@@ -1071,7 +1061,7 @@ void display_equation(char *in, int input_size, int x, int y, int SIZE, int curs
             pos += 2;
             temp[0] = 'l';
             draw_char(x, y + 5 + pos, temp, 0X0000, 0X0000, 2);
-            pos += 1.5 * SIZE;
+            pos += 4 * SIZE;
             temp[0] = 'n';
             draw_char(x, y + 5 + pos, temp, 0X0000, 0X0000, 2);
             pos += 4.5 * SIZE;
@@ -1121,7 +1111,7 @@ void draw_image(int x, int y, int h, int w, uint16_t *img, uint16_t bck)
         for (int j = 0; j < h; j++)
         {
             if (img[i * h + j] != bck)
-                fill_rect(x + h - i, y + j, 1, 1, img[i * h + j]);
+                fill_rect(x + i, y + j, 1, 1, img[j * h + i]);
         }
     }
 }
@@ -1275,7 +1265,7 @@ int menu_proba()
     printf("aaaII\n");
     while (true)
     {
-        for (int i = pos; i < pos + 4; i++)
+        for (int i = pos; i < pos + 3; i++)
         {
             display_text_box(items[i], pos * -30, 0, i == selected);
             printf("aaaIzzzzI %i\n", i);
