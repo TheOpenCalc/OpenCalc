@@ -110,7 +110,9 @@ int main()
         {
             display_text_box(menu_button[i], 0, -77, i == select_item_menu);
             draw_buffer(menu_button[i]->y + 2, menu_button[i]->x + 2, 79, 79, i % 3 == 0 ? img_calc : img_solver);
+            #ifdef OPENCALC_WASM  
             //        draw_image(menu_button[i]->y+2, menu_button[i]->x+2, 79, 79,i%3==0? img_calc:img_solver,0x0000);
+            #endif
         }
 
         //  draw_image(120,20,79,79,img,44439);
