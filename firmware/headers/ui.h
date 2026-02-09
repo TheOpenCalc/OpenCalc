@@ -225,6 +225,8 @@ void fill_rect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color);
 
 void draw_char(uint16_t x, uint16_t y, char *c, uint16_t color, uint16_t bg, uint8_t size);
 
+void draw_image(int x, int y, int h, int w, uint16_t *img, uint16_t bck);
+
 void display_battery(uint16_t x, uint16_t y, int level);
 
 typedef struct fill_box_s fill_box;
@@ -238,6 +240,8 @@ fill_box *create_fill_box(int x, int y, int h, int w, int border);
 void axis();
 
 void update_fill_box(fill_box *in, int event, bool snd);
+
+void display_text(int x, int y, char * t,int SIZE, int t_size);
 
 void display_equation(char *in, int input_size, int x, int y, int SIZE, int cursor_pos);
 
