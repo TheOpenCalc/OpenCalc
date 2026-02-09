@@ -32,17 +32,26 @@ const KEY_CODES = {
   DOWN: 28,
   RIGHT: 29,
   X: 30,
-  EQUAL: 31,
-  PASS2: 32,
+  TOOLS: 31,
+  EQUAL: 32,
   LEFT: 33,
   OK: 34,
   PASS3: 35,
   SECOND: 36,
   PASS4: 37,
-  UP: 38
+  UP: 38,
+END_KEYS:39,
+    FACT:40,
+    COSH:41,
+    SINH:42,
+    TANH:43,
+    ACOSH:44,
+    ASINH:45,
+    ATANH:46
 };
 
 const KEYBOARD_MAP = {
+  'A': KEY_CODES.TOOLS,
   '0': KEY_CODES.ZERO,
   '1': KEY_CODES.ONE,
   '2': KEY_CODES.TWO,
@@ -301,7 +310,7 @@ export default function App() {
             </div>
             <div className="function-row">
               <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.X)} type="button">x</button>
-              <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.BACK)} type="button">tools</button>
+              <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.TOOLS)} type="button">tools</button>
               <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.EQUAL)} type="button">=</button>
             </div>
             <div className="function-row">
