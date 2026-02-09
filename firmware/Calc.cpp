@@ -24,7 +24,7 @@ int Calc()
     fill_screen(BACKGROUND_COLOR);  // Bleu
 
     while (true) {
-        for (int i = cur_selected - 4; i <= cur_selected; i++) {
+        for (int i = cur_selected - 5; i <= cur_selected; i++) {
             int a = i % HISTORY_SIZE;
             if (a < 0) {
                 a += HISTORY_SIZE;
@@ -52,7 +52,7 @@ int Calc()
             cur_selected = (cur_selected - 1) % HISTORY_SIZE;
             break;
         case DOWN :
-            cur_selected = (cur_selected + 1) % HISTORY_SIZE;
+            cur_selected = min(cur_last_history,(cur_selected + 1) % HISTORY_SIZE);
             break;
         case OK :
         case ENTER :
@@ -73,6 +73,7 @@ int Calc()
 
             double temp = evaluate_npi(out, tokenized_size);
             history[cur_last_history]->t_size = double_to_string_scientific(temp, (history[cur_last_history]->text));
+            cur_last_history++;
             cur_selected = cur_last_history;
         }
             history[cur_last_history]->curso_pos = history[cur_last_history]->t_size;
