@@ -285,13 +285,11 @@ int Grapher()
         default :
             if (show_graph) {
                 if (last_pressed == PLUS) {
-                    fill_screen(BACKGROUND_COLOR);  
-                    x_min /= 2;
-                    x_max /= 2;
-                    y_min /= 2;
-                    y_max /= 2;
+                    x_min *= 2;
+                    x_max *= 2;
+                    y_min *= 2;
+                    y_max *= 2;
                 } else if (last_pressed == MINUS) {
-                    fill_screen(BACKGROUND_COLOR);  
                     x_min *= 2;
                     x_max *= 2;
                     y_min *= 2;
