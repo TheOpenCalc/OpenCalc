@@ -226,6 +226,9 @@ int Grapher()
      
         last_pressed=scan_keypad();
         while (last_pressed == -1) {
+            if(!show_graph){
+                            blink_cursor();
+                }
             last_pressed = scan_keypad();
         }
         std::printf("%i\n", (int) show_graph);
