@@ -51,7 +51,6 @@ END_KEYS:39,
 };
 
 const KEYBOARD_MAP = {
-  'A': KEY_CODES.TOOLS,
   '0': KEY_CODES.ZERO,
   '1': KEY_CODES.ONE,
   '2': KEY_CODES.TWO,
@@ -315,7 +314,7 @@ export default function App() {
             </div>
             <div className="function-row">
               <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.NOT2)} type="button">i</button>
-              <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.LN)} type="button">log</button>
+              <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.BACK)} type="button">←</button>
               <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.LN)} type="button">ln</button>
             </div>
           </div>
