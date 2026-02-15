@@ -958,9 +958,53 @@ void update_fill_box(fill_box *in, int event, bool snd)
     }
     free(temp);
 }
+int * get_depth(char * in, int input_size){
+    int * depth = (int*)malloc(sizeof(int)*input_size);
+    for(int i = 0 ; i < input_size;i++){
+        depth[i]=0;
+    }
+    int m=0;
+    int cur_depth =0;   
+    for(int searched_depth = 0 ; searched_depth<10;searched_depth++){      //A optimiser, inneficient
+    for(int i = 0 ; i < input_size;i++){
+        if(in[i]=='(')
+            cur_depth++;
+        if(in[i]==')')
+            cur_depth--;
+        if(cur_depth==searched_depth && in[i]=='/'){
+            int a = 0;
+            for(int j = i+1 ; (j==i+1 || a>0) &&  j<input_size;j++){
+                if(in[j]=='(')
+                    a++;
+                if(in[j]==')')
+                     a--;
+                depth[j]--;
+                if(depth[j]<m)
+                    m=depth[j];
+            }
+            a = 0;
+            for(int j = i-1 ; (j==i-1 ||a<0 )&&  j>=0;j--){
+                if(in[j]=='(')
+                    a++;
+                if(in[j]==')')
+                     a--;
+                depth[j]++;
+            }
+        }
+    }
+}
+    for(int i = 0 ; i < input_size;i++){
+        
+        depth[i]=0;
+        //depth[i]-=m;
+    }
+    return depth;
+}
 
 void display_equation(char *in, int input_size, int x, int y, int SIZE, int cursor_pos)
 {
+
+    int * depth = get_depth(in,input_size);
     x += 25;
 
     int pos = 0;
@@ -993,22 +1037,22 @@ void display_equation(char *in, int input_size, int x, int y, int SIZE, int curs
         }
         if (is_in(in[i], "0123456789,.+-*()/Xx=ABCDEFGHIJKLMNOPQRSTUVWYZ!")) {
             temp[0] = in[i];
-            draw_char(x, y + 5 + pos, temp, 0X0000, 0X0000, SIZE);
+            draw_char(x+depth[i]*7*SIZE, y + 5 + pos, temp, 0X0000, 0X0000, SIZE);
             pos += 5.5 * SIZE;
         } else if (is_in(in[i], "uvwijkfghcst")) {
         if (is_in(in[i],"uvwijk")){
             temp[0] = 'a';
-            draw_char(x, y + 5 + pos, temp, 0X0000, 0X0000, 2);
+            draw_char(x+depth[i]*7*SIZE, y + 5 + pos, temp, 0X0000, 0X0000, 2);
             pos += 5.5 * SIZE;
             }
             if (is_in(in[i],"cfui")) {
-                draw_char(x, y + 5 + pos, cos, 0X0000, 0X0000, 2);
+                draw_char(x+depth[i]*7*SIZE, y + 5 + pos, cos, 0X0000, 0X0000, 2);
             }
             if (is_in(in[i], "sgvj")) {
-                draw_char(x, y + 5 + pos, sin, 0X0000, 0X0000, 2);
+                draw_char(x+depth[i]*7*SIZE, y + 5 + pos, sin, 0X0000, 0X0000, 2);
             }
             if (is_in(in[i] ,"twhk")) {
-                draw_char(x, y + 5 + pos, tan, 0X0000, 0X0000, 2);
+                draw_char(x+depth[i]*7*SIZE, y + 5 + pos, tan, 0X0000, 0X0000, 2);
             }
             if(is_in(in[i],"uvwcst")){
               pos+=15.5*SIZE;
@@ -1016,17 +1060,17 @@ void display_equation(char *in, int input_size, int x, int y, int SIZE, int curs
             else if(is_in(in[i],"ijkfgh")){
               pos+=15.5*SIZE;
                       temp[0] = 'h';
-            draw_char(x, y + 5 + pos, temp, 0X0000, 0X0000, 2);
+            draw_char(x+depth[i]*7*SIZE, y + 5 + pos, temp, 0X0000, 0X0000, 2);
             pos += 5.5 * SIZE;
             }
         } else if (in[i] == 'c') {
-            draw_char(x, y + 5 + pos, cos, 0X0000, 0X0000, 2);
+            draw_char(x+depth[i]*7*SIZE, y + 5 + pos, cos, 0X0000, 0X0000, 2);
             pos += 12 * SIZE;
         } else if (in[i] == 's') {
-            draw_char(x, y + 5 + pos, sin, 0X0000, 0X0000, 2);
+            draw_char(x+depth[i]*7*SIZE, y + 5 + pos, sin, 0X0000, 0X0000, 2);
             pos += 13 * SIZE;
         } else if (in[i] == 't') {
-            draw_char(x, y + 5 + pos, tan, 0X0000, 0X0000, 2);
+            draw_char(x+depth[i]*7*SIZE, y + 5 + pos, tan, 0X0000, 0X0000, 2);
             pos += 13 * SIZE;
         } 
         else if (in[i] == 'p') {
@@ -1035,7 +1079,7 @@ void display_equation(char *in, int input_size, int x, int y, int SIZE, int curs
 #else
             temp[0] = 'π';
 #endif
-            draw_char(x, y + 5 + pos, temp, 0X0000, 0X0000, 2);
+            draw_char(x+depth[i]*7*SIZE, y + 5 + pos, temp, 0X0000, 0X0000, 2);
             pos += SIZE * 4;
         } else if (in[i] == 'r') {
             int ind = 1;
@@ -1051,19 +1095,19 @@ void display_equation(char *in, int input_size, int x, int y, int SIZE, int curs
             if (ind == 0) {
                 // temp[0] = (char) 251;
                 temp[0] = 'R';
-                draw_char(x, y + 5 + pos, temp, 0X0000, 0X0000, 2);
+                draw_char(x+depth[i]*7*SIZE, y + 5 + pos, temp, 0X0000, 0X0000, 2);
                 pos += SIZE * 4;
-                display_equation(&in[i + 2], j - 3, x + pos, y - 3, 2, cursor_pos);
+                display_equation(&in[i + 2], j - 3, x + pos+depth[i]*7*SIZE, y - 3, 2, cursor_pos);
                 i += j - 1;
                 pos += SIZE * 4 * (j - 2);
             }
         } else if (in[i] == 'l') {
             pos += 2;
             temp[0] = 'l';
-            draw_char(x, y + 5 + pos, temp, 0X0000, 0X0000, 2);
+            draw_char(x+depth[i]*7*SIZE, y + 5 + pos, temp, 0X0000, 0X0000, 2);
             pos += 4 * SIZE;
             temp[0] = 'n';
-            draw_char(x, y + 5 + pos, temp, 0X0000, 0X0000, 2);
+            draw_char(x+depth[i]*7*SIZE, y + 5 + pos, temp, 0X0000, 0X0000, 2);
             pos += 4.5 * SIZE;
         } else if (in[i] == '^') {
             int ind = 1;
@@ -1077,12 +1121,12 @@ void display_equation(char *in, int input_size, int x, int y, int SIZE, int curs
                 j++;
             }
             if (i + j < input_size) {
-                display_equation(&in[i + 2], j - 3, x - 17, y + pos, 1, cursor_pos);
+                display_equation(&in[i + 2], j - 3, x +depth[i]*7*SIZE- 17, y + pos, 1, cursor_pos);
                 i += j - 1;
                 pos += 2.5 * (j - 1);
             }
             if (i + j == input_size) {
-                display_equation(&in[i + 2], j - 3, x - 17, y + pos, 1, cursor_pos);
+                display_equation(&in[i + 2], j - 3, x +depth[i]*7*SIZE- 17, y + pos, 1, cursor_pos);
                 i += j;
                 pos += 2.5 * (j - 1);
             }
