@@ -1,25 +1,26 @@
 #include "headers/elements.h"
 #include "headers/ui.h"
 #include "pico/stdlib.h"
+#include <headers/Evaluator.h>
 #include "hardware/spi.h"
 #include <stdio.h>
 #include "menu.h"
+#include<string>
 #include <stdlib.h>
 
 void display_table()
 {
     fill_screen(BACKGROUND_COLOR);  // Bleu
-    int hauteur[33] = {7, 6, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 6, 6, 6, 6, 6, 7};
+    int hauteur[33] = {7, 6, 4, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,2, 2, 4, 4, 4, 4, 4, 4, 4, 4, 4, 6, 6, 6, 6, 6, 7};
     text_box ***table = (text_box***) malloc(sizeof(text_box*) * 32);
     int k = 0;
-    char *name[] = {"Fr", "Cs", "Rb", "K", "Na", "Li", "H ", "Ra", "Ba", "Sr", "Ca", "Mg", "Be", "Ac", "La", "Th", "Ce",
-                    "Pa", "Pr", "U ", "Nd", "Np", "Pm", "Pu", "Sm", "Am", "Eu", "Cm", "Gd", "Bk", "Tb", "Cf", "Dy", "Es",
-                    "Ho", "Fm", "Er", "Md", "Tm", "No", "Yb", "Lr", "Lu", "Y ", "Sc", "Rf", "Hf", "Zr", "Ti", "Db", "Ta",
-                    "Nb", "V ", "Sg", "W ", "Mo", "Cr", "Bh", "Re", "Tc", "Mn", "Hs", "Os", "Ru", "Fe", "Mt", "Ir", "Rh",
-                    "Co", "Ds", "Pt", "Pd", "Ni", "Rg", "Au", "Ag", "Cu", "Cn", "Hg", "Cd", "Zn", "Nh", "Tl", "In", "Ga",
-                    "Al", "B ", "Fl", "Pb", "Sn", "Ge", "Si", "C ", "Mc", "Bi", "SB", "As", "P ", "N", "Lv", "Po", "Te",
-                    "Se", "S ", "O ", "Ts", "At", "I ", "Br", "Cl", "F ", "Og", "Rn", "Xe", "Kr", "Ar", "Ne", "He"};
-        
+    char *name[] = {"H","He","Li","Be","B","C","N","O","F","Ne","Na","Mg","Al","Si","P","S","Cl","Ar","K","Ca","Sc",
+        "Ti","V","Cr","Mn","Fe","Co","Ni","Cu","Zn","Ga","Ge","As","Se","Br","Kr","Rb","Sr","Y","Zr","Nb","Mo","Tc",
+        "Ru","Rh","Pd","Ag","Cd","In","Sn","Sb","Te","I","Xe","Cs","Ba","La","Ce","Pr","Nd","Pm","Sm","Eu","Gd","Tb",
+        "Dy","Ho","Er","Tm","Yb","Lu","Hf","Ta","W","Re","Os","Ir","Pt","Au","Hg","Tl","Pb","Bi","Po","At","Rn","Fr",
+        "Ra","Ac","Th","Pa","U","Np","Pu","Am","Cm","Bk","Cf","Es","Fm","Md","No","Lr","Rf","Db","Sg","Bh","Hs","Mt",
+        "Ds","Rg","Cn","Nh","Fl","Mc","Lv","Ts","Og","Uue"};
+    
     char *appearance[]=
                     {"colorless gas","colorless gas, exhibiting a red-orange glow when placed in a high-voltage electric field",
                         "silvery-white","white-gray metallic","black-brown","null","colorless gas, liquid or solid","null","null",
@@ -99,7 +100,8 @@ void display_table()
                         "Joint Institute for Nuclear Research","GSI Helmholtz Centre for Heavy Ion Research"};
    
                     int col = 0;
-    int L, C = 0;
+    int L=0;
+    int C = 0;
     int shift = 0;
     for (int i = 0; i < 32; i++) {
         table[i] = (text_box**) malloc(sizeof(text_box*) * hauteur[i]);
@@ -116,7 +118,10 @@ void display_table()
                 table[i][j]->col = 0x07e0;
             } else if (k < 13) {
                 table[i][j]->col = 0xf674;
-            } else if (k < 43) {
+            }else if(k==15||k==16){
+                                table[i][j]->col = 0xfeba;
+
+            } else if (k < 45) {
                 table[i][j]->col = k % 2 == 0 ? 0xfddf : 0xfcd9;
             } else if (k == 73 || k == 69 || k == 65 || k == 81|| k == 87 || k == 93 || k == 99 || k == 105 || k == 111) {
                 table[i][j]->col = FRONTGROUND_COLOR;
@@ -134,28 +139,34 @@ void display_table()
                 table[i][j]->col = 0xbf3f;
             }
 
-            if (k < 118) {
 
-                table[i][j]->text=name[k];
+            if (k < 118) {
+ int pos= 0;
+         for(int a =0;a<i;a++){
+            if(hauteur[a]>j)
+                pos++;
+
+        }
+
+        for(int a =0;a < 33;a++){
+            
+            pos+=max(0,hauteur[a]-j-1);
+        }
+                table[i][j]->text=name[pos];
 
             }
             k++;
         }
     }
     int last_pressed = scan_keypad();
-    text_box *data = create_text_box(5, 200, 40, 40, 2, true);
+    text_box *data = create_text_box(72, 134, 93, 124, 2, true);
     while (true) {
-        if (C - ((shift / 31)) < 5) {
-            fill_rect(105, 5, 128, 160, BACKGROUND_COLOR);
-        } else {
-            fill_rect(105, 175, 128, 160, BACKGROUND_COLOR);
-        }        
         for (int i = max(C - 10, 0); i < min(C + 10, 32); i++) {
             for (int j = 0; j < hauteur[i]; j++) {
               display_text_box(table[i][j],0,0,C==i && L==j);
             }
         }
-        
+       
        /* if (C - ((shift / 31)) > 5) {
             fill_rect(105, 175, 128, 160, 0);
         } else {
@@ -205,5 +216,76 @@ void display_table()
                 }
             }
         }
+
+        data->x=10;
+        if(shift==31||shift==0){
+            data->x=62-shift+10;
+        }
+         int pos= 0;
+         for(int i =0;i<C;i++){
+            if(hauteur[i]>L)
+                pos++;
+
+        }
+
+        for(int i =0; i < 33;i++){
+            
+            pos+=max(0,hauteur[i]-L-1);
+        }
+
+    printf("%i %i %i\n",C,L,pos);
+
+
+    display_text_box(data,0,0,false);
+        display_text(195,data->x,name[pos],2,2);
+
+    
+    char *buff =(char*)malloc(sizeof(char)*20);
+    buff[0]='A';
+    buff[1]='t';
+    buff[2]='o';
+    buff[3]='m';
+    buff[4]='i';
+    buff[5]='c';
+    buff[6]=' ';
+    buff[7]='m';
+    buff[8]='a';
+    buff[9]='s';
+    buff[10]='s';
+    buff[11]=':';
+
+    sprintf(&buff[12], "%.5g", atomic_mass[pos]);
+    display_text(180,data->x,buff,1,2);
+     
+    buff[0]='D';
+    buff[1]='e';
+    buff[2]='n';
+    buff[3]='s';
+    buff[4]='i';
+    buff[5]='t';
+    buff[6]='y';
+    buff[7]=':';
+    
+
+    sprintf(&buff[8], "%.5g", density[pos]);
+    display_text(170,data->x,buff,1,2);
+         
+    buff[0]='B';
+    buff[1]='o';
+    buff[2]='i';
+    buff[3]='l';
+    buff[4]='i';
+    buff[5]='n';
+    buff[6]='g';
+    buff[7]=':';
+    
+    sprintf(&buff[8], "%.5g", boiling_point[pos]);
+    
+    int a =0;
+    while(buff[a]!='\0')
+        a++;
+    buff[a]='K';
+    buff[a+1]='\0';
+    display_text(160,data->x,buff,1,2);
     }
 }
