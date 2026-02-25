@@ -97,6 +97,14 @@ const KEYBOARD_MAP = {
 };
 
 const MAIN_KEYS = [
+
+  [
+    { label: 'X', code: KEY_CODES.X },
+    { label: 'Tools', code: KEY_CODES.TOOLS },
+    { label: 'Home', code: KEY_CODES.HOME },
+    { label: 'Const', code: KEY_CODES.CONST },
+    { label: '←', code: KEY_CODES.BACK }
+  ],
   [
     { label: 'COS', code: KEY_CODES.COS },
     { label: 'SIN', code: KEY_CODES.SIN },
@@ -155,7 +163,7 @@ export default function App() {
         canvas.width = 320;
         canvas.height = 240;
         const ctx = canvas.getContext('2d', { alpha: false });
-        ctx.fillStyle = '#f0f0e8';
+        ctx.fillStyle = '#121212';
         ctx.fillRect(0, 0, 320, 240);
         // Center the logo (not stretched)
         const x = (320 - logo.width) / 2;
@@ -304,17 +312,17 @@ export default function App() {
           <div className="function-area">
             <div className="function-row">
               <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.SECOND)} type="button">2nd</button>
-              <button className="key key-fn key-small" type="button"></button>
+              <button className="key key-fn key-small" type="button">alpha</button>
               <button className="key key-fn key-small" type="button"></button>
             </div>
             <div className="function-row">
-              <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.X)} type="button">x</button>
-              <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.TOOLS)} type="button">tools</button>
+              <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.X)} type="button">phy</button>
+              <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.TOOLS)} type="button"></button>
               <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.EQUAL)} type="button">=</button>
             </div>
             <div className="function-row">
-              <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.NOT2)} type="button">i</button>
-              <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.BACK)} type="button">←</button>
+              <button className="key key-fn key-small" onPointerDown={() => sendKey(E)} type="button">exp</button>
+              <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.BACK)} type="button">log</button>
               <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.LN)} type="button">ln</button>
             </div>
           </div>
