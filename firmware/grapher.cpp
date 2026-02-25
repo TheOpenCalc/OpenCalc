@@ -162,10 +162,10 @@ int Grapher()
     
     text_box *Graph = create_text_box(160, 220, 20, 160, 1, false);
     text_box *Formula = create_text_box(0, 220, 20, 160, 1, false);
-    Graph->text = "Graph";
-    Graph->t_size = 5;
-    Formula->text = "Formula";
-    Formula->t_size = 7;
+    Graph->text = "Graphe";
+    Graph->t_size = 6;
+    Formula->text = "Fonctions";
+    Formula->t_size = 9;
 
     fill_box *n = create_fill_box(0, 20, 40, 320, 3);
     const uint16_t palet[] = {
