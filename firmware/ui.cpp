@@ -243,6 +243,7 @@ void display_battery(uint16_t x, uint16_t y, int level)
     fill_rect(x + 5, y + 27, 4, 1, 0x0000);
 }
 
+
 int min(int a, int b)
 {
     if (a < b) {
@@ -250,6 +251,7 @@ int min(int a, int b)
     }
     return b;
 }
+
 
 int max(int a, int b)
 {
@@ -942,6 +944,7 @@ void update_fill_box(fill_box *in, int event, bool snd)
     }
     free(temp);
 }
+
 int * get_depth(char * in, int input_size){
     int * depth = (int*)malloc(sizeof(int)*input_size);
     for(int i = 0 ; i < input_size;i++){
@@ -1010,88 +1013,87 @@ int * get_depth(char * in, int input_size){
     for(int i = 0 ; i < input_size;i++){
         
 
-       // depth[i]-=m;
-       depth[i]=0;
+        depth[i]-=m;
+       //depth[i]=0;
     }
     return depth;
 }
 
-
-int * get_length(char * in, int input_size,int * depth){
-    int * length = (int*)malloc(sizeof(int)*input_size);
-    for(int i = 0 ; i < input_size;i++){
-        length[i]=0;
+float* get_length(char* in, int input_size, int* depth) {
+    float* length = (float*)malloc(sizeof(float) * input_size);
+    length[0]=0;
+     if(is_in(in[0],"uvwijk"))
+            length[0]+=3;
+        if(is_in(in[0],"fghcst"))
+            length[0]+=2;
+    for(int i = 1; i < input_size; i++) {
+        length[i] = length[i-1]+1;
+        if(is_in(in[i],"uvwijk"))
+            length[i]+=3;
+        if(is_in(in[i],"fghcst"))
+            length[i]+=2;
     }
-    int m=0;
-    int cur_depth =0;   
-    for(int searched_depth = 10 ; searched_depth>=0;searched_depth--){      //A optimiser, inneficient
-    for(int i = 0 ; i < input_size;i++){
-        if(in[i]=='(')
-            cur_depth++;
-        if(in[i]==')')
-            cur_depth--;
-        if(cur_depth==searched_depth && in[i]=='/'){
-            int a = 0;
-            int l1=0;
-            int l2=0;
-            for(int j = i+1 ; (j==i+1 || a>0) &&  j<input_size;j++){
-                if(in[j]=='(')
-                    a++;
-                if(in[j]==')')
-                     a--;
-                l1++;
-
+    for(int searched_depth = 10; searched_depth >= 0; searched_depth--) {
+        int cur_depth=0;
+        for(int i = 0; i < input_size;i++){
+            if(in[i]=='('){
+                cur_depth++;
             }
-            a = 0;
-            for(int j = i-1 ; (j==i-1 ||a<0 )&&  j>=0;j--){
-                if(in[j]=='(')
+            if(in[i]==')'){
+                cur_depth--;
+            }
+            if(in[i]=='/' && cur_depth==searched_depth){
+                printf("Good, %i \n",i);
+                int a =0;
+                int l1=0;
+                int j;
+                for(j = i-1 ; (j==i-1 ||a<0 )&&  j>0;j--){
+                 if(in[j]=='(')
                     a++;
                 if(in[j]==')')
                      a--;
-                if(in[j]=='/')
-                l2++;
+                }
+
+                int d = j;
+                l1=length[i]-length[max(j,0)];
+                printf("K: %i %i %i\n",j,length[i],length[j]);
+
+                int l2=0;
+                a=0;
+                for(j = i+1 ; (j==i+1 || a>0    ) &&  j<input_size;j++){
+                    if(in[j]=='(')
+                        a++;
+                    if(in[j]==')')
+                        a--;
+                }
+                l2=length[j]-length[i];
+                printf("J: %i %i %i\n",j,length[j],length[i]);
+                if(l2>l1){
+                    for(int j = d+1 ; j<i;j++){
+                        length[j]+=(l2-l1)/2.0;
+                    }
+                    for(int j = i ; j<input_size;j++){
+                        length[j]-=l1;
+                    }
+                }else{
+
+                }
             
             }
-     
-            for(int j = i+1 ; (j==i+1 || a>0) &&  j<input_size;j++){
-                if(in[j]=='(')
-                    a++;
-                if(in[j]==')')
-                     a--;
-                     if(l2<l1){
-                        length[j]-=l2+2;
-                     }else{
-                        length[j]-=(l1-l2)/2+l2+1;
-
-                     }
 
             }
-            a = 0;
-            for(int j = i-1 ; (j==i-1 ||a<0 )&&  j>=0;j--){
-                if(in[j]=='(')
-                    a++;
-                if(in[j]==')')
-                     a--;
-                length[j]+=max(0,(l1-l2)/2);
-            }
+
         }
-    }
-}
-for(int i =0;i<input_size;i++)
-{
-    length[i]=0;
-}
-   
-    return length;
-}
+            return length;
 
+    }
 
 
 void display_equation(char *in, int input_size, int x, int y, int SIZE, int cursor_pos)
 {
 
     int * depth = get_depth(in,input_size);
-    int * length = get_length(in,input_size,depth);
+    float * length = get_length(in,input_size,depth);
 
     x += 25;
 
@@ -1121,7 +1123,7 @@ void display_equation(char *in, int input_size, int x, int y, int SIZE, int curs
     for (int i = 0; i < input_size; i++) {
         if (i == cursor_pos - 1) {
             x_cursor = x+depth[i]*7*SIZE;
-            y_cursor = y + 5 + pos+length[i]*SIZE*5 +7;
+            y_cursor = y + 5 +length[i]*SIZE*5 +7;
         }
         if (is_in(in[i], "0123456789,.+-*()/Xx=ABCDEFGHIJKLMNOPQRSTUVWYZ!")) {
            /* if((in[i]=='('||in[i]==')'||in[i]=='/') && ((depth[i]!=depth[i+1]) || (depth[i]!=depth[i-1]))){
@@ -1131,7 +1133,7 @@ void display_equation(char *in, int input_size, int x, int y, int SIZE, int curs
                 }
             }else{*/
             temp[0] = in[i];
-            draw_char(x+depth[i]*7*SIZE, y + 5 + pos+length[i]*SIZE*5, temp, 0X0000, 0X0000, SIZE);
+            draw_char(x+depth[i]*7*SIZE, y + 5 +length[i]*SIZE*5, temp, 0X0000, 0X0000, SIZE);
             pos += 5 * SIZE;
             //}
         } else if (is_in(in[i], "uvwijkfghcst")) {
@@ -1216,12 +1218,12 @@ void display_equation(char *in, int input_size, int x, int y, int SIZE, int curs
                 j++;
             }
             if (i + j < input_size) {
-                display_equation(&in[i + 2], j - 3, x +depth[i]*7*SIZE- 17, y + pos, 1, cursor_pos);
+                display_equation(&in[i + 2], j - 3, x +depth[i]*7*SIZE- 17, y + 5+length[i]*10, 1, cursor_pos);
                 i += j - 1;
                 pos += 2.5 * (j - 1);
             }
             if (i + j == input_size) {
-                display_equation(&in[i + 2], j - 3, x +depth[i]*7*SIZE- 17, y + pos, 1, cursor_pos);
+                display_equation(&in[i + 2], j - 3, x +depth[i]*7*SIZE- 17, y + 5+  length[i]*10, 1, cursor_pos);
                 i += j;
                 pos += 2.5 * (j - 1);
             }
@@ -1254,7 +1256,6 @@ void draw_image(int x, int y, int h, int w, uint16_t *img, uint16_t bck)
         }
     }
 }
-
 
 void display_potentiometer(pontentiometer *in, bool is_selected)
 
@@ -1456,7 +1457,6 @@ int menu_proba()
     return END_KEYS;
 }
 
-
 int menu_trigo()
 {
     text_box **items = (text_box **)malloc(sizeof(text_box *) * 6);
@@ -1562,8 +1562,6 @@ int menu_trigo()
     }
     return END_KEYS;
 }
-
-
 
 int menu_const_phy()
 {

@@ -26,6 +26,10 @@
 #define COLOR_TEAL      0x0410
 #define COLOR_NAVY      0x0010
 
+int X_cursor =0;
+int Y_cursor =0;
+
+
 void wu_line(int y0, int x0, int y1, int x1, uint16_t color)
 {
     int steep = abs(y1 - y0) > abs(x1 - x0);
@@ -110,16 +114,21 @@ void graph(double cursor_pos, token *function, double x_min, double x_max, doubl
             } else {
                 fill_rect(display_y - 2, i - 2, 3, 3, color);
             }
+            if(is_selected && pos<cursor_pos && pos+pas>cursor_pos){
+                X_cursor=i-1;
+                Y_cursor=last;
 
+            }
             pos += pas;
             last = display_y;
         }
     }
     if (is_selected) {
+
         text_box *t = create_text_box(0, 0, 20, 160, 2, false);
         char *temp = (char *) malloc(sizeof(char) * 100);
         int s_temp = double_to_string_scientific(cursor_pos, temp);
-     
+        
         for (int i = 3; s_temp + 3 > i; i++) {
             t->text[i] = temp[i - 3];
         }
@@ -217,13 +226,17 @@ int Grapher()
                     token *tokenized = parse_string_to_token(arr_fill_box[i]->text, arr_fill_box[i]->t_size, &tokenized_size);
                     token *out = shunting_yard(tokenized, tokenized_size);
                     graph(cursor_pos, tokenized, x_min, x_max, y_min, y_max, tokenized_size, palet[i % 14], i == selected_fill_box, true);
+                    fill_rect(Y_cursor,X_cursor-5,1,10,0x000000);
+                    fill_rect(Y_cursor-5,X_cursor,10,1,0x000000);
+
                 }
             }
         }
 
         display_text_box(Formula,0,0,!show_graph && selected_fill_box==-1);
         display_text_box(Graph,0,0,show_graph&& selected_fill_box==-1);
-     
+             sleep_ms(150);
+
         last_pressed=scan_keypad();
         while (last_pressed == -1) {
             if(!show_graph){
@@ -269,6 +282,10 @@ int Grapher()
             break;
         case RIGHT :
             if (show_graph && selected_fill_box != -1) {
+
+                fill_rect(Y_cursor,X_cursor-5,1,10,BACKGROUND_COLOR);
+                    fill_rect(Y_cursor-5,X_cursor,10,1,BACKGROUND_COLOR);
+                    
                 cursor_pos += (x_max - x_min) / 100;
             } else {
                 fill_screen(BACKGROUND_COLOR);
@@ -278,6 +295,9 @@ int Grapher()
             break;
         case LEFT :
             if (show_graph && selected_fill_box != -1) {
+                                    fill_rect(20,0,200,340,BACKGROUND_COLOR);
+
+                    
                 cursor_pos -= (x_max - x_min) / 100;
             } else {
                 fill_screen(BACKGROUND_COLOR);
@@ -288,11 +308,15 @@ int Grapher()
         default :
             if (show_graph) {
                 if (last_pressed == PLUS) {
-                    x_min *= 2;
-                    x_max *= 2;
-                    y_min *= 2;
-                    y_max *= 2;
+                                        fill_rect(20,0,200,340,BACKGROUND_COLOR);
+
+                    x_min /= 2;
+                    x_max /= 2;
+                    y_min /= 2;
+                    y_max /= 2;
                 } else if (last_pressed == MINUS) {
+                    fill_rect(Y_cursor,X_cursor-5,1,10,BACKGROUND_COLOR);
+                    fill_rect(Y_cursor-5,X_cursor,10,1,BACKGROUND_COLOR);
                     x_min *= 2;
                     x_max *= 2;
                     y_min *= 2;
@@ -303,6 +327,5 @@ int Grapher()
             }
             break;
         }
-        sleep_ms(150);
     }
 }
