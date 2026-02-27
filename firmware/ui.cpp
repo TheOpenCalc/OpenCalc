@@ -23,10 +23,60 @@ extern "C" {
 
 #endif
 
+
+#define MAX_NODES 128
+
+typedef enum {
+    N_NUMBER,
+    N_VARIABLE,
+    N_CONST,
+    N_BINOP,
+    N_FUNC,
+    N_PLACEHOLDER,
+} NodeType;
+
+typedef struct ASTNode {
+    NodeType       type;
+    char           op;
+    double         number;
+    char           variable;
+    int            src_pos;  // position dans la string source (pour le curseur)
+    struct ASTNode *left;
+    struct ASTNode *right;
+} ASTNode;
+
+static ASTNode node_pool[MAX_NODES];
+static int     pool_top = 0;
+
+static ASTNode *alloc_node() {
+    if (pool_top >= MAX_NODES) return &node_pool[MAX_NODES - 1];
+    ASTNode *n  = &node_pool[pool_top++];
+    n->left     = nullptr;
+    n->right    = nullptr;
+    n->number   = 0;
+    n->op       = 0;
+    n->src_pos  = -1;
+    return n;
+}
+static void reset_pool() { pool_top = 0; }
+
+static ASTNode *make_placeholder() {
+    ASTNode *nd = alloc_node();
+    nd->type    = N_PLACEHOLDER;
+    return nd;
+}
+
 struct coord_s {
     int x;
     int y;
 };
+
+
+typedef struct {
+    token *toks;
+    int    n;
+    int    pos;
+} Parser;
 
 typedef struct coord_s coord;
 
@@ -1089,146 +1139,347 @@ float* get_length(char* in, int input_size, int* depth) {
     }
 
 
-void display_equation(char *in, int input_size, int x, int y, int SIZE, int cursor_pos)
-{
+static token *p_peek(Parser *p) {
+    return p->pos < p->n ? &p->toks[p->pos] : nullptr;
+}
+static token *p_consume(Parser *p) {
+    return p->pos < p->n ? &p->toks[p->pos++] : nullptr;
+}
 
-    int * depth = get_depth(in,input_size);
-    float * length = get_length(in,input_size,depth);
+static ASTNode *parse_expr(Parser *p);
+static ASTNode *parse_term(Parser *p);
+static ASTNode *parse_factor(Parser *p);
+static ASTNode *parse_base(Parser *p);
 
-    x += 25;
+static ASTNode *parse_base(Parser *p) {
+    token *t = p_peek(p);
+    if (!t) return make_placeholder();
 
-    int pos = 0;
-    char *cos = (char*) malloc(sizeof(char) * 4);
-    char *sin = (char*) malloc(sizeof(char) * 4);
-    char *tan = (char*) malloc(sizeof(char) * 4);
-    cos[0] = 'c';
-    cos[1] = 'o';
-    cos[2] = 's';
+    if (t->type == 'n') {
+        p_consume(p);
+        ASTNode *nd   = alloc_node();
+        nd->type      = N_NUMBER;
+        nd->number    = t->value;
+        nd->src_pos   = t->src_pos;
+        return nd;
+    }
+    if (t->type == 'X') {
+        p_consume(p);
+        ASTNode *nd   = alloc_node();
+        nd->type      = N_VARIABLE;
+        nd->variable  = (char)('a' + (int)t->value);
+        nd->src_pos   = t->src_pos;
+        return nd;
+    }
+    if (t->type == 'p' || t->type == 'e') {
+        p_consume(p);
+        ASTNode *nd  = alloc_node();
+        nd->type     = N_CONST;
+        nd->op       = t->type;
+        nd->src_pos  = t->src_pos;
+        return nd;
+    }
+    if (t->type == '(') {
+        p_consume(p);
+        ASTNode *inner = parse_expr(p);
+        if (p_peek(p) && p_peek(p)->type == ')') p_consume(p);
+        return inner;
+    }
 
-    sin[0] = 's';
-    sin[1] = 'i';
-    sin[2] = 'n';
+    char *funcs = (char *)"lrcstuvwfghijk";
+    if (is_in(t->type, funcs)) {
+        token *ft = p_consume(p);
+        ASTNode *nd = alloc_node();
+        nd->type    = N_FUNC;
+        nd->op      = ft->type;
+        nd->src_pos = ft->src_pos;
+        if (p_peek(p) && p_peek(p)->type == '(') p_consume(p);
+        token *next = p_peek(p);
+        if (!next || next->type == ')')
+            nd->left = make_placeholder();
+        else
+            nd->left = parse_expr(p);
+        if (p_peek(p) && p_peek(p)->type == ')') p_consume(p);
+        return nd;
+    }
 
-    tan[0] = 't';
-    tan[1] = 'a';
-    tan[2] = 'n';
+    return make_placeholder();
+}
 
-    cos[3] = '\0';
-    sin[3] = '\0';
-    tan[3] = '\0';
+static ASTNode *parse_factor(Parser *p) {
+    ASTNode *base = parse_base(p);
+    token   *t    = p_peek(p);
+    if (t && t->type == '^') {
+        token *ot = p_consume(p);
+        ASTNode *nd  = alloc_node();
+        nd->type     = N_BINOP;
+        nd->op       = '^';
+        nd->src_pos  = ot->src_pos;
+        nd->left     = base;
+        nd->right    = parse_factor(p);
+        return nd;
+    }
+    return base;
+}
 
-    char *temp = (char*) malloc(sizeof(char) * 2);
-    temp[1] = '\0';
+static ASTNode *parse_term(Parser *p) {
+    ASTNode *left = parse_factor(p);
+    while (true) {
+        token *t = p_peek(p);
+        if (!t || (t->type != '*' && t->type != '/')) break;
+        token *ot   = p_consume(p);
+        ASTNode *nd = alloc_node();
+        nd->type    = N_BINOP;
+        nd->op      = ot->type;
+        nd->src_pos = ot->src_pos;
+        nd->left    = left;
+        nd->right   = parse_factor(p);
+        left        = nd;
+    }
+    return left;
+}
 
-    for (int i = 0; i < input_size; i++) {
-        if (i == cursor_pos - 1) {
-            x_cursor = x+depth[i]*7*SIZE;
-            y_cursor = y + 5 +length[i]*SIZE*5 +7;
+static ASTNode *parse_expr(Parser *p) {
+    ASTNode *left = parse_term(p);
+    while (true) {
+        token *t = p_peek(p);
+        if (!t || (t->type != '+' && t->type != '-')) break;
+        token *ot   = p_consume(p);
+        ASTNode *nd = alloc_node();
+        nd->type    = N_BINOP;
+        nd->op      = ot->type;
+        nd->src_pos = ot->src_pos;
+        nd->left    = left;
+        nd->right   = parse_term(p);
+        left        = nd;
+    }
+    return left;
+}
+
+
+typedef struct { int w; int h; int baseline; } Dims;
+static inline int CW(int S) { return 6 * S; }
+static inline int CH(int S) { return 8 * S; }
+
+static int fmt_number(double v, char *buf) {
+    if (v == (int)v && v >= 0 && v < 100000) return sprintf(buf, "%d", (int)v);
+    else return sprintf(buf, "%.4g", v);
+}
+static int func_name_width(char op, int SIZE) {
+    switch (op) {
+        case 'c': case 's': case 't':               return 3*CW(SIZE);
+        case 'u': case 'v': case 'w':
+        case 'f': case 'g': case 'h':               return 4*CW(SIZE);
+        case 'i': case 'j': case 'k':               return 5*CW(SIZE);
+        case 'l':                                   return 2*CW(SIZE);
+        default:                                    return   CW(SIZE);
+    }
+}
+
+static Dims measure(ASTNode *nd, int SIZE) {
+    if (!nd) return {CW(SIZE), CH(SIZE), CH(SIZE)/2};
+    switch (nd->type) {
+        case N_PLACEHOLDER:
+        case N_VARIABLE:
+        case N_CONST:
+            return {CW(SIZE), CH(SIZE), CH(SIZE)/2};
+        case N_NUMBER: {
+            char buf[32];
+            int nc = fmt_number(nd->number, buf);
+            return {nc*CW(SIZE), CH(SIZE), CH(SIZE)/2};
         }
-        if (is_in(in[i], "0123456789,.+-*()/Xx=ABCDEFGHIJKLMNOPQRSTUVWYZ!")) {
-           /* if((in[i]=='('||in[i]==')'||in[i]=='/') && ((depth[i]!=depth[i+1]) || (depth[i]!=depth[i-1]))){
-                pos+=5*SIZE;
-                if(in[i]=='/'){
-                    fill_rect(x+depth[i]*4*SIZE, y + 5 + pos+length[i]*SIZE*5-max(length[i-1],length[i+1])*SIZE*5,2,max(length[i-1],-length[i+1])*SIZE*5,0x0000);
-                }
-            }else{*/
-            temp[0] = in[i];
-            draw_char(x+depth[i]*7*SIZE, y + 5 +length[i]*SIZE*5, temp, 0X0000, 0X0000, SIZE);
-            pos += 5 * SIZE;
-            //}
-        } else if (is_in(in[i], "uvwijkfghcst")) {
-        if (is_in(in[i],"uvwijk")){
-            temp[0] = 'a';
-            draw_char(x+depth[i]*7*SIZE, y + 5 + pos, temp, 0X0000, 0X0000, 2);
-            pos += 5.5 * SIZE;
+        case N_BINOP: {
+            if (nd->op == '/') {
+                Dims num = measure(nd->left,  SIZE);
+                Dims den = measure(nd->right, SIZE);
+                int  w   = (num.w > den.w ? num.w : den.w) + 4;
+                return {w, num.h + den.h + 6, den.h + 3};
+            } else if (nd->op == '^') {
+                int eS = SIZE > 1 ? SIZE-1 : 1;
+                Dims b = measure(nd->left,  SIZE);
+                Dims e = measure(nd->right, eS);
+                return {b.w + e.w, b.h + e.h/2, b.baseline + e.h/2};
+            } else {
+                Dims l       = measure(nd->left,  SIZE);
+                Dims r       = measure(nd->right, SIZE);
+                int ow       = nd->op == '*' ? 0 : CW(SIZE);
+                int baseline = l.baseline > r.baseline ? l.baseline : r.baseline;
+                int below_l  = l.h - l.baseline;
+                int below_r  = r.h - r.baseline;
+                int h        = baseline + (below_l > below_r ? below_l : below_r);
+                return {l.w + ow + r.w, h, baseline};
             }
-            if (is_in(in[i],"cfui")) {
-                draw_char(x+depth[i]*7*SIZE, y + 5 + pos, cos, 0X0000, 0X0000, 2);
+        }
+        case N_FUNC: {
+            if (nd->op == 'r') {
+                Dims c = measure(nd->left, SIZE);
+                return {CW(SIZE)+2+c.w, c.h+3, c.baseline+3};
             }
-            if (is_in(in[i], "sgvj")) {
-                draw_char(x+depth[i]*7*SIZE, y + 5 + pos, sin, 0X0000, 0X0000, 2);
+            Dims c = measure(nd->left, SIZE);
+            int fw = func_name_width(nd->op, SIZE);
+            int h  = c.h > CH(SIZE) ? c.h : CH(SIZE);
+            return {fw + CW(SIZE) + c.w + CW(SIZE), h, h/2};
+        }
+    }
+    return {CW(SIZE), CH(SIZE), CH(SIZE)/2};
+}
+
+extern int x_cursor;
+extern int y_cursor;
+
+static int draw_str(int x, int y, const char *s, int SIZE) {
+    char buf[2] = {0,0};
+    while (*s) { buf[0] = *s++; draw_char(x, y, buf, 0x0000, 0x0000, SIZE); y += CW(SIZE); }
+    return y;
+}
+static int draw_func_name(char op, int x, int y, int SIZE) {
+    switch (op) {
+        case 'c': return draw_str(x,y,"cos",SIZE);
+        case 's': return draw_str(x,y,"sin",SIZE);
+        case 't': return draw_str(x,y,"tan",SIZE);
+        case 'u': return draw_str(x,y,"acos",SIZE);
+        case 'v': return draw_str(x,y,"asin",SIZE);
+        case 'w': return draw_str(x,y,"atan",SIZE);
+        case 'f': return draw_str(x,y,"cosh",SIZE);
+        case 'g': return draw_str(x,y,"sinh",SIZE);
+        case 'h': return draw_str(x,y,"tanh",SIZE);
+        case 'i': return draw_str(x,y,"acosh",SIZE);
+        case 'j': return draw_str(x,y,"asinh",SIZE);
+        case 'k': return draw_str(x,y,"atanh",SIZE);
+        case 'l': return draw_str(x,y,"ln",SIZE);
+        default:  return y;
+    }
+}
+static void update_cursor(ASTNode *nd, int x, int y, int cursor_pos) {
+    if (nd->src_pos < 0) return;
+    if (cursor_pos - 1 == nd->src_pos) {
+        x_cursor = x;
+        y_cursor = y + 7;
+    }
+}
+
+static int render_node(ASTNode *nd, int x, int y, int SIZE, int cursor_pos) {
+    if (!nd) return y;
+    Dims d = measure(nd, SIZE);
+    char buf[2] = {0,0}; char numbuf[32];
+
+    switch (nd->type) {
+
+        case N_PLACEHOLDER: {
+            int w = CW(SIZE), h = CH(SIZE);
+            fill_rect(x-13,         y,         1, w, 0x0000);
+            fill_rect(x + h - 14, y,         1, w, 0x0000);
+            fill_rect(x-13,         y,         h, 1, 0x0000);
+            fill_rect(x-13,         y + w - 1, h, 1, 0x0000);
+            return y + w;
+        }
+
+        case N_NUMBER: {
+            update_cursor(nd, x, y, cursor_pos);
+            fmt_number(nd->number, numbuf);
+            return draw_str(x, y, numbuf, SIZE);
+        }
+
+        case N_VARIABLE: {
+            update_cursor(nd, x, y, cursor_pos);
+            buf[0] = nd->variable;
+            draw_char(x, y, buf, 0x0000, 0x0000, SIZE);
+            return y + CW(SIZE);
+        }
+
+        case N_CONST: {
+            update_cursor(nd, x, y, cursor_pos);
+            buf[0] = nd->op;
+            draw_char(x, y, buf, 0x0000, 0x0000, SIZE);
+            return y + CW(SIZE);
+        }
+
+        case N_BINOP: {
+
+            if (nd->op == '/') {
+                Dims num = measure(nd->left,  SIZE);
+                Dims den = measure(nd->right, SIZE);
+                int bw   = d.w;
+                update_cursor(nd, x + den.h + 2, y + bw/2, cursor_pos);
+                render_node(nd->right, x,              y + (bw - den.w)/2, SIZE, cursor_pos);
+                fill_rect(x + den.h -11, y, 2, bw, 0x0000);
+                render_node(nd->left,  x + den.h + 5, y + (bw - num.w)/2, SIZE, cursor_pos);
+                return y + bw;
+
+            } else if (nd->op == '^') {
+                int eS = SIZE > 1 ? SIZE-1 : 1;
+                Dims b = measure(nd->left,  SIZE);
+                Dims e = measure(nd->right, eS);
+                update_cursor(nd, x + e.h/2, y + b.w, cursor_pos);
+                render_node(nd->left,  x + e.h/2, y,        SIZE, cursor_pos);
+                render_node(nd->right, x,          y + b.w,  eS,   cursor_pos);
+                return y + d.w;
+
+            } else {
+                Dims l = measure(nd->left,  SIZE);
+                Dims r = measure(nd->right, SIZE);
+                int  h        = d.h;
+                int  baseline = d.baseline;
+                int cy = render_node(nd->left,  x + (baseline - l.baseline), y,  SIZE, cursor_pos);
+                update_cursor(nd, x + (baseline - CH(SIZE)/2), cy, cursor_pos);
+                buf[0] = nd->op;
+                draw_char(x + (baseline - CH(SIZE)/2), cy, buf, 0x0000, 0x0000, SIZE);
+                cy += CW(SIZE);
+                return render_node(nd->right, x + (baseline - r.baseline), cy, SIZE, cursor_pos);
             }
-            if (is_in(in[i] ,"twhk")) {
-                draw_char(x+depth[i]*7*SIZE, y + 5 + pos, tan, 0X0000, 0X0000, 2);
-            }
-            if(is_in(in[i],"uvwcst")){
-              pos+=15.5*SIZE;
-            }
-            else if(is_in(in[i],"ijkfgh")){
-              pos+=15.5*SIZE;
-                      temp[0] = 'h';
-            draw_char(x+depth[i]*7*SIZE, y + 5 + pos, temp, 0X0000, 0X0000, 2);
-            pos += 5.5 * SIZE;
-            }
-        } else if (in[i] == 'c') {
-            draw_char(x+depth[i]*7*SIZE, y + 5 + pos, cos, 0X0000, 0X0000, 2);
-            pos += 12 * SIZE;
-        } else if (in[i] == 's') {
-            draw_char(x+depth[i]*7*SIZE, y + 5 + pos, sin, 0X0000, 0X0000, 2);
-            pos += 13 * SIZE;
-        } else if (in[i] == 't') {
-            draw_char(x+depth[i]*7*SIZE, y + 5 + pos, tan, 0X0000, 0X0000, 2);
-            pos += 13 * SIZE;
-        } 
-        else if (in[i] == 'p') {
-#ifdef OPENCALC_WASM      /// Pourquoi ???? J'ai compris pourquoi
-            temp[0] = 'p';
-#else
-            temp[0] = 'π';
-#endif
-            draw_char(x+depth[i]*7*SIZE, y + 5 + pos, temp, 0X0000, 0X0000, 2);
-            pos += SIZE * 4;
-        } else if (in[i] == 'r') {
-            int ind = 1;
-            int j = 2;
-            while (i + j < input_size && ind != 0) {
-                if (in[i + j] == '(') {
-                    ind++;
-                } else if (in[i + j] == ')') {
-                    ind--;
-                }
-                j++;
-            }
-            if (ind == 0) {
-                // temp[0] = (char) 251;
-                temp[0] = 'R';
-                draw_char(x+depth[i]*7*SIZE, y + 5 + pos, temp, 0X0000, 0X0000, 2);
-                pos += SIZE * 4;
-                display_equation(&in[i + 2], j - 3, x + pos+depth[i]*7*SIZE, y - 3, 2, cursor_pos);
-                i += j - 1;
-                pos += SIZE * 4 * (j - 2);
-            }
-        } else if (in[i] == 'l') {
-            pos += 2;
-            temp[0] = 'l';
-            draw_char(x+depth[i]*7*SIZE, y + 5 + pos, temp, 0X0000, 0X0000, 2);
-            pos += 4 * SIZE;
-            temp[0] = 'n';
-            draw_char(x+depth[i]*7*SIZE, y + 5 + pos, temp, 0X0000, 0X0000, 2);
-            pos += 4.5 * SIZE;
-        } else if (in[i] == '^') {
-            int ind = 1;
-            int j = 2;
-            while (i + j < input_size && ind != 0) {
-                if (in[i + j] == '(') {
-                    ind++;
-                } else if (in[i + j] == ')') {
-                    ind--;
-                }
-                j++;
-            }
-            if (i + j < input_size) {
-                display_equation(&in[i + 2], j - 3, x +depth[i]*7*SIZE- 17, y + 5+length[i]*10, 1, cursor_pos);
-                i += j - 1;
-                pos += 2.5 * (j - 1);
-            }
-            if (i + j == input_size) {
-                display_equation(&in[i + 2], j - 3, x +depth[i]*7*SIZE- 17, y + 5+  length[i]*10, 1, cursor_pos);
-                i += j;
-                pos += 2.5 * (j - 1);
+        }
+
+        case N_FUNC: {
+            update_cursor(nd, x, y, cursor_pos);
+            if (nd->op == 'r') {
+                Dims c = measure(nd->left, SIZE);
+                buf[0] = 'R'; draw_char(x+3, y, buf, 0x0000, 0x0000, SIZE);
+                int cy = y + CW(SIZE) + 2;
+                fill_rect(x, cy, 1, c.w, 0x0000);
+                render_node(nd->left, x+3, cy, SIZE, cursor_pos);
+                return cy + c.w;
+            } else {
+                Dims c = measure(nd->left, SIZE);
+                int  h = d.h;
+                int cy = draw_func_name(nd->op, x + (h-CH(SIZE))/2, y, SIZE);
+                int xc = x + (h-c.h)/2;
+                buf[0] = '('; draw_char(xc, cy, buf, 0x0000, 0x0000, SIZE); cy += CW(SIZE);
+                cy = render_node(nd->left, xc, cy, SIZE, cursor_pos);
+                buf[0] = ')'; draw_char(xc, cy, buf, 0x0000, 0x0000, SIZE);
+                return cy + CW(SIZE);
             }
         }
     }
+    return y + d.w;
+}
+
+
+
+void display_equation(char *in, int input_size, int x, int y, int SIZE, int cursor_pos)
+{
+    x+=10;
+    reset_pool();
+    if (!in || input_size == 0) return;
+
+    int    tok_n = 0;
+    token *toks  = parse_string_to_token(in, input_size, &tok_n);
+
+    Parser  p    = { toks, tok_n, 0 };
+    ASTNode *root = parse_expr(&p);
+
+    if (root) {
+        render_node(root, x + 14, y + 5, SIZE, cursor_pos);
+    } else {
+        char buf[2] = {0, 0};
+        int cy = y + 5;
+        for (int i = 0; i < input_size; i++) {
+            buf[0] = in[i];
+            draw_char(x + 14, cy, buf, 0x0000, 0x0000, SIZE);
+            cy += CW(SIZE);
+        }
+    }
+
+    free(toks);
 }
 
 void blink_cursor()

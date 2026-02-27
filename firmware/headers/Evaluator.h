@@ -3,6 +3,7 @@
 
 struct token_s {
     char type;
+    int src_pos;
     double value;
     int h = 0;
 };

@@ -103,6 +103,8 @@ bool higher_priority(char a, char b)
     if (b == '^') {
         return false;
     }
+        if (is_in(a, (char*) "*/") && is_in(b, (char*) "*/")) return true;
+    if (is_in(a, (char*) "+-") && is_in(b, (char*) "+-")) return true;  
     if (is_in(a, (char*) "+-") && is_in(b, (char*) "*/")) {
         return false;
     }
@@ -423,6 +425,7 @@ token *parse_string_to_token(char *in, int n, int *tokenized_size)
                 out[out_size].value = cur.value;
                 out[out_size].type = 'n';
                 cur.value = 0;
+                out[out_size].src_pos = i - 1; 
                 out_size++;
             }
         }
@@ -470,20 +473,26 @@ token *parse_string_to_token(char *in, int n, int *tokenized_size)
             }
             out[out_size].value = cur.value;
             out[out_size].type = 'n';
+            out[out_size].src_pos = i - 1;  
             cur.value = 0;
             out_size++;
         }
         if (i < n && is_in(in[i], (char*) "(")) {
             out[out_size].value = (int) in[i] - 'a';
             out[out_size].type = in[i];
+            out[out_size].src_pos = i;  
             out_size++; 
         } else if (i < n && is_in(in[i], funop)) {
+            
             out[out_size].value = (int) in[i] - 'a';
             out[out_size].type = in[i];
+                        out[out_size].src_pos = i;  
+
             out_size++;
         } else if (in[i] <= 'Z' && 'A' <= in[i]) {
             out[out_size].value = in[i] - 'a';
             out[out_size].type = 'X';
+            out[out_size].src_pos = i;  // ← position du caractère
             out_size++;
         }
     }
