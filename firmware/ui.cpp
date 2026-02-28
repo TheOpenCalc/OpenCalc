@@ -33,6 +33,7 @@ typedef enum {
     N_BINOP,
     N_FUNC,
     N_PLACEHOLDER,
+    N_PARENTHESIS,
 } NodeType;
 
 typedef struct ASTNode {
@@ -40,7 +41,7 @@ typedef struct ASTNode {
     char           op;
     double         number;
     char           variable;
-    int            src_pos;  // position dans la string source (pour le curseur)
+    int            src_pos;  
     struct ASTNode *left;
     struct ASTNode *right;
 } ASTNode;
@@ -255,7 +256,7 @@ void draw_char(uint16_t x, uint16_t y, char *c, uint16_t color, uint16_t bg, uin
     int i = 0;
     while (c[i] != '\0') {
         if (c[i] < 32 || c[i] > 126) {
-            return; // Caractères imprimables uniquement
+            return; 
         }
         const uint8_t *glyph = &font5x7[(c[i] - 32) * 5];
 
@@ -1150,12 +1151,37 @@ static ASTNode *parse_expr(Parser *p);
 static ASTNode *parse_term(Parser *p);
 static ASTNode *parse_factor(Parser *p);
 static ASTNode *parse_base(Parser *p);
-
 static ASTNode *parse_base(Parser *p) {
     token *t = p_peek(p);
     if (!t) return make_placeholder();
 
-    if (t->type == 'n') {
+    if (t->type == '(') {
+     //   bool virt = t->is_virtual;
+        p_consume(p);
+        ASTNode *inner  = parse_expr(p);
+        ASTNode *paren  = alloc_node();
+        paren->type     = N_PARENTHESIS;  
+        paren->op       = '(';     
+        paren->left     = inner;
+        paren->src_pos  = t->src_pos;
+        if (p_peek(p) && p_peek(p)->type == ')') {
+            paren->right = alloc_node();   
+            paren->right->type = N_PLACEHOLDER;
+            p_consume(p);
+        }
+        return paren;
+    }
+
+    if (t->type == ')') {
+        p_consume(p);
+        ASTNode *nd = alloc_node();
+        nd->type    = N_PARENTHESIS;
+        nd->op      = ')';
+        nd->src_pos = t->src_pos;
+        return nd;
+    }
+    if (t->type == 'n' ) {
+        
         p_consume(p);
         ASTNode *nd   = alloc_node();
         nd->type      = N_NUMBER;
@@ -1279,6 +1305,8 @@ static int func_name_width(char op, int SIZE) {
 static Dims measure(ASTNode *nd, int SIZE) {
     if (!nd) return {CW(SIZE), CH(SIZE), CH(SIZE)/2};
     switch (nd->type) {
+      
+        
         case N_PLACEHOLDER:
         case N_VARIABLE:
         case N_CONST:
@@ -1287,6 +1315,15 @@ static Dims measure(ASTNode *nd, int SIZE) {
             char buf[32];
             int nc = fmt_number(nd->number, buf);
             return {nc*CW(SIZE), CH(SIZE), CH(SIZE)/2};
+        }
+         case N_PARENTHESIS: {
+            if (nd->op == ')') {
+                return {CW(SIZE), CH(SIZE), CH(SIZE)/2};
+            }
+            
+            Dims c   = measure(nd->left, SIZE);
+            int  pw  = CW(SIZE) + (nd->right ? CW(SIZE) : 0);
+            return {c.w + pw, c.h, c.baseline};
         }
         case N_BINOP: {
             if (nd->op == '/') {
@@ -1379,6 +1416,25 @@ static int render_node(ASTNode *nd, int x, int y, int SIZE, int cursor_pos) {
             fmt_number(nd->number, numbuf);
             return draw_str(x, y, numbuf, SIZE);
         }
+        case N_PARENTHESIS: {
+            update_cursor(nd, x, y, cursor_pos);
+    if (nd->op == ')') {
+        buf[0] = ')';
+        draw_char(x, y, buf, 0x0000, 0x0000, SIZE);
+        return y + CW(SIZE);
+    }
+    Dims c  = measure(nd->left, SIZE);
+    int  xc = x + (c.h - CH(SIZE)) / 2;
+    buf[0] = '(';
+    draw_char(xc, y, buf, 0x0000, 0x0000, SIZE);
+    int cy = render_node(nd->left, x, y + CW(SIZE), SIZE, cursor_pos);
+    if (nd->right) {
+        buf[0] = ')';
+        draw_char(xc, cy, buf, 0x0000, 0x0000, SIZE);
+        cy += CW(SIZE);
+    }
+    return cy;
+        }
 
         case N_VARIABLE: {
             update_cursor(nd, x, y, cursor_pos);
@@ -1393,7 +1449,7 @@ static int render_node(ASTNode *nd, int x, int y, int SIZE, int cursor_pos) {
             draw_char(x, y, buf, 0x0000, 0x0000, SIZE);
             return y + CW(SIZE);
         }
-
+        
         case N_BINOP: {
 
             if (nd->op == '/') {
@@ -1454,29 +1510,22 @@ static int render_node(ASTNode *nd, int x, int y, int SIZE, int cursor_pos) {
 }
 
 
-
 void display_equation(char *in, int input_size, int x, int y, int SIZE, int cursor_pos)
 {
-    x+=10;
+    x += 10;
     reset_pool();
     if (!in || input_size == 0) return;
 
     int    tok_n = 0;
     token *toks  = parse_string_to_token(in, input_size, &tok_n);
+    Parser p     = { toks, tok_n, 0 };
+    int    cy    = y + 5;
 
-    Parser  p    = { toks, tok_n, 0 };
-    ASTNode *root = parse_expr(&p);
-
-    if (root) {
-        render_node(root, x + 14, y + 5, SIZE, cursor_pos);
-    } else {
-        char buf[2] = {0, 0};
-        int cy = y + 5;
-        for (int i = 0; i < input_size; i++) {
-            buf[0] = in[i];
-            draw_char(x + 14, cy, buf, 0x0000, 0x0000, SIZE);
-            cy += CW(SIZE);
-        }
+    while (p.pos < p.n) {
+        int before   = p.pos;
+        ASTNode *node = parse_expr(&p);
+        if (node) cy = render_node(node, x + 14, cy, SIZE, cursor_pos);
+        if (p.pos == before) p.pos++; 
     }
 
     free(toks);

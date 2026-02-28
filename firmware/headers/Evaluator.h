@@ -6,6 +6,7 @@ struct token_s {
     int src_pos;
     double value;
     int h = 0;
+    
 };
 
 struct operation_s {
