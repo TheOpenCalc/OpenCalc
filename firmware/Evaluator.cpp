@@ -26,17 +26,13 @@ int double_to_string_scientific(double in, char *out)
     char buffer[256];
     std::sprintf(buffer, "%.15g", in);
     int j = 0;
-    int s = 0;
-    while (buffer[j] != '\0') {
-        j++;
-    }
-    //free(out);
-    //out = (char*) malloc(sizeof(char) * (j + 2));
-    for (int i = 0; i < j + 2; i++) {
-        (out)[i] = '\0';
-    }
-    s = j;
+    while (buffer[j] != '\0') j++;
+
+    for (int i = 0; i < j + 2; i++) out[i] = '\0';
+
+    int s = j;
     int k = 0;
+
     for (int i = 0; i < j; i++) {
         if (buffer[i] == 'e') {
             out[i] = '*';
@@ -44,20 +40,28 @@ int double_to_string_scientific(double in, char *out)
             out[i + 2] = '0';
             out[i + 3] = '^';
             k = 2;
-            i++;
-            i++;
+            i += 2;
             s = j + 2;
         }
         out[i + k] = buffer[i];
     }
-    for (int i = j - 1; i >= 0 && out[i] == '0'; i--) {
-        out[i] = '\0';
-        s--;
+
+    bool has_dot = false;
+    for (int i = 0; i < s; i++) {
+        if (out[i] == '.') { has_dot = true; break; }
     }
-    if (out[s - 1] == '.') {
-        out[s - 1] = '\0';
-        s--;
+
+    if (has_dot) {
+        for (int i = s - 1; i >= 0 && out[i] == '0'; i--) {
+            out[i] = '\0';
+            s--;
+        }
+        if (s > 0 && out[s - 1] == '.') {
+            out[s - 1] = '\0';
+            s--;
+        }
     }
+
     return s;
 }
 

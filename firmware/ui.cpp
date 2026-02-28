@@ -1288,9 +1288,27 @@ static inline int CW(int S) { return 6 * S; }
 static inline int CH(int S) { return 8 * S; }
 
 static int fmt_number(double v, char *buf) {
-    if (v == (int)v && v >= 0 && v < 100000) return sprintf(buf, "%d", (int)v);
-    else return sprintf(buf, "%.4g", v);
+    if (v == (int)v && v >= 0 && v < 10000000) {
+        return sprintf(buf, "%d", (int)v);
+    }
+    int    int_part = (int)v;
+    double dec_part = v - int_part;
+    if (dec_part < 0) dec_part = -dec_part;
+
+    int decimals = (int)(dec_part * 1000000 + 0.5);
+    int len = sprintf(buf, "%d.", int_part);
+
+    char dec_buf[8];
+    int dec_len = sprintf(dec_buf, "%04d", decimals);
+
+    while (dec_len > 1 && dec_buf[dec_len-1] == '0') dec_len--;
+    dec_buf[dec_len] = '\0';
+
+    for (int i = 0; i < dec_len; i++) buf[len++] = dec_buf[i];
+    buf[len] = '\0';
+    return len;
 }
+
 static int func_name_width(char op, int SIZE) {
     switch (op) {
         case 'c': case 's': case 't':               return 3*CW(SIZE);
