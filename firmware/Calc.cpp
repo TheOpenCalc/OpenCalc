@@ -69,8 +69,8 @@ int Calc()
             token *t = parse_string_to_token(history[l]->text, history[l]->t_size, &tokenized_size);
 
             token *out = shunting_yard(t, tokenized_size);
-
-            double temp = evaluate_npi(out, tokenized_size);
+            int yarded = count_yarded(t, tokenized_size) ;
+            double temp = evaluate_npi(out, yarded);
             history[cur_last_history]->t_size = double_to_string_scientific(temp, (history[cur_last_history]->text));
             cur_last_history++;
             cur_selected = cur_last_history;
@@ -100,7 +100,7 @@ int Calc()
             
             update_fill_box(history[cur_last_history],menu_tools(),snd);
         }
-        break;
+       // break;
         default:
             update_fill_box(history[cur_last_history], last_pressed,snd);
             break;

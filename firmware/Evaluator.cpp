@@ -14,7 +14,7 @@ double fact_r(double in)
         return NAN;
     else{
         out=1;
-        for(int i = 1; i < in;i++){
+        for(int i = 1; i <= in+0.5;i++){
             out*=i;
         }
     }
@@ -506,6 +506,7 @@ token *parse_string_to_token(char *in, int n, int *tokenized_size)
             out_size++;
         }
     }
+    
     *tokenized_size = out_size;
     return(out);
 }

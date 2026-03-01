@@ -1206,7 +1206,7 @@ static ASTNode *parse_base(Parser *p) {
         return inner;
     }
 
-    char *funcs = (char *)"lrcstuvwfghijk";
+    char *funcs = (char *)"lrcstuvwfghijk!";
     if (is_in(t->type, funcs)) {
         token *ft = p_consume(p);
         ASTNode *nd = alloc_node();
@@ -1383,6 +1383,7 @@ static int draw_str(int x, int y, const char *s, int SIZE) {
 }
 static int draw_func_name(char op, int x, int y, int SIZE) {
     switch (op) {
+        case '!': return draw_str(x,y,"!",SIZE);
         case 'c': return draw_str(x,y,"cos",SIZE);
         case 's': return draw_str(x,y,"sin",SIZE);
         case 't': return draw_str(x,y,"tan",SIZE);
@@ -1506,7 +1507,12 @@ static int render_node(ASTNode *nd, int x, int y, int SIZE, int cursor_pos) {
                 fill_rect(x, cy, 1, c.w, 0x0000);
                 render_node(nd->left, x+3, cy, SIZE, cursor_pos);
                 return cy + c.w;
-            } else {
+            } else if(nd->op=='!') {
+                   int cy = render_node(nd->left, x, y, SIZE, cursor_pos);
+                buf[0] = '!'; draw_char(x, cy, buf, 0x0000, 0x0000, SIZE);
+                return cy + CW(SIZE);
+
+            }else {
                 Dims c = measure(nd->left, SIZE);
                 int  h = d.h;
                 int cy = draw_func_name(nd->op, x + (h-CH(SIZE))/2, y, SIZE);
