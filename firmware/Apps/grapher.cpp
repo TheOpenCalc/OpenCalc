@@ -63,7 +63,7 @@ void wu_line(int y0, int x0, int y1, int x1, uint16_t color)
 
         if (steep) {
             fill_rect(y_int, x, 1, 1, color);       // pixel principal
-            fill_rect(y_int + 1, x, 1, 1, color);   // pixel voisin (antialias)
+            fill_rect(y_int + 1, x, 1, 1, (color+BACKGROUND_COLOR)/2);   // pixel voisin (antialias)
         } else {
             fill_rect(x, y_int, 1, 1, color);
             fill_rect(x, y_int + 1, 1, 1, color);
