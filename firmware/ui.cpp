@@ -1476,7 +1476,7 @@ static int render_node(ASTNode *nd, int x, int y, int SIZE, int cursor_pos) {
                 int bw   = d.w;
                 update_cursor(nd, x + den.h + 2, y + bw/2, cursor_pos);
                 render_node(nd->right, x,              y + (bw - den.w)/2, SIZE, cursor_pos);
-                fill_rect(x + den.h -11, y, 2, bw, 0x0000);
+                fill_rect(x + den.h -SIZE*7+3, y, 2, bw, 0x0000);
                 render_node(nd->left,  x + den.h + 5, y + (bw - num.w)/2, SIZE, cursor_pos);
                 return y + bw;
 
@@ -1486,7 +1486,7 @@ static int render_node(ASTNode *nd, int x, int y, int SIZE, int cursor_pos) {
                 Dims e = measure(nd->right, eS);
                 update_cursor(nd, x + e.h/2, y + b.w, cursor_pos);
                 render_node(nd->left,  x + e.h/2, y,        SIZE, cursor_pos);
-                render_node(nd->right, x,          y + b.w,  eS,   cursor_pos);
+                render_node(nd->right, x+10,          y + b.w,  eS,   cursor_pos);
                 return y + d.w;
 
             } else {
