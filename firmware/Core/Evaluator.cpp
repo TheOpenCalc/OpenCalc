@@ -25,7 +25,7 @@ double fact_r(double in)
 double fact(double in)
 {
     if (in - (int)in > 0.05 || in < 0)
-        return 0;
+        return NAN;
     else
         return (double)fact_r((int)in);
 }

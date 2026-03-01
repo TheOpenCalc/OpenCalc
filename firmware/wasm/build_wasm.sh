@@ -26,8 +26,11 @@ em++ -O2 -std=c++17 \
   -DOPENCALC_WASM \
   -I"$FIRMWARE_DIR/wasm/stubs" \
   -I"$FIRMWARE_DIR" \
+  -I"$FIRMWARE_DIR/Apps"\
+  -I"$FIRMWARE_DIR/Core"\
   -I"$FIRMWARE_DIR/headers" \
-  "$FIRMWARE_DIR"/*.cpp \
+  "$FIRMWARE_DIR/Core"/*.cpp \
+  "$FIRMWARE_DIR/Apps"/*.cpp \
   "$FIRMWARE_DIR/wasm/wasm_input.cpp" \
   -sMODULARIZE=1 \
   -sEXPORT_ES6=1 \
