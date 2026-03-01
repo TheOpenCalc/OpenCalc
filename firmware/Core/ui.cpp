@@ -448,7 +448,7 @@ typedef struct { int w; int h; int baseline; } Dims;
 static inline int CW(int S) { return 6 * S; }
 static inline int CH(int S) { return 8 * S; }
 
-static int fmt_number(double v, char *buf) {
+int fmt_number(double v, char *buf) {
     if (v == (int)v && v >= 0 && v < 10000000) {
         return sprintf(buf, "%d", (int)v);
     }

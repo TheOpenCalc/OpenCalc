@@ -73,7 +73,7 @@ void wu_line(int y0, int x0, int y1, int x1, uint16_t color)
     }
 }
 
-void graph(double cursor_pos, token *function, double x_min, double x_max, double y_min, double y_max, int n, uint16_t color, bool is_selected, bool fill_between_points)
+void graph(double cursor_pos, token *function, double x_min, double x_max, double y_min, double y_max, int n, uint16_t color, int id, bool fill_between_points)
 {
     double pas = (x_max - x_min) / SCREEN_WIDTH;
     
@@ -113,7 +113,7 @@ void graph(double cursor_pos, token *function, double x_min, double x_max, doubl
             } else {
                 fill_rect(display_y - 2, i - 2, 3, 3, color);
             }
-            if(is_selected && pos<cursor_pos && pos+pas>cursor_pos){
+            if((id!=-1) && pos<cursor_pos && pos+pas>cursor_pos){
                 X_cursor=i-1;
                 Y_cursor=last;
 
@@ -122,9 +122,9 @@ void graph(double cursor_pos, token *function, double x_min, double x_max, doubl
             last = display_y;
         }
     }
-    if (is_selected) {
+    if (id!=-1) {
 
-        text_box *t = create_text_box(0, 0, 20, 160, 2, false);
+        text_box *t = create_text_box(0, 0, 20, 107, 2, false);
         char *temp = (char *) malloc(sizeof(char) * 100);
         int s_temp = double_to_string_scientific(cursor_pos, temp);
         
@@ -138,28 +138,47 @@ void graph(double cursor_pos, token *function, double x_min, double x_max, doubl
         free(temp);
         display_text_box(t, 0, 0, false);
 
-        text_box *tb = create_text_box(160, 0, 20, 160, 2, false);
+        text_box *tb = create_text_box(107, 0, 20, 107, 2, false);
         char *tempb = (char*) malloc(sizeof(char) * 100);
         int s_tempb = double_to_string_scientific(evaluate_npi(tokenized_expression, yarded, cursor_pos, 'X'), tempb);
 
-        for (int i = 3; s_tempb + 3 > i; i++) {
-            tb->text[i] = tempb[i - 3];
+        for (int i = 6; s_tempb + 6 > i; i++) {
+            tb->text[i] = tempb[i - 6];
         }
-        tb->t_size = 3 + s_temp;
-        tb->text[0] = 'Y';
-        tb->text[1] = ':';
-        tb->text[2] = ' ';
+        tb->t_size = 6 + s_tempb;
+        tb->text[0] = (('f'+id-1 ));
+
+        tb->text[1] = '(';
+        tb->text[2] = 'x';
+        tb->text[3] = ')';
+        
+        tb->text[4] = ':';
+        tb->text[5] = ' ';
         free(tempb);
         display_text_box(tb, 0, 0, false);
 
 
-        // sf::Vector2f s(6.0f, 6.0f);
-        // sf::RectangleShape rect(s);
-        // rect.setPosition((1 - (cursor_pos - x_max) / (x_min - x_max)) * 320 - 3,
-        //                   SCREEN_HEIGHT - (evaluate_npi(tokenized_expression, yarded, cursor_pos, 'X') - y_min) / (y_max - y_min) * SCREEN_HEIGHT - 3);
-        // rect.setFillColor(sf::Color(0xffffff));
+        
 
-        // window->draw(rect);
+        text_box *tc = create_text_box(214, 0, 20, 106, 2, false);
+        char *tempc = (char*) malloc(sizeof(char) * 100);
+        char * buff = (char*)malloc(sizeof(char)*20);
+        fmt_number((-evaluate_npi(tokenized_expression, yarded, cursor_pos, 'X')+evaluate_npi(tokenized_expression, yarded, cursor_pos+(x_max-x_min)/100000000, 'X'))/((x_max-x_min)/100000000),buff);
+
+        for (int i = 6; 15 > i; i++) {
+            tc->text[i] = buff[i - 6];
+        }
+        tc->t_size = 7;
+        tc->text[0] = (('f'+id-1 ));
+        tc->text[1] = '\'';
+
+        tc->text[2] = '(';
+        tc->text[3] = 'x';
+        tc->text[4] = ')';
+        
+        tc->text[5] = ':';
+        free(tempc);
+        display_text_box(tc, 0, 0, false);
     }
     return;
 }

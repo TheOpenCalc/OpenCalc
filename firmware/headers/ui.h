@@ -74,6 +74,8 @@ enum touches  {
 
 void axis();
 
+int fmt_number(double v, char *buf);
+
 void display_text(int x, int y, char * t,int SIZE, int t_size);
 
 void display_equation(char *in, int input_size, int x, int y, int SIZE, int cursor_pos);
