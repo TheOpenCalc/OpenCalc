@@ -73,7 +73,6 @@ int main()
     arr_img[5]=img_periodic;
 
 
-    printf("AA");
     gpio_init(PIN_CS);
     gpio_set_dir(PIN_CS, GPIO_OUT);
     gpio_init(PIN_DC);
@@ -128,7 +127,6 @@ int main()
     int start = 0;
     while (true)
     {
-        print_heap();
 
         for (int i = 0; i < 6; i++)
         {
@@ -143,7 +141,6 @@ int main()
         display_battery(222, 286, 2);
 
         draw_char(230, 160 - 9 * 5, "Main menu", 0x0000, BACKGROUND_COLOR, 2);
-        printf("%d \n", start - to_ms_since_boot(get_absolute_time()));
         int last_pressed = scan_keypad();
         while (last_pressed == -1)
         {

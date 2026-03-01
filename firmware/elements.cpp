@@ -233,7 +233,6 @@ void display_table()
             pos+=max(0,hauteur[i]-L-1);
         }
 
-    printf("%i %i %i\n",C,L,pos);
 
 
     display_text_box(data,0,0,false);

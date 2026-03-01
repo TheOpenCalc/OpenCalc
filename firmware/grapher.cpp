@@ -93,7 +93,7 @@ void graph(double cursor_pos, token *function, double x_min, double x_max, doubl
     for (int i = 0; i < SCREEN_WIDTH; i += k) {
         y = evaluate_npi(tokenized_expression, yarded, pos, 'X');
 
-        if (y == NAN) {
+        if (isnan(y)) {
             if (fill_between_points) {
                 pos += pas;
             } else {
@@ -106,7 +106,6 @@ void graph(double cursor_pos, token *function, double x_min, double x_max, doubl
             }
             double h = (y_max - y_min);
             double display_y = (y - y_min) / h * SCREEN_HEIGHT;
-            //printf("%f / %f / %f\n", pos, y, display_y);
             if (fill_between_points) {
                 if (last < 320 && last > 0 && display_y > 0 && display_y < 320) {
                     wu_line((i - 1), last, i, display_y, color);
@@ -219,7 +218,6 @@ int Grapher()
         } else {
             axis();
             for (int i = 0; i < 100; i++) {
-                printf("%i %i\n", i, (int) (arr_fill_box[i] != nullptr));   
                 if (arr_fill_box[i] != nullptr) {
                     int yarded = count_yarded(arr_fill_box[i]->text);
                     int tokenized_size = 0;
@@ -315,8 +313,8 @@ int Grapher()
                     y_min /= 2;
                     y_max /= 2;
                 } else if (last_pressed == MINUS) {
-                    fill_rect(Y_cursor,X_cursor-5,1,10,BACKGROUND_COLOR);
-                    fill_rect(Y_cursor-5,X_cursor,10,1,BACKGROUND_COLOR);
+                                                            fill_rect(20,0,200,340,BACKGROUND_COLOR);
+
                     x_min *= 2;
                     x_max *= 2;
                     y_min *= 2;

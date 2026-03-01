@@ -13,7 +13,6 @@ void settings()
     int max_size = 0;
     while (true)
     {
-        printf("%i\n",luminosity->val);
             display_potentiometer(luminosity, false);
 
             last_pressed = scan_keypad();

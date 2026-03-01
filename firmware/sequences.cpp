@@ -115,7 +115,6 @@ int Sequencer()
             } else {
                 selected_fill_box =- 1;
                 show_graph = true;
-                printf("GOOD");
             }
             break;
         case LEFT :
@@ -127,7 +126,6 @@ int Sequencer()
             }
             break;
         case X :
-            printf("AAA");
             arr_fill_box[selected_fill_box]->text[arr_fill_box[selected_fill_box]->t_size++] = 'X';
             break;
         default :

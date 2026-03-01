@@ -47,7 +47,6 @@ void insertion_sort(double **input, int nb_element, int size_element)
     while (start != nb_element) {
         int k = start;
         for (int i = start + 1; i < nb_element; i++) {
-            printf("%i\n", i);
             if (comp(input[k], input[i], size_element)) {
                 double *temp = input[k];
                 input[k] = input[i];
@@ -66,22 +65,18 @@ double *solve(double **input, int nb_var, int nb_eq)
             simplify_first((input[i]), (input[k]), nb_var + 1, i);
         }
     }
-    printdouble2D(input, 5, 6);
-    printf("\n\n");
+
     for (int i = 0; i < nb_eq; i++) {
         normalize(input[i], nb_var + 1, i);
     }
 
-    printdouble2D(input, 5, 6);
-    printf("\n\n");
+
     double *solution = (double*) malloc(sizeof(double) * nb_var);
     for (int i = 0; i < nb_var; i++) {
         solution[i] = input[i][nb_var];
     }
 
-    for (int i = 0; i < nb_var; i++) {
-        printf("%f \n", solution[i]);
-    }
+
 
     for (int i = nb_eq - 1; i >= 0; i--) {
         for (int k = 0; k < nb_var; k++) {
@@ -116,9 +111,7 @@ int Solver()
             c[i][j] = (rand() % 20000) / 500.0;
         }
     }
-    printdouble2D(c, 5, 6);
 
-    printf("\n\n");
 
     solve(c, 5, 5);
 

@@ -35,7 +35,6 @@ int Calc()
         }
         
         int last_pressed = scan_keypad();
-        last_pressed = scan_keypad();
 
         while (last_pressed == -1) {
             blink_cursor();
@@ -99,6 +98,7 @@ int Calc()
             
             update_fill_box(history[cur_last_history],menu_tools(),snd);
         }
+        break;
         default:
             update_fill_box(history[cur_last_history], last_pressed,snd);
             break;

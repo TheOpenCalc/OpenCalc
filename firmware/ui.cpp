@@ -375,9 +375,7 @@ pontentiometer *create_potentiometer(int x, int y, int h, int w, int border, cha
 
 void increment_potentiometer(pontentiometer *p)
 {
-    printf("%i %i\n", p->val, p->grad);
     p->val = min(p->val + 1, p->grad);
-    printf("%i %i\n", p->val, p->grad);
 }
 
 void decrement_potentiometer(pontentiometer *p)
@@ -387,7 +385,6 @@ void decrement_potentiometer(pontentiometer *p)
 
 void display_text_box(text_box *in, int shift_y, int shift_text, bool is_selected)
 {
-    printf("L: %c\n", in->allign);
     if (in == nullptr)
         return;
 
@@ -1094,7 +1091,6 @@ float* get_length(char* in, int input_size, int* depth) {
                 cur_depth--;
             }
             if(in[i]=='/' && cur_depth==searched_depth){
-                printf("Good, %i \n",i);
                 int a =0;
                 int l1=0;
                 int j;
@@ -1107,7 +1103,6 @@ float* get_length(char* in, int input_size, int* depth) {
 
                 int d = j;
                 l1=length[i]-length[max(j,0)];
-                printf("K: %i %i %i\n",j,length[i],length[j]);
 
                 int l2=0;
                 a=0;
@@ -1118,7 +1113,6 @@ float* get_length(char* in, int input_size, int* depth) {
                         a--;
                 }
                 l2=length[j]-length[i];
-                printf("J: %i %i %i\n",j,length[j],length[i]);
                 if(l2>l1){
                     for(int j = d+1 ; j<i;j++){
                         length[j]+=(l2-l1)/2.0;
@@ -1607,12 +1601,9 @@ void display_potentiometer(pontentiometer *in, bool is_selected)
 int menu_tools()
 {
     text_box **items = (text_box **)malloc(sizeof(text_box *) * 6);
-    printf("aaeeaII");
-
     for (int i = 0; i < 6; i++)
     {
         items[i] = create_text_box(32, i * 30, 30, 256, 0, false);
-        printf("aaaII %i\n", i);
     }
     items[0]->text = "Probabilites";
     items[1]->text = "Matrices";
@@ -1697,12 +1688,10 @@ int menu_proba()
 {
     text_box **items = (text_box **)malloc(sizeof(text_box *) * 3);
     fill_rect(0, 32, 120, 256, 0x311f);
-    printf("aaeeaII");
 
     for (int i = 0; i < 3; i++)
     {
         items[i] = create_text_box(60, i * 30, 30, 200, 2, false);
-        printf("aaaII %i\n", i);
     }
     items[0]->text = "Factorielle n!";
     items[1]->text = "k parmis n ";
@@ -1720,20 +1709,17 @@ int menu_proba()
     int pos = 0;
     int selected = 0;
     int last_pressed = scan_keypad();
-    printf("aaaII\n");
     while (true)
     {
         for (int i = pos; i < pos + 3; i++)
         {
             display_text_box(items[i], pos * -30, 0, i == selected);
-            printf("aaaIzzzzI %i\n", i);
         }
         last_pressed = scan_keypad();
         while (last_pressed == -1)
         {
             last_pressed = scan_keypad();
         }
-        printf("aaaII\n");
 
         switch (last_pressed)
         {
@@ -1779,12 +1765,10 @@ int menu_trigo()
 {
     text_box **items = (text_box **)malloc(sizeof(text_box *) * 6);
     fill_rect(0, 32, 120, 256, 0x311f);
-    printf("aaeeaII");
 
     for (int i = 0; i < 6; i++)
     {
         items[i] = create_text_box(60, i * 30, 30, 200, 2, false);
-        printf("aaaII %i\n", i);
     }
     items[0]->text = "cosinus hyperbolique";
     items[1]->text = "sinus hyperbolique";
@@ -1811,20 +1795,17 @@ int menu_trigo()
     int pos = 0;
     int selected = 0;
     int last_pressed = scan_keypad();
-    printf("aaaII\n");
     while (true)
     {
         for (int i = pos; i < pos + 4; i++)
         {
             display_text_box(items[i], pos * -30, 0, i == selected);
-            printf("aaaIzzzzI %i\n", i);
         }
         last_pressed = scan_keypad();
         while (last_pressed == -1)
         {
             last_pressed = scan_keypad();
         }
-        printf("aaaII\n");
 
         switch (last_pressed)
         {
@@ -1885,7 +1866,6 @@ int menu_const_phy()
 {
     text_box **items = (text_box **)malloc(sizeof(text_box *) * 6);
     fill_rect(0, 32, 120, 256, 0x311f);
-    printf("aaeeaII");
 
     for (int i = 0; i < 6; i++)
     {
@@ -1924,20 +1904,17 @@ int menu_const_phy()
     int pos = 0;
     int selected = 0;
     int last_pressed = scan_keypad();
-    printf("aaaII\n");
     while (true)
     {
         for (int i = pos; i < pos + 4; i++)
         {
             display_text_box(items[i], pos * -30, 0, i == selected);
-            printf("aaaIzzzzI %i\n", i);
         }
         last_pressed = scan_keypad();
         while (last_pressed == -1)
         {
             last_pressed = scan_keypad();
         }
-        printf("aaaII\n");
 
         switch (last_pressed)
         {

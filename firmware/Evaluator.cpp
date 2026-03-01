@@ -9,10 +9,18 @@
 
 double fact_r(double in)
 {
-    if (in == 0)
-        return 1;
-    return fact_r(in - 1) * in;
+    double out =0;
+    if(in>170)
+        return NAN;
+    else{
+        out=1;
+        for(int i = 1; i < in;i++){
+            out*=i;
+        }
+    }
+    return out;
 }
+
 
 double fact(double in)
 {
@@ -123,10 +131,8 @@ token *shunting_yard(token *input, int n)
     char *function = (char*) "lrcstuvwfghijk!";
     char *operato = (char*) "+-*/^";
     char *letters = (char*) "ABCDEFGHIJKLMNOPQRSTUVWYZ";
-    token *output = (token*) malloc(sizeof(token) * 20);
-    if (output == NULL) {
-        printf("YYAA");
-    }
+    token *output = (token*) malloc(sizeof(token) * 100);
+
     int output_size = 0;
     stack Operator_stack;
     init(&Operator_stack, n);
