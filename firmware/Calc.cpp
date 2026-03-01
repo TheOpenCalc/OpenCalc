@@ -74,6 +74,8 @@ int Calc()
             history[cur_last_history]->t_size = double_to_string_scientific(temp, (history[cur_last_history]->text));
             cur_last_history++;
             cur_selected = cur_last_history;
+            free(t);
+            free(out);
         }
             history[cur_last_history]->curso_pos = history[cur_last_history]->t_size;
             break;
