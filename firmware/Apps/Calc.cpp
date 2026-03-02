@@ -100,7 +100,7 @@ int Calc()
             
             update_fill_box(history[cur_last_history],menu_tools(),snd);
         }
-       // break;
+       break;
         default:
             update_fill_box(history[cur_last_history], last_pressed,snd);
             break;
