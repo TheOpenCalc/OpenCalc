@@ -441,6 +441,20 @@ static ASTNode *parse_expr(Parser *p) {
         left        = nd;
     }
     return left;
+}static ASTNode *parse_equation(Parser *p) {
+    ASTNode *left = parse_expr(p);
+    token *t = p_peek(p);
+    if (t && t->type == '=') {
+        token *ot = p_consume(p);
+        ASTNode *nd  = alloc_node();
+        nd->type     = N_BINOP;
+        nd->op       = '=';
+        nd->src_pos  = ot->src_pos;
+        nd->left     = left;
+        nd->right    = parse_expr(p);
+        return nd;
+    }
+    return left;
 }
 
 
@@ -708,7 +722,7 @@ void display_equation(char *in, int input_size, int x, int y, int SIZE, int curs
 
     while (p.pos < p.n) {
         int before   = p.pos;
-        ASTNode *node = parse_expr(&p);
+        ASTNode *node = parse_equation(&p);
         if (node) cy = render_node(node, x + 14, cy, SIZE, cursor_pos);
         if (p.pos == before) p.pos++; 
     }

@@ -55,19 +55,37 @@ void insertion_sort(double **input, int nb_element, int size_element)
         }
         start++;
     }
-}
-
-double *solve(double **input, int nb_var, int nb_eq)
+}double *solve(double **input, int nb_var, int nb_eq)
 {
-    insertion_sort(input, nb_eq, nb_var);
     for (int i = 0; i < nb_eq - 1; i++) {
+
+
+        int max_row = i;
+        double max_val = fabs(input[i][i]);
         for (int k = i + 1; k < nb_eq; k++) {
-            simplify_first((input[i]), (input[k]), nb_var + 1, i);
+            if (fabs(input[k][i]) > max_val) {
+                max_val = fabs(input[k][i]);
+                max_row = k;
+            }
+        }
+
+        if (max_row != i) {
+            double *temp   = input[i];
+            input[i]       = input[max_row];
+            input[max_row] = temp;
+        }
+
+
+        for (int k = i + 1; k < nb_eq; k++) {
+            if (fabs(input[i][i]) > 1e-12)   // sécurité : évite /0
+                simplify_first(input[i], input[k], nb_var + 1, i);
         }
     }
 
+
     for (int i = 0; i < nb_eq; i++) {
-        normalize(input[i], nb_var + 1, i);
+        if (fabs(input[i][i]) > 1e-12)
+            normalize(input[i], nb_var + 1, i);
     }
 
 
@@ -75,8 +93,6 @@ double *solve(double **input, int nb_var, int nb_eq)
     for (int i = 0; i < nb_var; i++) {
         solution[i] = input[i][nb_var];
     }
-
-
 
     for (int i = nb_eq - 1; i >= 0; i--) {
         for (int k = 0; k < nb_var; k++) {
@@ -88,7 +104,6 @@ double *solve(double **input, int nb_var, int nb_eq)
 
     return solution;
 }
-
 void printdouble2D(double **input, int L, int H)
 {
     for (int i = 0; i < L; i++) {
@@ -198,59 +213,87 @@ int Solver()
                 selected_fill_box++;
             }
             break;
-        case RIGHT :
-        {
-            int NB_VAR = 2;
-            int NB_EQ = 2;
-            show_solution = true;
+      case RIGHT :
+{
+    show_solution = true;
 
-            double **mat = init_2d_Mat(20, 10, 0);
-
-            for (int i = 0; i <= NB_EQ; i++) {
-                if (arr_fill_box[i] != nullptr) {
-                    int k = 0;
-                    while (k < arr_fill_box[i]->t_size && arr_fill_box[i]->text[k] != '=') {
-                        k++;
-                    }
-                    int tokenized_size = 0;
-
-                    for (int letter = 0; letter < NB_VAR; letter++) {
-                        token *t = parse_string_to_token(arr_fill_box[i]->text, k, &tokenized_size);
-
-                        token *out = shunting_yard(t, tokenized_size);
-
-                        double temp = evaluate_npi(out, tokenized_size, 1, 'A' + letter) - evaluate_npi(out, tokenized_size, 0, 'A' + letter);
-                        arr_solution[i]->t_size = double_to_string_scientific(temp, (arr_solution[i]->text));
-
-                        int tokenized_sizeb = 0;
-                        token *tb = parse_string_to_token(&((arr_fill_box[i]->text)[k + 1]), arr_fill_box[i]->t_size - k - 1, &tokenized_sizeb);
-                        token *outb = shunting_yard(tb, tokenized_sizeb);
-                        double tempb = evaluate_npi(outb, tokenized_sizeb, 1, 'A' + letter)-evaluate_npi(outb, tokenized_sizeb, 0, 'A' + letter);
-
-                        mat[i][letter] = temp - tempb;
-                    }
-                    token *t = parse_string_to_token(arr_fill_box[i]->text, k, &tokenized_size);
-
-                    token *out = shunting_yard(t, tokenized_size);
-
-                    double temp = evaluate_npi(out, tokenized_size, 0, 'A');
-
-                    arr_solution[i]->t_size = double_to_string_scientific(temp, (arr_solution[i]->text));
-
-                    int tokenized_sizeb = 0;
-                    token *tb = parse_string_to_token(&((arr_fill_box[i]->text)[k + 1]), arr_fill_box[i]->t_size - k - 1, &tokenized_sizeb);
-                    token *outb = shunting_yard(tb, tokenized_sizeb);
-                    double tempb = evaluate_npi(outb, tokenized_sizeb, 0, 'A');
-                    mat[i][NB_VAR ] = tempb - temp;
-                }
-            }
-
-            double *sol = solve(mat, NB_VAR, NB_EQ);
-            for (int i = 0; i < NB_VAR; i++) {
-                arr_solution[i]->t_size = double_to_string_scientific(sol[i], (arr_solution[i]->text));
-            }
-        }
+    int NB_EQ = 0;
+    for (int i = 0; i < 30; i++) {
+        if (arr_fill_box[i] != nullptr && arr_fill_box[i]->t_size > 0)
+            NB_EQ++;
+        else
             break;
+    }
+
+    bool var_present[26] = {false};
+    for (int i = 0; i < NB_EQ; i++) {
+        for (int c = 0; c < arr_fill_box[i]->t_size; c++) {
+            char ch = arr_fill_box[i]->text[c];
+            if (ch >= 'A' && ch <= 'Z')
+                var_present[ch - 'A'] = true;
+        }
+    }
+    int var_index[26];
+    int NB_VAR = 0;
+    for (int v = 0; v < 26; v++) {
+        if (var_present[v])
+            var_index[NB_VAR++] = v;
+    }
+
+    if (NB_VAR == 0 || NB_EQ == 0) break;
+
+    double **mat = init_2d_Mat(NB_EQ, NB_VAR + 1, 0);
+
+    for (int i = 0; i < NB_EQ; i++) {
+        if (arr_fill_box[i] == nullptr) continue;
+
+        int k = 0;
+        while (k < arr_fill_box[i]->t_size && arr_fill_box[i]->text[k] != '=')
+            k++;
+
+        for (int v = 0; v < NB_VAR; v++) {
+            int letter = var_index[v];
+            int ts = 0;
+
+            token *tl = parse_string_to_token(arr_fill_box[i]->text, k, &ts);
+            token *ol = shunting_yard(tl, ts);
+            double left = evaluate_npi(ol, ts, 1, 'A' + letter)
+                        - evaluate_npi(ol, ts, 0, 'A' + letter);
+
+            int ts2 = 0;
+            token *tr = parse_string_to_token(&arr_fill_box[i]->text[k + 1],
+                                              arr_fill_box[i]->t_size - k - 1, &ts2);
+            token *or_ = shunting_yard(tr, ts2);
+            double right = evaluate_npi(or_, ts2, 1, 'A' + letter)
+                         - evaluate_npi(or_, ts2, 0, 'A' + letter);
+
+            mat[i][v] = left - right;
+        }
+
+        int ts = 0;
+        token *tl = parse_string_to_token(arr_fill_box[i]->text, k, &ts);
+        token *ol = shunting_yard(tl, ts);
+        double left0 = evaluate_npi(ol, ts, 0, 'A' + var_index[0]);
+
+        int ts2 = 0;
+        token *tr = parse_string_to_token(&arr_fill_box[i]->text[k + 1],
+                                          arr_fill_box[i]->t_size - k - 1, &ts2);
+        token *or_ = shunting_yard(tr, ts2);
+        double right0 = evaluate_npi(or_, ts2, 0, 'A' + var_index[0]);
+
+        mat[i][NB_VAR] = right0 - left0;
+    }
+
+    double *sol = solve(mat, NB_VAR, NB_EQ);
+
+    for (int v = 0; v < NB_VAR; v++) {
+        arr_solution[v]->text[0] = 'A' + var_index[v];
+        arr_solution[v]->text[1] = '=';
+        int written = double_to_string_scientific(sol[v], arr_solution[v]->text + 2);
+        arr_solution[v]->t_size = written + 2;
+    }
+}
+    break;
         case LEFT :
             show_solution = false;
             break;
