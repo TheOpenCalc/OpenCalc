@@ -19,6 +19,8 @@ typedef struct operation_s operation;
 
 typedef struct token_s token;
 
+double fact(double in);
+
 int double_to_string_scientific(double in, char *out);
 
 bool is_in(char test, char *arr);

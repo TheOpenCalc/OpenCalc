@@ -40,14 +40,14 @@ const KEY_CODES = {
   SECOND: 36,
   PASS4: 37,
   UP: 38,
-END_KEYS:39,
-    FACT:40,
-    COSH:41,
-    SINH:42,
-    TANH:43,
-    ACOSH:44,
-    ASINH:45,
-    ATANH:46
+  END_KEYS: 39,
+  FACT: 40,
+  COSH: 41,
+  SINH: 42,
+  TANH: 43,
+  ACOSH: 44,
+  ASINH: 45,
+  ATANH: 46
 };
 
 const KEYBOARD_MAP = {
@@ -96,49 +96,49 @@ const KEYBOARD_MAP = {
   Shift: KEY_CODES.SECOND
 };
 
-const MAIN_KEYS = [
 
+const MAIN_KEYS = [
   [
-    { label: 'X', code: KEY_CODES.X },
+    { label: 'X',     code: KEY_CODES.X },
     { label: 'Tools', code: KEY_CODES.TOOLS },
-    { label: 'Home', code: KEY_CODES.HOME },
+    { label: 'Home',  code: KEY_CODES.HOME },
     { label: 'Const', code: KEY_CODES.CONST },
-    { label: '←', code: KEY_CODES.BACK }
+    { label: '←',    code: KEY_CODES.BACK }
   ],
   [
-    { label: 'COS', code: KEY_CODES.COS },
-    { label: 'SIN', code: KEY_CODES.SIN },
-    { label: 'TAN', code: KEY_CODES.TAN },
-    { label: '/', code: KEY_CODES.DIVIDE },
-    { label: '√', code: KEY_CODES.SQRT }
+    { label: 'COS', code: KEY_CODES.COS,    second: 'A' },  // acos → var A
+    { label: 'SIN', code: KEY_CODES.SIN,    second: 'B' },  // asin → var B
+    { label: 'TAN', code: KEY_CODES.TAN,    second: 'C' },  // atan → var C
+    { label: '/',   code: KEY_CODES.DIVIDE, second: 'O' },  // var O
+    { label: '√',   code: KEY_CODES.SQRT,   second: 'D' },  // var D
   ],
   [
-    { label: '7', code: KEY_CODES.SEVEN },
-    { label: '8', code: KEY_CODES.EIGHT },
-    { label: '9', code: KEY_CODES.NINE },
-    { label: '*', code: KEY_CODES.TIMES },
-    { label: '^', code: KEY_CODES.POW }
+    { label: '7', code: KEY_CODES.SEVEN, second: 'F' },
+    { label: '8', code: KEY_CODES.EIGHT, second: 'G' },
+    { label: '9', code: KEY_CODES.NINE,  second: 'H' },
+    { label: '*', code: KEY_CODES.TIMES, second: 'T' },
+    { label: '^', code: KEY_CODES.POW,   second: 'E' },  // var E
   ],
   [
-    { label: '4', code: KEY_CODES.FOUR },
-    { label: '5', code: KEY_CODES.FIVE },
-    { label: '6', code: KEY_CODES.SIX },
-    { label: '-', code: KEY_CODES.MINUS },
-    { label: 'Pi', code: KEY_CODES.PI }
+    { label: '4',  code: KEY_CODES.FOUR,  second: 'K' },
+    { label: '5',  code: KEY_CODES.FIVE,  second: 'L' },
+    { label: '6',  code: KEY_CODES.SIX,   second: 'M' },
+    { label: '-',  code: KEY_CODES.MINUS, second: 'N' },
+    { label: 'Pi', code: KEY_CODES.PI,    second: 'W' },  // var W
   ],
   [
-    { label: '1', code: KEY_CODES.ONE },
-    { label: '2', code: KEY_CODES.TWO },
-    { label: '3', code: KEY_CODES.THREE },
-    { label: '+', code: KEY_CODES.PLUS },
-    { label: 'Ans', code: KEY_CODES.E }
+    { label: '1',   code: KEY_CODES.ONE,  second: 'P' },
+    { label: '2',   code: KEY_CODES.TWO,  second: 'Q' },
+    { label: '3',   code: KEY_CODES.THREE,second: 'R' },
+    { label: '+',   code: KEY_CODES.PLUS, second: 'S' },
+    { label: 'Ans', code: KEY_CODES.E },                   // pas de 2nd
   ],
   [
-    { label: '.', code: KEY_CODES.COMA },
-    { label: '0', code: KEY_CODES.ZERO },
-    { label: '(', code: KEY_CODES.OPENING_PARENTHESIS },
-    { label: ')', code: KEY_CODES.CLOSING_PARENTHESIS },
-    { label: 'OK', code: KEY_CODES.OK, variant: 'ok' }
+    { label: '.',  code: KEY_CODES.COMA,                second: 'V' },
+    { label: '0',  code: KEY_CODES.ZERO,                second: 'U' },
+    { label: '(',  code: KEY_CODES.OPENING_PARENTHESIS, second: 'I' },
+    { label: ')',  code: KEY_CODES.CLOSING_PARENTHESIS, second: 'J' },
+    { label: 'OK', code: KEY_CODES.OK, variant: 'ok' },    // pas de 2nd
   ]
 ];
 
@@ -149,6 +149,7 @@ export default function App() {
   const rafRef = useRef(0);
   const [status, setStatus] = useState('Chargement du module...');
   const [showSplash, setShowSplash] = useState(true);
+  const [snd, setSnd] = useState(false);
   const logoRef = useRef(null);
 
   // Load the logo image
@@ -157,7 +158,6 @@ export default function App() {
     logo.src = '/logo.png';
     logo.onload = () => {
       logoRef.current = logo;
-      // Draw logo on canvas if splash is showing
       const canvas = canvasRef.current;
       if (canvas && showSplash) {
         canvas.width = 320;
@@ -165,7 +165,6 @@ export default function App() {
         const ctx = canvas.getContext('2d', { alpha: false });
         ctx.fillStyle = '#121212';
         ctx.fillRect(0, 0, 320, 240);
-        // Center the logo (not stretched)
         const x = (320 - logo.width) / 2;
         const y = (240 - logo.height) / 2;
         ctx.drawImage(logo, x, y);
@@ -173,7 +172,6 @@ export default function App() {
     };
   }, []);
 
-  // Draw splash screen when showSplash changes
   useEffect(() => {
     if (showSplash && logoRef.current) {
       const canvas = canvasRef.current;
@@ -183,7 +181,6 @@ export default function App() {
         const ctx = canvas.getContext('2d', { alpha: false });
         ctx.fillStyle = '#f0f0e8';
         ctx.fillRect(0, 0, 320, 240);
-        // Center the logo (not stretched)
         const x = (320 - logoRef.current.width) / 2;
         const y = (240 - logoRef.current.height) / 2;
         ctx.drawImage(logoRef.current, x, y);
@@ -191,7 +188,6 @@ export default function App() {
     }
   }, [showSplash]);
 
-  // Load WASM module and start render loop when splash is dismissed
   useEffect(() => {
     if (showSplash) return;
 
@@ -260,7 +256,6 @@ export default function App() {
 
   useEffect(() => {
     const handleKeyDown = (event) => {
-      // Dismiss splash on any key press
       if (showSplash) {
         setShowSplash(false);
         return;
@@ -268,6 +263,9 @@ export default function App() {
       const code = KEYBOARD_MAP[event.key];
       if (code === undefined || !moduleRef.current) return;
       event.preventDefault();
+      if (code === KEY_CODES.SECOND) {
+        setSnd(s => !s);
+      }
       moduleRef.current._opencalc_key_down(code);
     };
 
@@ -276,10 +274,12 @@ export default function App() {
   }, [showSplash]);
 
   const sendKey = (code) => {
-    // Dismiss splash on any button press
     if (showSplash) {
       setShowSplash(false);
       return;
+    }
+    if (code === KEY_CODES.SECOND) {
+      setSnd(s => !s);
     }
     if (!moduleRef.current) return;
     moduleRef.current._opencalc_key_down(code);
@@ -289,6 +289,7 @@ export default function App() {
     <button
       key={`${key.label || 'blank'}-${index}`}
       className={`key ${key.variant ? `key-${key.variant}` : ''} ${extraClass}`.trim()}
+      style={{ position: 'relative' }}
       onPointerDown={(event) => {
         event.preventDefault();
         if (key.code !== null) {
@@ -297,6 +298,24 @@ export default function App() {
       }}
       type="button"
     >
+      {/* Label 2nd en haut à gauche */}
+      {key.second && (
+        <span style={{
+          position: 'absolute',
+          top: '3px',
+          left: '4px',
+          fontSize: '8px',
+          fontWeight: '700',
+          lineHeight: 1,
+          color: snd ? '#ffe066' : '#a89fc0',
+          opacity: snd ? 1 : 0.75,
+          transition: 'color 0.15s, opacity 0.15s',
+          pointerEvents: 'none',
+          letterSpacing: '0.2px',
+        }}>
+          {key.second}
+        </span>
+      )}
       {key.label}
     </button>
   );
@@ -311,7 +330,20 @@ export default function App() {
         <div className="control-section">
           <div className="function-area">
             <div className="function-row">
-              <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.SECOND)} type="button">2nd</button>
+              <button
+                className="key key-fn key-small"
+                style={{
+                  color: snd ? '#ffe066' : undefined,
+                  boxShadow: snd
+                    ? 'inset 0 -2px 0 rgba(0,0,0,0.15), 0 0 8px rgba(255,220,80,0.4)'
+                    : undefined,
+                  transition: 'color 0.15s, box-shadow 0.15s',
+                }}
+                onPointerDown={() => sendKey(KEY_CODES.SECOND)}
+                type="button"
+              >
+                2nd
+              </button>
               <button className="key key-fn key-small" type="button">alpha</button>
               <button className="key key-fn key-small" type="button"></button>
             </div>
@@ -321,7 +353,7 @@ export default function App() {
               <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.EQUAL)} type="button">=</button>
             </div>
             <div className="function-row">
-              <button className="key key-fn key-small" onPointerDown={() => sendKey(E)} type="button">exp</button>
+              <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.E)} type="button">exp</button>
               <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.BACK)} type="button">log</button>
               <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.LN)} type="button">ln</button>
             </div>
