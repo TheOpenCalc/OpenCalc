@@ -290,8 +290,7 @@ export default function App() {
       key={`${key.label || 'blank'}-${index}`}
       className={`key ${key.variant ? `key-${key.variant}` : ''} ${extraClass}`.trim()}
       style={{ position: 'relative' }}
-      onPointerDown={(event) => {
-        event.preventDefault();
+      onPointerDown={() => {
         if (key.code !== null) {
           sendKey(key.code);
         }
