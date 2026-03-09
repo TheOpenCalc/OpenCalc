@@ -73,7 +73,7 @@ void wu_line(int y0, int x0, int y1, int x1, uint16_t color)
     }
 }
 
-void graph(double cursor_pos, token *function, double x_min, double x_max, double y_min, double y_max, int n, uint16_t color, int id, bool fill_between_points)
+void graph(double cursor_pos, token *function, double x_min, double x_max, double y_min, double y_max, int n, uint16_t color, int id, bool fill_between_points,char var)
 {
     double pas = (x_max - x_min) / SCREEN_WIDTH;
     
@@ -81,7 +81,7 @@ void graph(double cursor_pos, token *function, double x_min, double x_max, doubl
     double pos = x_min;
     int yarded = count_yarded(function, n);
 
-    double last = (evaluate_npi(tokenized_expression, yarded, pos, 'X') - y_min) / (y_max - y_min) * SCREEN_HEIGHT;
+    double last = (evaluate_npi(tokenized_expression, yarded, pos, var) - y_min) / (y_max - y_min) * SCREEN_HEIGHT;
     double y = 0;
     int k = 0;
     if (fill_between_points) {
@@ -91,7 +91,7 @@ void graph(double cursor_pos, token *function, double x_min, double x_max, doubl
     }
 
     for (int i = 0; i < SCREEN_WIDTH; i += k) {
-        y = evaluate_npi(tokenized_expression, yarded, pos, 'X');
+        y = evaluate_npi(tokenized_expression, yarded, pos, var);
 
         if (isnan(y)) {
             if (fill_between_points) {
@@ -118,8 +118,11 @@ void graph(double cursor_pos, token *function, double x_min, double x_max, doubl
                 Y_cursor=last;
 
             }
-            pos += pas;
-            last = display_y;
+            if (fill_between_points) {
+                pos += pas;
+            } else {
+                pos++;
+            }            last = display_y;
         }
     }
     if (id!=-1) {
@@ -132,7 +135,7 @@ void graph(double cursor_pos, token *function, double x_min, double x_max, doubl
             t->text[i] = temp[i - 3];
         }
         t->t_size = 3 + s_temp;
-        t->text[0] = 'X';
+        t->text[0] = var;
         t->text[1] = ':';
         t->text[2] = ' ';
         free(temp);
@@ -140,7 +143,7 @@ void graph(double cursor_pos, token *function, double x_min, double x_max, doubl
 
         text_box *tb = create_text_box(107, 0, 20, 107, 2, false);
         char *tempb = (char*) malloc(sizeof(char) * 100);
-        int s_tempb = double_to_string_scientific(evaluate_npi(tokenized_expression, yarded, cursor_pos, 'X'), tempb);
+        int s_tempb = double_to_string_scientific(evaluate_npi(tokenized_expression, yarded, cursor_pos, var), tempb);
 
         for (int i = 6; s_tempb + 6 > i; i++) {
             tb->text[i] = tempb[i - 6];
@@ -149,7 +152,7 @@ void graph(double cursor_pos, token *function, double x_min, double x_max, doubl
         tb->text[0] = (('f'+id-1 ));
 
         tb->text[1] = '(';
-        tb->text[2] = 'x';
+        tb->text[2] = var;
         tb->text[3] = ')';
         
         tb->text[4] = ':';
@@ -163,7 +166,7 @@ void graph(double cursor_pos, token *function, double x_min, double x_max, doubl
         text_box *tc = create_text_box(214, 0, 20, 106, 2, false);
         char *tempc = (char*) malloc(sizeof(char) * 100);
         char * buff = (char*)malloc(sizeof(char)*20);
-        fmt_number((-evaluate_npi(tokenized_expression, yarded, cursor_pos, 'X')+evaluate_npi(tokenized_expression, yarded, cursor_pos+(x_max-x_min)/100000000, 'X'))/((x_max-x_min)/100000000),buff);
+        fmt_number((-evaluate_npi(tokenized_expression, yarded, cursor_pos, var)+evaluate_npi(tokenized_expression, yarded, cursor_pos+(x_max-x_min)/100000000, var))/((x_max-x_min)/100000000),buff);
 
         for (int i = 6; 15 > i; i++) {
             tc->text[i] = buff[i - 6];
@@ -173,7 +176,7 @@ void graph(double cursor_pos, token *function, double x_min, double x_max, doubl
         tc->text[1] = '\'';
 
         tc->text[2] = '(';
-        tc->text[3] = 'x';
+        tc->text[3] = var;
         tc->text[4] = ')';
         
         tc->text[5] = ':';
@@ -242,7 +245,7 @@ int Grapher()
                     int tokenized_size = 0;
                     token *tokenized = parse_string_to_token(arr_fill_box[i]->text, arr_fill_box[i]->t_size, &tokenized_size);
                     token *out = shunting_yard(tokenized, tokenized_size);
-                    graph(cursor_pos, tokenized, x_min, x_max, y_min, y_max, tokenized_size, palet[i % 14], i == selected_fill_box, true);
+                    graph(cursor_pos, tokenized, x_min, x_max, y_min, y_max, tokenized_size, palet[i % 14], i == selected_fill_box, true,'X');
                     fill_rect(Y_cursor,X_cursor-5,1,10,0x000000);
                     fill_rect(Y_cursor-5,X_cursor,10,1,0x000000);
 

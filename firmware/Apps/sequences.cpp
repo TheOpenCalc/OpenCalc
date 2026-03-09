@@ -126,15 +126,15 @@ int Sequencer()
             }
             break;
         case X :
-            arr_fill_box[selected_fill_box]->text[arr_fill_box[selected_fill_box]->t_size++] = 'X';
+            arr_fill_box[selected_fill_box]->text[arr_fill_box[selected_fill_box]->t_size++] = 'N';
             break;
         default :
             if (show_graph) {
                 if (last_pressed == PLUS) {
-                    x_min *= 2;
-                    x_max *= 2;
-                    y_min *= 2;
-                    y_max *= 2;
+                    x_min /= 2;
+                    x_max /= 2;
+                    y_min /= 2;
+                    y_max /= 2;
                 } else if (last_pressed == MINUS) {
                     x_min *= 2;
                     x_max *= 2;
@@ -160,7 +160,7 @@ int Sequencer()
                     int tokenized_size = 0;
                     token *tokenized = parse_string_to_token(arr_fill_box[i]->text, arr_fill_box[i]->t_size, &tokenized_size);
                     token *out = shunting_yard(tokenized, tokenized_size);
-                    graph(cursor_pos, tokenized, x_min, x_max, y_min, y_max, tokenized_size, palet[i % 14], i == selected_fill_box, false);
+                    graph(cursor_pos, tokenized, x_min, x_max, y_min, y_max, tokenized_size, palet[i % 14], i == selected_fill_box, false, 'N');
                 }
             }
         }
