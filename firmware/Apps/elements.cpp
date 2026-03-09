@@ -160,67 +160,8 @@ void display_table()
     }
     int last_pressed = scan_keypad();
     text_box *data = create_text_box(72, 134, 93, 124, 2, true);
+    bool view_data = false;
     while (true) {
-        for (int i = max(C - 10, 0); i < min(C + 10, 32); i++) {
-            for (int j = 0; j < hauteur[i]; j++) {
-              display_text_box(table[i][j],0,0,C==i && L==j);
-            }
-        }
-       
-       /* if (C - ((shift / 31)) > 5) {
-            fill_rect(105, 175, 128, 160, 0);
-        } else {
-            fill_rect(105, 5, 128, 160, 0);
-        }*/
-        last_pressed = scan_keypad();
-        while (last_pressed == -1) {
-            last_pressed = scan_keypad();
-        }
-
-        switch (last_pressed) {
-        case BACK :
-            return;
-            break;
-        case RIGHT :
-            C = min(C + 1, 31);
-            L = min(hauteur[C] - 1, L);
-            break;
-        case LEFT :
-            C = max(0 ,C - 1);
-            L = min(hauteur[C] - 1, L);
-            break;
-        case UP :
-            L = min(L + 1, hauteur[C] - 1);
-            break;
-        case DOWN :
-            L = max(L - 1, 0);
-            break;
-        default :
-            break;
-        }
-
-        if (shift + 300 < 31 * C) {
-            fill_screen(BACKGROUND_COLOR);
-            shift += 31;
-            for (int i = 0; i < 32; i++) {
-                for (int j = 0; j < hauteur[i]; j++) {
-                    table[i][j]->x -= 31;
-                }
-            }
-        } else if (shift > 31 * C) {
-            fill_screen(BACKGROUND_COLOR);
-            shift -= 31;
-            for (int i = 0; i < 32; i++) {
-                for (int j = 0; j < hauteur[i]; j++) {
-                    table[i][j]->x += 31;
-                }
-            }
-        }
-
-        data->x=10;
-        if(shift==31||shift==0){
-            data->x=62-shift+10;
-        }
          int pos= 0;
          for(int i =0;i<C;i++){
             if(hauteur[i]>L)
@@ -233,8 +174,7 @@ void display_table()
             pos+=max(0,hauteur[i]-L-1);
         }
 
-
-
+if(!view_data){
     display_text_box(data,0,0,false);
         display_text(195,data->x,name[pos],2,2);
 
@@ -286,5 +226,143 @@ void display_table()
     buff[a]='K';
     buff[a+1]='\0';
     display_text(160,data->x,buff,1,2);
+}
+    
+if(!view_data){
+        for (int i = max(C - 10, 0); i < min(C + 10, 32); i++) {
+            for (int j = 0; j < hauteur[i]; j++) {
+              display_text_box(table[i][j],0,0,C==i && L==j);
+            }
+        }
     }
+       
+if(view_data){
+    table[C][L]->w*=3;
+    table[C][L]->h*=3;
+    int x=table[C][L]->x;
+    int y=table[C][L]->y;
+table[C][L]->x = 200;
+table[C][L]->y = 100;
+table[C][L]->display_text_size=4;
+                  display_text_box(table[C][L],0,-30,false);
+  table[C][L]->x=x;
+    table[C][L]->y=y;
+table[C][L]->display_text_size=1;
+
+    table[C][L]->w/=3;
+    table[C][L]->h/=3;
+        text_box *Atomic_Mass  = create_text_box(10, 210, 20, 160, 1, false);
+        Atomic_Mass->allign='r';
+         Atomic_Mass->text[0]='A';
+    Atomic_Mass->text[1]='t';
+    Atomic_Mass->text[2]='o';
+    Atomic_Mass->text[3]='m';
+    Atomic_Mass->text[4]='i';
+    Atomic_Mass->text[5]='c';
+    Atomic_Mass->text[6]=' ';
+    Atomic_Mass->text[7]='m';
+    Atomic_Mass->text[8]='a';
+    Atomic_Mass->text[9]='s';
+    Atomic_Mass->text[10]='s';
+    Atomic_Mass->text[11]=':';
+
+            sprintf(&Atomic_Mass->text[12], "%.5g", atomic_mass[pos]);
+            display_text_box(Atomic_Mass,0,0,0);
+    
+    text_box *Density  = create_text_box(10, 190, 20, 160, 1, false);
+    Density->allign='r';
+    Density->text[0]='D';
+    Density->text[1]='e';
+    Density->text[2]='n';
+    Density->text[3]='s';
+    Density->text[4]='i';
+    Density->text[5]='t';
+    Density->text[6]='y';
+    Density->text[7]=':';
+    
+
+    sprintf(&Density->text[8], "%.5g", density[pos]);
+               display_text_box(Density,0,0,0);
+
+                         text_box *Boiling  = create_text_box(10, 170, 20, 160, 1, false);
+  Boiling->allign='r';
+    Boiling->text[0]='B';
+    Boiling->text[1]='o';
+    Boiling->text[2]='i';
+    Boiling->text[3]='l';
+    Boiling->text[4]='i';
+    Boiling->text[5]='n';
+    Boiling->text[6]='g';
+    Boiling->text[7]=':';
+
+    sprintf(&Boiling->text[8], "%.5g", boiling_point[pos]);
+    
+                    display_text_box(Boiling,0,0,0);
+
+
+            
+
+}
+       /* if (C - ((shift / 31)) > 5) {
+            fill_rect(105, 175, 128, 160, 0);
+        } else {
+            fill_rect(105, 5, 128, 160, 0);
+        }*/
+        last_pressed = scan_keypad();
+        while (last_pressed == -1) {
+            last_pressed = scan_keypad();
+        }
+
+        switch (last_pressed) {
+        case BACK :
+            return;
+            break;
+        case RIGHT :
+            C = min(C + 1, 31);
+            L = min(hauteur[C] - 1, L);
+            break;
+        case LEFT :
+            C = max(0 ,C - 1);
+            L = min(hauteur[C] - 1, L);
+            break;
+        case UP :
+            L = min(L + 1, hauteur[C] - 1);
+            break;
+        case DOWN :
+            L = max(L - 1, 0);
+            break;
+            case OK:
+                        fill_screen(BACKGROUND_COLOR);
+
+            toggle(&view_data);
+            break;
+        default :
+            break;
+        }
+
+        if (shift + 300 < 31 * C) {
+            fill_screen(BACKGROUND_COLOR);
+            shift += 31;
+            for (int i = 0; i < 32; i++) {
+                for (int j = 0; j < hauteur[i]; j++) {
+                    table[i][j]->x -= 31;
+                }
+            }
+        } else if (shift > 31 * C) {
+            fill_screen(BACKGROUND_COLOR);
+            shift -= 31;
+            for (int i = 0; i < 32; i++) {
+                for (int j = 0; j < hauteur[i]; j++) {
+                    table[i][j]->x += 31;
+                }
+            }
+        }
+
+        data->x=10;
+        if(shift==31||shift==0){
+            data->x=62-shift+10;
+        }
+
+ 
+}
 }
