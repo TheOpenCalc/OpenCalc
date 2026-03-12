@@ -246,9 +246,9 @@ accuracy_box->t_size = 0;
         case BACK:
             if (!show_solution && selected_fill_box >= 0 &&
                 arr_fill_box[selected_fill_box]->t_size > 0) {
-                arr_fill_box[selected_fill_box]->t_size--;
-                arr_fill_box[selected_fill_box]->text[arr_fill_box[selected_fill_box]->t_size] = '\0';
-            } else {
+                update_fill_box(arr_fill_box[selected_fill_box], last_pressed, snd);
+    
+                } else {
                 return 0;
             }
             break;

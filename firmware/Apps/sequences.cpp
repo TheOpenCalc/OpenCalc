@@ -80,8 +80,8 @@ int Sequencer()
             break;
         case BACK :
             if (!show_graph && arr_fill_box[selected_fill_box]->t_size > 0) {
-                arr_fill_box[selected_fill_box]->t_size--;
-                arr_fill_box[selected_fill_box]->text[arr_fill_box[selected_fill_box]->t_size] = '\0';
+                           update_fill_box(arr_fill_box[selected_fill_box], last_pressed,snd);
+
             } else {
                 return 0;
             }
