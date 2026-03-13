@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+
+<html lang="fr">
+<head>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <title>Caractéristiques techniques – OpenCalc</title>
+
+  <style>
+    :root {
+      --primary: #2f80ed;
+      --dark: #1f2933;
+      --light: #f9fafb;
+      --border: #e5e7eb;
+      --text: #374151;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, sans-serif;
+      background: var(--light);
+      color: var(--text);
+    }
+
+    .opencalc-tech {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 4rem 1.5rem;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 3rem;
+      color: var(--dark);
+    }
+
+    /* ===== MASTER GRID ===== */
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 320px 1fr;
+      grid-template-rows: auto auto;
+      gap: 3rem 2.5rem;
+      align-items: start;
+    }
+
+    /* Positions explicites */
+    .left-top   { grid-column: 1; grid-row: 1; }
+    .center     { grid-column: 2; grid-row: 1; align-self: center; }
+    .right-top  { grid-column: 3; grid-row: 1; }
+    .bottom     { grid-column: 1 / 4; grid-row: 2; }
+
+    .column {
+      display: flex;
+      flex-direction: column;
+      gap: 1.8rem;
+    }
+
+    .tech-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.03);
+    }
+
+    .tech-card h2 {
+      margin: 0 0 0.5rem 0;
+      font-size: 1.05rem;
+      color: var(--primary);
+    }
+
+    .tech-card ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      font-size: 0.9rem;
+    }
+
+    .tech-card li { margin-bottom: 0.4rem; }
+
+    /* ===== CALCULATOR ===== */
+    .calculator {
+      width: 280px;
+      height: 440px;
+      margin: 0 auto;
+      background: linear-gradient(180deg, #111827, #1f2933);
+      border-radius: 26px;
+      position: relative;
+      box-shadow: 0 24px 48px rgba(0,0,0,0.25);
+    }
+
+    .calculator::before {
+      content: "";
+      position: absolute;
+      top: 22px;
+      left: 22px;
+      right: 22px;
+      height: 120px;
+      background: #e5e7eb;
+      border-radius: 12px;
+    }
+
+    .calculator::after {
+      content: "";
+      position: absolute;
+      bottom: 22px;
+      left: 22px;
+      right: 22px;
+      height: 230px;
+      background: #0f172a;
+      border-radius: 16px;
+    }
+
+    /* ===== BOTTOM GRID ===== */
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+      }
+
+      .left-top,
+      .center,
+      .right-top,
+      .bottom {
+        grid-column: auto;
+        grid-row: auto;
+      }
+
+      .bottom-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+
+ <style>
+    body { font-family: 'Inter', sans-serif; }
+    .fade-up {
+      opacity: 0;
+      transform: translateY(40px);
+      transition: all 0.8s ease-out;
+    }
+    .fade-up.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .slide-left {
+      opacity: 0;
+      transform: translateX(-40px);
+      transition: all 0.8s ease-out;
+    }
+    .slide-left.visible {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    .slide-right {
+      opacity: 0;
+      transform: translateX(40px);
+      transition: all 0.8s ease-out;
+    }
+    .slide-right.visible {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    header nav a.active {
+      color: #1e40af;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+<body class="bg-gray-50 text-gray-900">
+  <!-- Header -->
+  
+ <header class="bg-white shadow sticky top-0 z-50">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+
+    <!-- Logo -->
+    <h1 class="text-3xl font-extrabold text-blue-600">OpenCalc</h1>
+
+    <!-- Bouton burger (mobile) -->
+    <button id="menuBtn" class="md:hidden text-gray-700 focus:outline-none">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M4 6h16M4 12h16M4 18h16"/>
+      </svg>
+    </button>
+
+    <!-- Menu desktop -->
+    <nav class="hidden md:flex space-x-6 text-base font-medium">
+      <a href="https://emulateur.opencalc.fr" class="text-gray-700 hover:text-blue-600" style = "font-weight: 900;">Emulateur !</a>
+      <a href="ht#features" class="text-gray-700 hover:text-blue-600">Fonctionnalités</a>
+      <a href="#open-source" class="text-gray-700 hover:text-blue-600">Open Source</a>
+      <a href="spec.html" class="text-gray-700 hover:text-blue-600">Composants</a>
+      <a href="#use-cases" class="text-gray-700 hover:text-blue-600">Usages</a>
+      <a href="#timeline" class="text-gray-700 hover:text-blue-600">Chronologie</a>
+      <a href="#team" class="text-gray-700 hover:text-blue-600">Équipe</a>
+      <a href="#contact" class="text-gray-700 hover:text-blue-600">Contact</a>
+    </nav>
+  </div>
+
+  <!-- Menu mobile -->
+  <div id="mobileMenu" class="hidden md:hidden px-6 pb-4 space-y-3 text-base font-medium">
+    <a href="https://emulateur.opencalc.fr" class="text-gray-700 hover:text-blue-600" style = "font-weight: 900;">Emulateur !</a>
+    <a href="#features" class="block text-gray-700 hover:text-blue-600">Fonctionnalités</a>
+    <a href="#open-source" class="block text-gray-700 hover:text-blue-600">Open Source</a>
+    <a href="spec.html" class="block text-gray-700 hover:text-blue-600">Composants</a>
+    <a href="#use-cases" class="block text-gray-700 hover:text-blue-600">Usages</a>
+    <a href="#timeline" class="block text-gray-700 hover:text-blue-600">Chronologie</a>
+    <a href="#team" class="block text-gray-700 hover:text-blue-600">Équipe</a>
+    <a href="#contact" class="block text-gray-700 hover:text-blue-600">Contact</a>
+  </div>
+</header>
+<section class="opencalc-tech">
+
+  <h1>Caractéristiques techniques</h1>
+
+  <div class="layout">
+
+```
+<!-- COLONNE GAUCHE HAUT -->
+<div class="column left-top">
+  <div class="tech-card">
+    <h2>📐 Dimensions & poids</h2>
+    <ul><li>155 × 80 × 15 mm</li><li>180 g</li></ul>
+  </div>
+  <div class="tech-card">
+    <h2>🖥️ Écran</h2>
+    <ul><li>LCD 2.8 pouces</li><li>320 × 240 px</li><li>Couleurs 16 bits </li></ul>
+  </div>
+  <div class="tech-card">
+    <h2>🔋 Autonomie</h2>
+    <ul><li>Batterie Li-ion</li><li>Jusqu’à 20 h</li></ul>
+  </div>
+</div>
+
+<!-- CALCULATRICE -->
+<div class="center">
+  <img src="top_calc.webp">
+</div>
+
+<!-- COLONNE DROITE HAUT -->
+<div class="column right-top">
+  <div class="tech-card">
+    <h2>⚙️ Performances</h2>
+    <ul><li>150 Mhz</li><li> 2 Coeurs</li><li>520 Kb RAM</li><li>4 Mb stockage</li></ul>
+    
+  </div>
+    <div class="tech-card"><h2>🧮 Fonctions</h2><ul><li>Calcul scientifique</li><li>Grapheur</li><li>Solveur d'équations</li><li>Suite</li><li>Probabilités</li><li>Tableau périodique</li></ul></div>
+
+</div>
+
+<!-- BAS -->
+<div class="bottom">
+  <div class="bottom-grid">
+    <div class="tech-card"><h2>🌱 Philosophie</h2><ul><li>Logiciel libre</li><li>Réparabilité</li></ul></div>
+    <div class="tech-card"><h2>🔌 Connectivité</h2><ul><li>USB-C</li></ul></div>
+  </div>
+</div>
+```
+
+  </div>
+
+</section>
+
+<script>
+  const btn = document.getElementById("menuBtn");
+  const menu = document.getElementById("mobileMenu");
+
+  btn.addEventListener("click", () => {
+    menu.classList.toggle("hidden");
+  });
+</script>
+
+</body>
+</html>

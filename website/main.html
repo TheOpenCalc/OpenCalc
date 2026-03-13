@@ -1,6 +1,5 @@
 <html lang="fr">
 <head>
-      <link rel = "icon" type = "logo.png" href = "logo.png">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenCalc – La calculatrice libre pour les lycéens</title>
@@ -41,68 +40,12 @@
       color: #1e40af;
       font-weight: 600;
     }
-        body {
-      margin: 0;
-      padding-bottom: 70px; /* espace pour le bandeau */
-      font-family: "Inter", sans-serif;
-      background: #f5f5f5;
-    }
-
-    /* Bandeau principal */
-    .bandeau-reseaux {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      background: linear-gradient(90deg, #000000, #1a1a1a);
-      color: white;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 40px;
-      padding: 12px 0;
-      box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
-      z-index: 1000;
-    }
-
-    .bandeau-reseaux a {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-decoration: none;
-      transition: transform 0.3s ease;
-    }
-
-    .bandeau-reseaux a:hover {
-      transform: scale(1.15);
-    }
-
-    .bandeau-reseaux img {
-      height: 32px;
-      width: 32px;
-      transition: opacity 0.3s ease;
-    }
-
-    .bandeau-reseaux img:hover {
-      opacity: 0.8;
-    }
-
-    @media (max-width: 480px) {
-      .bandeau-reseaux {
-        gap: 25px;
-        padding: 10px 0;
-      }
-      .bandeau-reseaux img {
-        height: 28px;
-        width: 28px;
-      }
-    }
-
   </style>
 </head>
+
 <body class="bg-gray-50 text-gray-900">
-  <!-- Header -->
-<header class="bg-white shadow sticky top-0 z-50">
+
+<!-- Header --><header class="bg-white shadow sticky top-0 z-50">
   <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
 
     <!-- Logo -->
@@ -115,11 +58,10 @@
           d="M4 6h16M4 12h16M4 18h16"/>
       </svg>
     </button>
-      <a href="https://emulateur.opencalc.fr" class="text-gray-700 hover:text-blue-600" style = "font-weight: 900;">Emulateur !</a>
+
     <!-- Menu desktop -->
     <nav class="hidden md:flex space-x-6 text-base font-medium">
-
-      <a href="ht#features" class="text-gray-700 hover:text-blue-600">Fonctionnalités</a>
+      <a href="#features" class="text-gray-700 hover:text-blue-600">Fonctionnalités</a>
       <a href="#open-source" class="text-gray-700 hover:text-blue-600">Open Source</a>
       <a href="spec.html" class="text-gray-700 hover:text-blue-600">Composants</a>
       <a href="#use-cases" class="text-gray-700 hover:text-blue-600">Usages</a>
@@ -131,7 +73,6 @@
 
   <!-- Menu mobile -->
   <div id="mobileMenu" class="hidden md:hidden px-6 pb-4 space-y-3 text-base font-medium">
-      <a href="https://emulateur.opencalc.fr" class="text-gray-700 hover:text-blue-600" style = "font-weight: 900;">Emulateur !</a>
     <a href="#features" class="block text-gray-700 hover:text-blue-600">Fonctionnalités</a>
     <a href="#open-source" class="block text-gray-700 hover:text-blue-600">Open Source</a>
     <a href="spec.html" class="block text-gray-700 hover:text-blue-600">Composants</a>
@@ -142,14 +83,10 @@
   </div>
 </header>
 
-
   <!-- Hero -->
-  <section style="background-image: url(code.png); width: 100%;    background-attachment: fixed;   background-size:     cover;                      /* <------ */
-    background-repeat:   no-repeat;
-    background-position: center center;  " id="hero" class="py-24 text-center fade-up">
-    <div  class="max-w-4xl mx-auto px-6" style="background-color: white;border-radius: 20px 10px 50px;background-blend-mode: color  ;  ">
-      
-      <h2 class="text-5xl font-bold mb-4" style="color: rgb(7 99 235 ">La calculatrice scientifique libre<br>pensée pour les lycéens</h2>
+  <section id="hero" class="py-24 text-center fade-up">
+    <div class="max-w-4xl mx-auto px-6">
+      <h2 class="text-5xl font-bold mb-4">La calculatrice scientifique libre<br>pensée pour les lycéens</h2>
       <p class="text-lg text-gray-600">OpenCalc est une calculatrice open source, économique et conçue pour l'apprentissage, l'expérimentation et la compréhension des maths et de l’électronique.</p>
     </div>
 
@@ -179,7 +116,7 @@
         <div class="text-center" style="  display: grid;
   place-items: center; /* centre horizontalement et verticalement */
   height: 300px;">          <h4 class="text-xl font-semibold mb-2">Batterie rechargeable</h4>
-            <img width=40%   style="  image-rendering: pixelated;"src="batterie.webp"/>
+            <img width=40%   style="  image-rendering: pixelated;"src="battery.png"/>
 
           <p class="text-gray-600">Jusqu’à 30h d’autonomie sur batterie Li-ion standard.</p>
         </div>
@@ -199,30 +136,16 @@
     <div class="max-w-6xl mx-auto px-6">
       <h3 class="text-4xl font-bold mb-12 text-center">Cas d’usage</h3>
       <div class="grid md:grid-cols-3 gap-12">
-        <div class="text-center" style="  display: grid;
-  place-items: center; /* centre horizontalement et verticalement */
-  height: 300px;">
+        <div class="text-center">
           <h4 class="text-xl font-semibold mb-2">Lycées et examens</h4>
-                    <img width=40%   src="school.webp"/>
-
           <p class="text-gray-600">Conforme aux exigences de l’éducation nationale et facile à prendre en main.</p>
         </div>
-        <div class="text-center" style="  display: grid;
-  place-items: center; /* centre horizontalement et verticalement */
-  height: 300px;">
-
+        <div class="text-center">
           <h4 class="text-xl font-semibold mb-2">Hackathons et bidouille</h4>
-                                        <img width=40%   src="tournevis.webp"/>
-
           <p class="text-gray-600">Un terrain de jeu idéal pour l’apprentissage de l’électronique et du code embarqué.</p>
         </div>
-        <div class="text-center" style="  display: grid;
-  place-items: center; /* centre horizontalement et verticalement */
-  height: 300px;">
-
+        <div class="text-center">
           <h4 class="text-xl font-semibold mb-2">Projets pédagogiques</h4>
-                                        <img width=40%   src="school3.webp"/>
-
           <p class="text-gray-600">Peut être montée, démontée, documentée et adaptée à volonté.</p>
         </div>
       </div>
@@ -232,7 +155,7 @@
 <section id="scroll-animation">
   <div class="scroll-wrapper">
     <div class="viewer">
-      <img id="sequence" src="webp_out/1.webp" alt="Frame 1" />
+      <img id="sequence" src="1.png" alt="Frame 1" />
     </div>
     <div class="scroll-space"></div>
   </div>
@@ -275,7 +198,7 @@
   const preloadImages = () => {
     for (let i = 1; i <= frameCount; i++) {
       const img = new Image();
-      img.src = `/img/webp_out/00${i}.webp`;
+      img.src = `/img/00${i}.png`;
     }
   };
 
@@ -289,7 +212,7 @@
     if (sectionTop <= 0 && Math.abs(sectionTop) <= sectionHeight - window.innerHeight) {
       const scrollFraction = Math.abs(sectionTop) / (sectionHeight - window.innerHeight);
       const frameIndex = Math.min(frameCount - 1, Math.floor(scrollFraction * frameCount));
-      imageElement.src = `/img/webp_out/00${frameIndex + 1}.webp`;
+      imageElement.src = `img/00${frameIndex + 1}.png`;
     }
   }
 
@@ -305,18 +228,18 @@
       <div class="space-y-10">
         <div class="relative pl-10">
           <div class="absolute left-0 top-1.5 w-3 h-3 bg-blue-600 rounded-full"></div>
-          <h4 class="text-xl font-semibold">Juillet 2024 – L’idée germe</h4>
+          <h4 class="text-xl font-semibold">2022 – L’idée germe</h4>
           <p class="text-gray-600">Constat du manque d’alternatives open source aux calculatrices traditionnelles.</p>
         </div>
         <div class="relative pl-10">
           <div class="absolute left-0 top-1.5 w-3 h-3 bg-blue-600 rounded-full"></div>
-          <h4 class="text-xl font-semibold">Octobre 2024 - Septembre 2025 – Premier prototype</h4>
-          <p class="text-gray-600">Développement des premiers logiciels et conception du circuit imprimé et de coques de prototype</p>
+          <h4 class="text-xl font-semibold">2023 – Premier prototype</h4>
+          <p class="text-gray-600">Développement de la première version imprimée 3D et test en classe pilote.</p>
         </div>
         <div class="relative pl-10">
           <div class="absolute left-0 top-1.5 w-3 h-3 bg-blue-600 rounded-full"></div>
-          <h4 class="text-xl font-semibold">Septembre 2025 – Version beta</h4>
-          <p class="text-gray-600">Impression en 3D d'une coque et création d'une version utilisable par un utilisateur final</p>
+          <h4 class="text-xl font-semibold">2024 – Version beta</h4>
+          <p class="text-gray-600">Amélioration du matériel, refonte logicielle et publication du dépôt GitHub.</p>
         </div>
         <div class="relative pl-10">
           <div class="absolute left-0 top-1.5 w-3 h-3 bg-blue-600 rounded-full"></div>
@@ -333,16 +256,30 @@
       <h3 class="text-4xl font-bold mb-12">Qui est derrière OpenCalc ?</h3>
       <div class="grid md:grid-cols-3 gap-12">
         <div>
-          <img src="Feunixi.webp" alt="Feunixi" class="w-32 rounded-full mx-auto mb-4">
-          <h4 class="text-xl font-semibold">Feunixi</h4>
-          <p class="text-gray-600">Designer</p>
+          <img src="https://images.unsplash.com/photo-1603415526960-f7e0328aeca5?auto=format&fit=crop&w=300&q=80" alt="Camille" class="w-32 h-32 rounded-full mx-auto mb-4">
+          <h4 class="text-xl font-semibold">Camille Dupuis</h4>
+          <p class="text-gray-600">Designer UX · Passionnée d’accessibilité numérique et d’open hardware.</p>
         </div>
         <div>
-          <img src="donut.png" alt="Gabriel" class="w-32 h-32 rounded-full mx-auto mb-4">
-          <h4 class="text-xl font-semibold">Gabriel</h4>
-          <p class="text-gray-600">Développeur</p>
+          <img src="https://images.unsplash.com/photo-1607746882042-944635dfe10e?auto=format&fit=crop&w=300&q=80" alt="Hugo" class="w-32 h-32 rounded-full mx-auto mb-4">
+          <h4 class="text-xl font-semibold">Hugo Lefèvre</h4>
+          <p class="text-gray-600">Développeur embarqué · Créateur du firmware OpenCalc basé sur Micropython.</p>
         </div>
-        
+        <div>
+          <img src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=300&q=80" alt="Lina" class="w-32 h-32 rounded-full mx-auto mb-4">
+          <h4 class="text-xl font-semibold">Lina Garcia</h4>
+          <p class="text-gray-600">Responsable communauté · Anime les ateliers dans les lycées et organise les hackathons.</p>
+        </div>
+        <div>
+          <img src="https://images.unsplash.com/photo-1502767089025-6572583495b0?auto=format&fit=crop&w=300&q=80" alt="Sami" class="w-32 h-32 rounded-full mx-auto mb-4">
+          <h4 class="text-xl font-semibold">Sami Benhaddou</h4>
+          <p class="text-gray-600">Ingénieur électronique · Responsable de la conception matérielle de la calculatrice.</p>
+        </div>
+        <div>
+          <img src="https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=300&q=80" alt="Nora" class="w-32 h-32 rounded-full mx-auto mb-4">
+          <h4 class="text-xl font-semibold">Nora El-Mansouri</h4>
+          <p class="text-gray-600">Pédagogue & rédactrice · Travaille sur les contenus éducatifs et la documentation.</p>
+        </div>
       </div>
     </div>
   </section>
@@ -352,7 +289,7 @@
     <div class="max-w-4xl mx-auto px-6 text-center">
       <h3 class="text-4xl font-bold mb-4">Contact & contribution</h3>
       <p class="text-lg text-gray-600 mb-8">Vous souhaitez tester OpenCalc dans votre établissement, contribuer au projet ou tout simplement nous écrire ?</p>
-      <a href="contact.html" class="inline-block bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 transition">Envoyer un email</a>
+      <a href="mailto:contact@opencalc.org" class="inline-block bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 transition">Envoyer un email</a>
     </div>
   </section>
 
@@ -374,19 +311,7 @@
     }, { threshold: 0.2 });
     document.querySelectorAll('section[id]').forEach(sec => observer.observe(sec));
   </script>
-  <div class="bandeau-reseaux">
-    <p>Rejoignez nos réseaux:</p>
-    <a href="https://www.linkedin.com" target="_blank" aria-label="LinkedIn">
-      <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/linkedin.svg" alt="LinkedIn" style="filter: invert(34%) sepia(93%) saturate(1830%) hue-rotate(190deg) brightness(97%) contrast(94%);" />
-    </a>
-    <a href="https://www.instagram.com/opencalc/" target="_blank" aria-label="Instagram">
-      <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/instagram.svg" alt="Instagram" style="filter: invert(45%) sepia(94%) saturate(3919%) hue-rotate(316deg) brightness(97%) contrast(101%);" />
-    </a>
-    <a href="https://www.youtube.com/@OpenCalc" target="_blank" aria-label="YouTube">
-      <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/youtube.svg" alt="YouTube" style="filter: invert(28%) sepia(93%) saturate(7405%) hue-rotate(355deg) brightness(98%) contrast(119%);" />
-    </a>
-  </div>
-<script>
+  <script>
   const btn = document.getElementById("menuBtn");
   const menu = document.getElementById("mobileMenu");
 
