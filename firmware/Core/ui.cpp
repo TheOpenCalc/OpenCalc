@@ -463,6 +463,8 @@ static inline int CW(int S) { return 6 * S; }
 static inline int CH(int S) { return 8 * S; }
 
 int fmt_number(double v, char *buf) {
+    return double_to_string_scientific(v, buf);
+
     if (v == (int)v && v >= 0 && v < 10000000) {
         return sprintf(buf, "%d", (int)v);
     }
