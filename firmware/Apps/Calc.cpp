@@ -24,13 +24,31 @@ int Calc()
     fill_screen(BACKGROUND_COLOR);  // Bleu
 
     while (true) {
-        for (int i = cur_selected - 5; i <= cur_selected; i++) {
+                    int mv = 0;
+
+        for (int i = cur_selected; i >= cur_selected-5; i--) {
             int a = i % HISTORY_SIZE;
             if (a < 0) {
                 a += HISTORY_SIZE;
             }
-            if (history[a] != nullptr) {
-                display_fill_box(history[a], 160 - (i - cur_selected + 4) * 40, (a - cur_selected) % HISTORY_SIZE == 0, -1, ' ');
+            if (history[a] != nullptr ) {
+int old_mv=mv;
+                    int    tok_n = 0;
+                    int input_size;
+    token *toks  = parse_string_to_token(history[a]->text , history[a]->t_size, &tok_n);
+    Parser p     = { toks, tok_n, 0 };
+
+    while (p.pos < p.n) {
+        int before   = p.pos;
+        ASTNode *node = parse_equation(&p);
+        if (p.pos == before) p.pos++; 
+            if(node)mv+=max(0,measure(node,2).h-16);
+        printf("%i %i\n",mv,a);
+
+    }
+    history[a]->h=mv-old_mv+40;
+            display_fill_box(history[a], 160 - (i - cur_selected + 4) * 40+old_mv, (a - cur_selected) % HISTORY_SIZE == 0, -1, ' ');
+
             }
         }
         

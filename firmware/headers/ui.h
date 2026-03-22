@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include "headers/display.h"
 #include "Tools.h"
-
+#include "Evaluator.h"
 
 
 #define BACKGROUND_COLOR 0xf7de
@@ -13,6 +13,11 @@
 
 const int HISTORY_SIZE = 50;
 
+typedef struct {
+    token *toks;
+    int    n;
+    int    pos;
+} Parser;
 
 int min(int a, int b);
 
@@ -71,8 +76,32 @@ enum touches  {
     
    
 };
+typedef enum {
+    N_NUMBER,
+    N_VARIABLE,
+    N_CONST,
+    N_BINOP,
+    N_FUNC,
+    N_PLACEHOLDER,
+    N_PARENTHESIS,
+} NodeType;
+
+typedef struct ASTNode {
+    NodeType       type;
+    char           op;
+    double         number;
+    char           variable;
+    int            src_pos;  
+    struct ASTNode *left;
+    struct ASTNode *right;
+} ASTNode;
+typedef struct { int w; int h; int baseline; } Dims;
 
 void axis();
+
+ASTNode *parse_equation(Parser *p) ;
+
+Dims measure(ASTNode *nd, int SIZE);
 
 int fmt_number(double v, char *buf);
 

@@ -14,25 +14,7 @@
 
 #define MAX_NODES 128
 
-typedef enum {
-    N_NUMBER,
-    N_VARIABLE,
-    N_CONST,
-    N_BINOP,
-    N_FUNC,
-    N_PLACEHOLDER,
-    N_PARENTHESIS,
-} NodeType;
 
-typedef struct ASTNode {
-    NodeType       type;
-    char           op;
-    double         number;
-    char           variable;
-    int            src_pos;  
-    struct ASTNode *left;
-    struct ASTNode *right;
-} ASTNode;
 
 static ASTNode node_pool[MAX_NODES];
 static int     pool_top = 0;
@@ -61,11 +43,6 @@ struct coord_s {
 };
 
 
-typedef struct {
-    token *toks;
-    int    n;
-    int    pos;
-} Parser;
 
 typedef struct coord_s coord;
 
@@ -441,7 +418,8 @@ static ASTNode *parse_expr(Parser *p) {
         left        = nd;
     }
     return left;
-}static ASTNode *parse_equation(Parser *p) {
+}
+ASTNode *parse_equation(Parser *p) {
     ASTNode *left = parse_expr(p);
     token *t = p_peek(p);
     if (t && t->type == '=') {
@@ -458,7 +436,6 @@ static ASTNode *parse_expr(Parser *p) {
 }
 
 
-typedef struct { int w; int h; int baseline; } Dims;
 static inline int CW(int S) { return 6 * S; }
 static inline int CH(int S) { return 8 * S; }
 
@@ -497,7 +474,7 @@ static int func_name_width(char op, int SIZE) {
     }
 }
 
-static Dims measure(ASTNode *nd, int SIZE) {
+ Dims measure(ASTNode *nd, int SIZE) {
     if (!nd) return {CW(SIZE), CH(SIZE), CH(SIZE)/2};
     switch (nd->type) {
       
