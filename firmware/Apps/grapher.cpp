@@ -233,11 +233,33 @@ int Grapher()
     fill_screen(BACKGROUND_COLOR);  
 
     while (1) {
-        if (!show_graph) {
-            for (int i = std::max(first_display, 0); i < first_display + 6; i++) {
-                display_fill_box(arr_fill_box[i], 160 - (i - std::max(first_display, 0)) * 41, i == selected_fill_box, i, 'f');
+  int mv=0;
+                  if (!show_graph)
+        {
+            for (int i = std::max(first_display, 0); i < first_display + 6; i++){
+            int old_mv = mv;
+                int tok_n = 0;
+                int input_size;
+                token *toks = parse_string_to_token(arr_fill_box[i]->text, arr_fill_box[i]->t_size, &tok_n);
+                Parser p = {toks, tok_n, 0};
+
+                while (p.pos < p.n)
+                {
+                    int before = p.pos;
+                    ASTNode *node = parse_equation(&p);
+                    if (p.pos == before)
+                        p.pos++;
+                    if (node)
+                        mv += max(0, measure(node, 2).h - 16);
+                    printf("%i %i\n", mv, i);
+                }
+                arr_fill_box[i]->h = mv - old_mv + 40;
+//                display_fill_box(arr_fill_box[i], 160 - (i - selected_fill_box + 4) * 40 + old_mv, (i - selected_fill_box) % HISTORY_SIZE == 0, -1, ' ');
+            
+                display_fill_box(arr_fill_box[i], 160 - (i - std::max(first_display, 0)) * 40-mv, i == selected_fill_box, i, 'f');
+
             }
-        } else {
+        }else {
             axis();
             for (int i = 0; i < 100; i++) {
                 if (arr_fill_box[i] != nullptr) {
