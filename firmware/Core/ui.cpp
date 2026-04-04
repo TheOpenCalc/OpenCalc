@@ -14,8 +14,6 @@
 
 #define MAX_NODES 128
 
-
-
 static ASTNode node_pool[MAX_NODES];
 static int     pool_top = 0;
 
@@ -41,7 +39,6 @@ struct coord_s {
     int x;
     int y;
 };
-
 
 
 typedef struct coord_s coord;
@@ -419,7 +416,7 @@ static ASTNode *parse_expr(Parser *p) {
     }
     return left;
 }
-ASTNode *parse_equation(Parser *p) {
+ ASTNode *parse_equation(Parser *p) {
     ASTNode *left = parse_expr(p);
     token *t = p_peek(p);
     if (t && t->type == '=') {
@@ -440,8 +437,6 @@ static inline int CW(int S) { return 6 * S; }
 static inline int CH(int S) { return 8 * S; }
 
 int fmt_number(double v, char *buf) {
-    return double_to_string_scientific(v, buf);
-
     if (v == (int)v && v >= 0 && v < 10000000) {
         return sprintf(buf, "%d", (int)v);
     }
@@ -474,7 +469,7 @@ static int func_name_width(char op, int SIZE) {
     }
 }
 
- Dims measure(ASTNode *nd, int SIZE) {
+Dims measure(ASTNode *nd, int SIZE) {
     if (!nd) return {CW(SIZE), CH(SIZE), CH(SIZE)/2};
     switch (nd->type) {
       
@@ -585,8 +580,13 @@ static int render_node(ASTNode *nd, int x, int y, int SIZE, int cursor_pos) {
         }
 
         case N_NUMBER: {
-            update_cursor(nd, x, y, cursor_pos);
-            fmt_number(nd->number, numbuf);
+            int nc = fmt_number(nd->number, numbuf);
+            // src_pos is the last digit's index; src_start is the first digit's index.
+            int src_start = nd->src_pos - nc + 1;
+            if (src_start >= 0 && cursor_pos >= src_start + 1 && cursor_pos <= src_start + nc) {
+                x_cursor = x;
+                y_cursor = y -6+ (cursor_pos - src_start) * CW(SIZE);
+            }
             return draw_str(x, y, numbuf, SIZE);
         }
         case N_PARENTHESIS: {
@@ -722,4 +722,3 @@ void blink_cursor()
         draw_char(x_cursor, y_cursor, temp, BACKGROUND_COLOR, BACKGROUND_COLOR, 2);
     };
 }
-
