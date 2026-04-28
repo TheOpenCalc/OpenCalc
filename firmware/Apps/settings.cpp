@@ -5,6 +5,8 @@
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
 #include <malloc.h>
+#include "headers/colors.h"
+
 
 int g_angle_mode = 0;   
 int g_decimals   = 6;

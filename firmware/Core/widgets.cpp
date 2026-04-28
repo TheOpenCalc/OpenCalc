@@ -2,6 +2,7 @@
 #include "headers/display.h"
 #include "headers/ui.h"
 #include <malloc.h>
+#include "headers/colors.h"
 fill_box *create_fill_box(int x, int y, int h, int w, int border)
 {
     fill_box *out = (fill_box*) malloc(sizeof(fill_box));

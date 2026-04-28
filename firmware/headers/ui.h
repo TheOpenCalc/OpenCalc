@@ -6,10 +6,6 @@
 #include "Evaluator.h"
 
 
-#define BACKGROUND_COLOR 0xf7de
-#define FRONTGROUND_COLOR 0xdefb
-#define FRONTGROUND_COLOR_BIS 0xce79
-
 
 const int HISTORY_SIZE = 50;
 

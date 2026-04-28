@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <cstdlib>
 #include "Tools.h"
-
+#include "headers/colors.h"
 int Calc()
 {
     bool snd = false;

@@ -440,15 +440,15 @@ int fmt_number(double v, char *buf) {
     if (v == (int)v && v >= 0 && v < 10000000) {
         return sprintf(buf, "%d", (int)v);
     }
-    int    int_part = (int)v;
+    long int    int_part = (long int)v;
     double dec_part = v - int_part;
     if (dec_part < 0) dec_part = -dec_part;
 
-    int decimals = (int)(dec_part * 1000000 + 0.5);
-    int len = sprintf(buf, "%d.", int_part);
+    long int decimals = (long int)(dec_part * 1000000 + 0.5);
+    long int len = sprintf(buf, "%d.", int_part);
 
     char dec_buf[8];
-    int dec_len = sprintf(dec_buf, "%06d", decimals);  
+    long int dec_len = sprintf(dec_buf, "%06d", decimals);  
 
     while (dec_len > 1 && dec_buf[dec_len-1] == '0') dec_len--;
     dec_buf[dec_len] = '\0';

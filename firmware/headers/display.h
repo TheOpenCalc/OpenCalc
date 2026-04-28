@@ -106,7 +106,6 @@ const uint8_t font5x7[] = {
 #define PIN_RST    20
 #define PIN_SCK    18
 #define PIN_MOSI   19
-#define BACKGROUND_COLOR 0xf7de
 
 
 const int SCREEN_HEIGHT = 240;
