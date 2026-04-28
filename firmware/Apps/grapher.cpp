@@ -13,6 +13,9 @@
 int X_cursor =0;
 int Y_cursor =0;
 
+double X_pos=0;
+double Y_pos=0;
+
 
 void wu_line(int y0, int x0, int y1, int x1, uint16_t color)
 {
@@ -100,6 +103,8 @@ void graph(double cursor_pos, token *function, double x_min, double x_max, doubl
             if((id!=-1) && pos<cursor_pos && pos+pas>cursor_pos){
                 X_cursor=i-1;
                 Y_cursor=last;
+                X_pos=pos;
+                Y_pos=y;
 
             }
             if (fill_between_points) {
@@ -218,6 +223,36 @@ int Grapher()
 
     while (1) {
   int mv=0;
+
+        if(Y_pos>y_max ){
+                            fill_screen(BACKGROUND_COLOR);
+
+            double d = Y_pos-y_max;
+            y_max+=d*10;
+            y_min+=d*10;
+        }
+        else if(Y_pos<y_min ){
+                            fill_screen(BACKGROUND_COLOR);
+
+            double d = y_min-Y_pos;
+            y_max-=d*10;
+            y_min-=d*10;
+        }
+        if(X_pos>x_max ){
+                            fill_screen(BACKGROUND_COLOR);
+
+            double d = X_pos-x_max;
+            x_max+=d*10;
+            x_min+=d*10;
+        }
+        else if(X_pos<x_min ){
+                            fill_screen(BACKGROUND_COLOR);
+
+            double d = x_min-X_pos;
+            x_max-=d*10;
+            x_min-=d*10;
+        }
+
                   if (!show_graph)
         {
             for (int i = std::max(first_display, 0); i < first_display + 6; i++){
@@ -245,6 +280,7 @@ int Grapher()
             }
         }else {
             axis();
+
             for (int i = 0; i < 100; i++) {
                 if (arr_fill_box[i] != nullptr) {
                     int yarded = count_yarded(arr_fill_box[i]->text);
@@ -254,11 +290,11 @@ int Grapher()
                     graph(cursor_pos, tokenized, x_min, x_max, y_min, y_max, tokenized_size, palet[i % 14], i == selected_fill_box, true,'X');
                     fill_rect(Y_cursor,X_cursor-5,1,10,0x000000);
                     fill_rect(Y_cursor-5,X_cursor,10,1,0x000000);
-
+       
                 }
             }
+            
         }
-
         display_text_box(Formula,0,0,!show_graph && selected_fill_box==-1);
         display_text_box(Graph,0,0,show_graph&& selected_fill_box==-1);
              sleep_ms(150);
