@@ -407,6 +407,20 @@ token *parse_string_to_token(char *in, int n, int *tokenized_size)
         *tokenized_size = 1;
         return out;
     }
+    if(in[0]=='i'&&in[1]=='n'&&in[2]=='f'){
+         token *out = (token*) malloc(sizeof(token));
+        out[0].type = 'n';
+        out[0].value = INFINITY;
+        *tokenized_size = 1;
+        return out;
+    }
+    if(in[0]=='-'&&in[1]=='i'&&in[2]=='n'&&in[3]=='f'){
+         token *out = (token*) malloc(sizeof(token));
+        out[0].type = 'n';
+        out[0].value = -INFINITY;
+        *tokenized_size = 1;
+        return out;
+    }
     int OUT_S = n;
     for (int i = 0; i < n; i++)
     {

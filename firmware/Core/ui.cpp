@@ -440,21 +440,27 @@ int fmt_number(double v, char *buf) {
     if (v == (int)v && v >= 0 && v < 10000000) {
         return sprintf(buf, "%d", (int)v);
     }
-    long int    int_part = (long int)v;
+    double int_part = floor(v);
     double dec_part = v - int_part;
     if (dec_part < 0) dec_part = -dec_part;
 
-    long int decimals = (long int)(dec_part * 1000000 + 0.5);
-    long int len = sprintf(buf, "%d.", int_part);
+    double decimals = (dec_part * 1000000 + 0.5);
+    long int len;
+    if(v!=INFINITY && v!=-INFINITY)
+        len = sprintf(buf, "%lf.", int_part);
+    else
+        len = sprintf(buf, "%lf", int_part);
 
     char dec_buf[8];
-    long int dec_len = sprintf(dec_buf, "%06d", decimals);  
-
+    if(v!=INFINITY && v!=-INFINITY){
+        long int dec_len = sprintf(dec_buf, "%06d", decimals);  
+    
     while (dec_len > 1 && dec_buf[dec_len-1] == '0') dec_len--;
     dec_buf[dec_len] = '\0';
 
     for (int i = 0; i < dec_len; i++) buf[len++] = dec_buf[i];
     buf[len] = '\0';
+    }   
     return len;
 }
 
