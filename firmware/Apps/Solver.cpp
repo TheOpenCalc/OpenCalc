@@ -11,6 +11,8 @@
 #include <cstdio>
 #include "headers/Solver.h"
 #include <stdio.h>
+#include "headers/colors.h"
+
 #include <time.h>
 
 void simplify_first(double *a, double *b, int n, int first_nb)

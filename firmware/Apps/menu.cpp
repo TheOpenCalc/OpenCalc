@@ -11,7 +11,7 @@
 #include "headers/Calc.h"
 #include "headers/ui.h"
 #include "headers/Tools.h"
-
+#include "headers/colors.h"
 #include <stdio.h>
 #include <string>
 int x_cursor = 0;

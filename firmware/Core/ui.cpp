@@ -10,7 +10,7 @@
 #include "headers/menu.h"
 #include "headers/Evaluator.h"
 #include "headers/widgets.h"
-
+#include "headers/colors.h"
 
 #define MAX_NODES 128
 
@@ -698,7 +698,9 @@ void display_equation(char *in, int input_size, int x, int y, int SIZE, int curs
     token *toks  = parse_string_to_token(in, input_size, &tok_n);
     Parser p     = { toks, tok_n, 0 };
     int    cy    = y + 5;
-
+    for(int i = 0 ; i < 20;i++){
+        printf("%c \n",p.toks[i].type);
+    }
     while (p.pos < p.n) {
         int before   = p.pos;
         ASTNode *node = parse_equation(&p);
