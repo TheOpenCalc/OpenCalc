@@ -445,17 +445,19 @@ int fmt_number(double v, char *buf) {
     double int_part = floor(v);
     double dec_part = v - int_part;
     if (dec_part < 0) dec_part = -dec_part;
+    printf("Dec: %lf\n",dec_part);
 
     double decimals = (dec_part * 1000000 + 0.5);
+    printf("Dec: %lf",dec_part);
     long int len;
     if(v!=INFINITY && v!=-INFINITY)
-        len = sprintf(buf, "%lf.", int_part);
+        len = sprintf(buf, "%0.lf.", int_part);
     else
         len = sprintf(buf, "%lf", int_part);
 
     char dec_buf[8];
     if(v!=INFINITY && v!=-INFINITY){
-        long int dec_len = sprintf(dec_buf, "%06d", decimals);  
+        long int dec_len = sprintf(dec_buf, "%0.lf", decimals);  
     
     while (dec_len > 1 && dec_buf[dec_len-1] == '0') dec_len--;
     dec_buf[dec_len] = '\0';
@@ -706,9 +708,7 @@ void display_equation(char *in, int input_size, int x, int y, int SIZE, int curs
     token *toks  = parse_string_to_token(in, input_size, &tok_n);
     Parser p     = { toks, tok_n, 0 };
     int    cy    = y + 5;
-    for(int i = 0 ; i < 20;i++){
-        printf("%c \n",p.toks[i].type);
-    }
+
     while (p.pos < p.n) {
         int before   = p.pos;
         ASTNode *node = parse_equation(&p);
