@@ -50,7 +50,6 @@ int Calc()
                         p.pos++;
                     if (node)
                         mv += max(0, measure(node, 2).h - 16);
-                    printf("%i %i\n", mv, a);
                 }
                 history[a]->h = mv - old_mv + 40;
                 display_fill_box(history[a], 160 - (i - cur_selected + 4) * 40 + old_mv, (a - cur_selected) % HISTORY_SIZE == 0, -1, ' ');

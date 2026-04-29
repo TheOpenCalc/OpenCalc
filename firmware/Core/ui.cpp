@@ -445,10 +445,8 @@ int fmt_number(double v, char *buf) {
     double int_part = floor(v);
     double dec_part = v - int_part;
     if (dec_part < 0) dec_part = -dec_part;
-    printf("Dec: %lf\n",dec_part);
 
     double decimals = (dec_part * 1000000 + 0.5);
-    printf("Dec: %lf",dec_part);
     long int len;
     if(v!=INFINITY && v!=-INFINITY)
         len = sprintf(buf, "%0.lf.", int_part);

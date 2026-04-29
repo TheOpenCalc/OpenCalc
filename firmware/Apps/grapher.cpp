@@ -223,9 +223,7 @@ int Grapher()
 
     while (1) {
   int mv=0;
- printf("Y:%f %f \n",Y_pos,y_max);
         double border =0.25;
-        printf("X:%f %f \n",X_pos,x_max);
        
         if(y_max-Y_pos<(y_max-y_min)*border ){
                             fill_screen(BACKGROUND_COLOR);
@@ -254,8 +252,6 @@ int Grapher()
             x_max-=d;
             x_min-=d;
         }
-        printf("Y:%f %f \n",Y_pos,y_max);
-        printf("X:%f %f \n\n\n\n",X_pos,x_max);
        
 
                   if (!show_graph)
@@ -275,7 +271,6 @@ int Grapher()
                         p.pos++;
                     if (node)
                         mv += max(0, measure(node, 2).h - 16);
-                    printf("%i %i\n", mv, i);
                 }
                 arr_fill_box[i]->h = mv - old_mv + 40;
 //                display_fill_box(arr_fill_box[i], 160 - (i - selected_fill_box + 4) * 40 + old_mv, (i - selected_fill_box) % HISTORY_SIZE == 0, -1, ' ');
@@ -311,7 +306,6 @@ int Grapher()
                 }
             last_pressed = scan_keypad();
         }
-        std::printf("%i\n", (int) show_graph);
         switch (last_pressed) {
         case SECOND :
             toggle(&snd);
