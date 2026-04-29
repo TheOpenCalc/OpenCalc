@@ -65,10 +65,12 @@ int max(int a, int b)
     return b;
 }
 
-void axis()
+void axis(double x_min,double x_max, double y_min,double y_max)
 {
-    fill_rect(0, 159, 220, 2, 0x0000);
-    fill_rect(120, 0, 2, 340, 0x0000);
+    if(x_min*x_max<0)
+        fill_rect(0, abs(x_min)/(x_max-x_min)*320, 220, 2, 0x0000);
+    if(y_min*y_max<0)
+        fill_rect(abs(y_min)/(y_max-y_min)*240, 0, 2, 340, 0x0000);
 }
 
 

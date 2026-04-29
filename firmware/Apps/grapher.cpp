@@ -223,35 +223,40 @@ int Grapher()
 
     while (1) {
   int mv=0;
-
-        if(Y_pos>y_max ){
+ printf("Y:%f %f \n",Y_pos,y_max);
+        double border =0.25;
+        printf("X:%f %f \n",X_pos,x_max);
+       
+        if(y_max-Y_pos<(y_max-y_min)*border ){
                             fill_screen(BACKGROUND_COLOR);
 
-            double d = Y_pos-y_max;
-            y_max+=d*10;
-            y_min+=d*10;
+            double d = abs(y_max-Y_pos  -(y_max-y_min)*border*2);
+            y_max+=d;
+            y_min+=d;
         }
-        else if(Y_pos<y_min ){
+        else if(Y_pos-y_min<(y_max-y_min)*border ){
                             fill_screen(BACKGROUND_COLOR);
 
-            double d = y_min-Y_pos;
-            y_max-=d*10;
-            y_min-=d*10;
-        }
-        if(X_pos>x_max ){
+            double d = abs(Y_pos-y_min  -(y_max-y_min)*border*2);
+            y_max-=d;
+            y_min-=d;
+        }if(x_max-X_pos<(x_max-x_min)*border ){
                             fill_screen(BACKGROUND_COLOR);
 
-            double d = X_pos-x_max;
-            x_max+=d*10;
-            x_min+=d*10;
+            double d = abs(x_max-X_pos  -(x_max-x_min)*border*2);
+            x_max+=d;
+            x_min+=d;
         }
-        else if(X_pos<x_min ){
+        else if(X_pos-x_min<(x_max-x_min)*border ){
                             fill_screen(BACKGROUND_COLOR);
 
-            double d = x_min-X_pos;
-            x_max-=d*10;
-            x_min-=d*10;
+            double d = abs(X_pos-x_min  -(x_max-x_min)*border*2);
+            x_max-=d;
+            x_min-=d;
         }
+        printf("Y:%f %f \n",Y_pos,y_max);
+        printf("X:%f %f \n\n\n\n",X_pos,x_max);
+       
 
                   if (!show_graph)
         {
@@ -279,7 +284,7 @@ int Grapher()
 
             }
         }else {
-            axis();
+            axis(x_min,x_max, y_min,y_max);
 
             for (int i = 0; i < 100; i++) {
                 if (arr_fill_box[i] != nullptr) {

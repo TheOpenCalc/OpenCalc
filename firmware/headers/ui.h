@@ -93,8 +93,7 @@ typedef struct ASTNode {
 } ASTNode;
 typedef struct { int w; int h; int baseline; } Dims;
 
-void axis();
-
+void axis(double x_min,double x_max, double y_min,double y_max);
 ASTNode *parse_equation(Parser *p) ;
 
 Dims measure(ASTNode *nd, int SIZE);
