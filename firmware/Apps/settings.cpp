@@ -19,8 +19,9 @@ int g_brightness = 10;
 #define ROW_H        42     
 
 #define ROW0_Y       152    
-#define ROW1_Y       100    
-#define ROW2_Y       48     
+#define ROW1_Y       105    
+#define ROW2_Y       58
+#define ROW3_Y       11     
 
 #define TITLE_Y      200   
 #define TITLE_H      40
@@ -28,7 +29,7 @@ int g_brightness = 10;
 #define HELP_Y       0      
 #define HELP_H       20
 
-#define NUM_SETTINGS 3
+#define NUM_SETTINGS 4
 
 static char dec_buf[8];
 static char deg_buf[4];
@@ -50,7 +51,7 @@ void settings()
     text_box *title = create_text_box(0, TITLE_Y, TITLE_H, 320, 0, false);
     title->text     = "Parametres";
     title->display_text_size=2;
-    title->t_size   = 10;
+    title->t_size   = 20;
     title->col      = 0x311f;
     title->allign   = 'c';
 
@@ -74,6 +75,12 @@ void settings()
     lbl2->text     = "Decimales";
     lbl2->t_size   = 9;
     lbl2->allign   = 'r';
+
+
+    text_box *lbl3 = create_text_box(LABEL_X, ROW3_Y+ROW_H/2, ROW_H/2, 316, 2, false);
+    lbl3->text     = "Credits : OpenCalc opencacl.fr version 0.9.5";
+    lbl3->t_size   = 43;
+    lbl3->allign   = 'c';
 
     pontentiometer *pot_bright = create_potentiometer(
         ROW0_Y + 11,  
@@ -130,6 +137,9 @@ void settings()
             refresh_dec_text(tb_dec);
             display_text_box(lbl2,   0, 0, cursor_pos == 2);
             display_text_box(tb_dec, 0, 0, cursor_pos == 2);
+
+            display_text_box(lbl3,   0, 0, cursor_pos == 3);
+
 
             need_draw = false;
         }
