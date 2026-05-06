@@ -515,7 +515,7 @@ Dims measure(ASTNode *nd, int SIZE) {
             } else {
                 Dims l       = measure(nd->left,  SIZE);
                 Dims r       = measure(nd->right, SIZE);
-                int ow       = nd->op == '*' ? 0 : CW(SIZE);
+                int ow       = /*nd->op == '*' ? 0 :*/ CW(SIZE);
                 int baseline = l.baseline > r.baseline ? l.baseline : r.baseline;
                 int below_l  = l.h - l.baseline;
                 int below_r  = r.h - r.baseline;
