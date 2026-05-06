@@ -448,15 +448,16 @@ int fmt_number(double v, char *buf) {
 
     double decimals = (dec_part * 1000000 + 0.5);
     long int len;
-    if(v!=INFINITY && v!=-INFINITY)
+    printf("%lf\n",decimals);
+    if(v!=INFINITY && v!=-INFINITY && decimals<=1)
         len = sprintf(buf, "%0.lf.", int_part);
     else
         len = sprintf(buf, "%lf", int_part);
 
     char dec_buf[8];
     if(v!=INFINITY && v!=-INFINITY){
-        long int dec_len = sprintf(dec_buf, "%0.lf", decimals);  
-    
+        //long int dec_len = sprintf(dec_buf, "%0.lf", decimals);  
+    long int dec_len=0;
     while (dec_len > 1 && dec_buf[dec_len-1] == '0') dec_len--;
     dec_buf[dec_len] = '\0';
 
@@ -672,7 +673,9 @@ static int render_node(ASTNode *nd, int x, int y, int SIZE, int cursor_pos) {
                 Dims c = measure(nd->left, SIZE);
                 buf[0] = 'R'; draw_char(x+3, y, buf, 0x0000, 0x0000, SIZE);
                 int cy = y + CW(SIZE) + 2;
-                fill_rect(x, cy, 1, c.w, 0x0000);
+                
+                fill_rect(x+7, cy, 2, c.w, 0x0000);
+                
                 render_node(nd->left, x+3, cy, SIZE, cursor_pos);
                 return cy + c.w;
             } else if(nd->op=='!') {
