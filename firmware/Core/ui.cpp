@@ -449,15 +449,16 @@ int fmt_number(double v, char *buf) {
     double decimals = (dec_part * 1000000 + 0.5);
     long int len;
     printf("%lf\n",decimals);
-    if(v!=INFINITY && v!=-INFINITY && decimals<=1)
+    if(v!=INFINITY && v!=-INFINITY && decimals>=1){
         len = sprintf(buf, "%0.lf.", int_part);
+    }
     else
-        len = sprintf(buf, "%lf", int_part);
+        len = sprintf(buf, "%0.lf", int_part);
+    long int dec_len=0;
 
     char dec_buf[8];
-    if(v!=INFINITY && v!=-INFINITY){
-        //long int dec_len = sprintf(dec_buf, "%0.lf", decimals);  
-    long int dec_len=0;
+    if(v!=INFINITY && v!=-INFINITY&& decimals>=1){
+        dec_len = sprintf(dec_buf, "%0.lf", decimals);  
     while (dec_len > 1 && dec_buf[dec_len-1] == '0') dec_len--;
     dec_buf[dec_len] = '\0';
 
@@ -671,10 +672,10 @@ static int render_node(ASTNode *nd, int x, int y, int SIZE, int cursor_pos) {
             update_cursor(nd, x, y, cursor_pos);
             if (nd->op == 'r') {
                 Dims c = measure(nd->left, SIZE);
-                buf[0] = 'R'; draw_char(x+3, y, buf, 0x0000, 0x0000, SIZE);
+                buf[0] = 'R'; draw_char(x+c.h/2, y, buf, 0x0000, 0x0000, SIZE);
                 int cy = y + CW(SIZE) + 2;
                 
-                fill_rect(x+7, cy, 2, c.w, 0x0000);
+                fill_rect(x+c.h-3, cy, 2, c.w, 0x0000);
                 
                 render_node(nd->left, x+3, cy, SIZE, cursor_pos);
                 return cy + c.w;
