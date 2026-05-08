@@ -489,7 +489,7 @@ Dims measure(ASTNode *nd, int SIZE) {
         case N_CONST:
             return {CW(SIZE), CH(SIZE), CH(SIZE)/2};
         case N_NUMBER: {
-            char buf[32];
+            char buf[256];
             int nc = fmt_number(nd->number, buf);
             return {nc*CW(SIZE), CH(SIZE), CH(SIZE)/2};
         }

@@ -15,7 +15,7 @@ fill_box *create_fill_box(int x, int y, int h, int w, int border)
     out->border = border;
     out->color = 0xffff;
     out->t_size = 0;
-    char *in = (char*) malloc(sizeof(char) * 100);
+    char *in = (char*) malloc(sizeof(char) * 1000);
     for (int i = 0; i < 100; i++) {
         in[i] = '\0';
     }
