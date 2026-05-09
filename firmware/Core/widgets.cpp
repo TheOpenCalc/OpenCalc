@@ -540,11 +540,26 @@ void update_fill_box(fill_box *in, int event, bool snd)
             in->t_size += 3;
             break;
         case BACK :
-            in->curso_pos--;
             if (in->t_size > 0) {
+                
+                int size_text_after=0;
+                while(size_text_after<100 && in->text[in->curso_pos+size_after_cursor]!='\0'){
+                    size_after_cursor++;
+                }
+                char * temp = (char *)malloc(sizeof(char)*size_text_after);
+                for(int i =0 ; i < size_after_cursor;i++){
+                    temp[i]=in->text[in->curso_pos+i];
+                }
+
                 in->t_size--;
+                for(int i =0 ; i < size_after_cursor;i++){
+                    in->text[in->curso_pos+i]=temp[i];
+                }
+                free(temp);
                 in->text[in->t_size] = '\0';
+        
             }
+
             break;
                case FACT:
 
