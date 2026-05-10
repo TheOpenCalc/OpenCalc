@@ -3,6 +3,7 @@
 #include "headers/ui.h"
 #include <malloc.h>
 #include "headers/colors.h"
+#include <stdio.h>
 
 fill_box *create_fill_box(int x, int y, int h, int w, int border)
 {
@@ -123,6 +124,11 @@ void display_fill_box(fill_box *in, int shift_y, bool is_selected, int pos, char
     } else {
         fill_rect(in->y + shift_y, in->x, in->h, in->w, 0xfff0);
     }
+    
+    for(int i =0 ; i<in->t_size;i++){
+        printf("%c ",in->text[i]);
+    }
+    printf("\n");
 
     display_equation(in->text, 100, in->y + shift_y, in->x + (prefix == ' ' ? 0 : 55), 2, is_selected ? in->curso_pos : -10);
 

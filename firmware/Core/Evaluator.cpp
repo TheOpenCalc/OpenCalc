@@ -471,7 +471,7 @@ token *parse_string_to_token(char *in, int n, int *tokenized_size)
             { // nombre juste avant la factorielle
 
                 token temp;
-                temp.h = out[out_size - 1].h;
+                //temp.h = out[out_size - 1].h;
                 temp.type = out[out_size - 1].type;
                 temp.value = out[out_size - 1].value;
                 out[out_size - 1].type = '!';
