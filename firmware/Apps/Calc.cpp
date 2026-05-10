@@ -107,11 +107,11 @@ int Calc()
             break;
         case LEFT:
             cur_selected = cur_last_history;
-            history[cur_last_history]->curso_pos--;
+            fill_box_left(history[cur_selected]);
             break;
         case RIGHT:
             cur_selected = cur_last_history;
-            history[cur_last_history]->curso_pos = min(history[cur_last_history]->curso_pos + 1, history[cur_last_history]->t_size);
+            fill_box_right(history[cur_selected]);
             break;
         case X:
             break;

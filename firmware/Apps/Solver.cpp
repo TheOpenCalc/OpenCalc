@@ -395,6 +395,7 @@ int Solver()
             break;
 
         case RIGHT:
+        if(selected_fill_box==-1)
         {
             show_solution = true;
 
@@ -517,10 +518,16 @@ int Solver()
             free(right_tok);
             free(left_sz);
             free(right_sz);
+        }else{
+            fill_box_right(arr_fill_box[selected_fill_box]);
         }
         break;
         case LEFT:
             show_solution = false;
+            if(selected_fill_box!=-1){
+                fill_box_left(arr_fill_box[selected_fill_box]);
+
+            }
             break;
 
         case SECOND:

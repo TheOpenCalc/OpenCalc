@@ -45,6 +45,21 @@ text_box *create_text_box(int x, int y, int h, int w, int border, bool transpare
     return out;
 }
 
+void fill_box_left(fill_box * in){
+    do{
+        in->curso_pos--;
+    }while(in->curso_pos>1 && in->text[in->curso_pos-1]=='/');
+    in->curso_pos=max(in->curso_pos,0);
+
+}
+
+void fill_box_right(fill_box * in){
+    do{
+        in->curso_pos++;
+    }while(in->curso_pos<in->t_size-1 &&in->text[in->curso_pos+1]=='/');
+    in->curso_pos=min(in->curso_pos,in->t_size);
+}
+
 pontentiometer *create_potentiometer(int x, int y, int h, int w, int border, char *name, int grad, bool transparent_back)
 {
     pontentiometer *out = (pontentiometer *)malloc(sizeof(pontentiometer));
@@ -158,6 +173,7 @@ void display_fill_box(fill_box *in, int shift_y, bool is_selected, int pos, char
 
 void update_fill_box(fill_box *in, int event, bool snd)
 {
+    printf("POS: %i \n",in->curso_pos);
     int size_after_cursor =0;
     while(size_after_cursor<100 && in->text[in->curso_pos+size_after_cursor]!='\0')
         size_after_cursor++;
@@ -326,6 +342,8 @@ void update_fill_box(fill_box *in, int event, bool snd)
                 in->text[in->t_size] = '\0';
         
             }
+                        in->curso_pos--;
+
             break;
                case FACT:
 
@@ -565,7 +583,7 @@ void update_fill_box(fill_box *in, int event, bool snd)
                 in->text[in->t_size] = '\0';
         
             }
-
+            in->curso_pos--;
             break;
                case FACT:
 

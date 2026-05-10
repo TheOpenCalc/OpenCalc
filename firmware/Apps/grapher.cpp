@@ -347,7 +347,11 @@ int Grapher()
                     fill_rect(Y_cursor-5,X_cursor,10,1,BACKGROUND_COLOR);
                     
                 cursor_pos += (x_max - x_min) / 100;
-            } else {
+            } else if (!show_graph && selected_fill_box!=-1){
+                fill_box_right(arr_fill_box[selected_fill_box]);
+
+
+            }else {
                 fill_screen(BACKGROUND_COLOR);
                 selected_fill_box =- 1;
                 show_graph = true;
@@ -355,11 +359,11 @@ int Grapher()
             break;
         case LEFT :
             if (show_graph && selected_fill_box != -1) {
-                                    fill_rect(20,0,200,340,BACKGROUND_COLOR);
-
-                    
+                fill_rect(20,0,200,340,BACKGROUND_COLOR);
                 cursor_pos -= (x_max - x_min) / 100;
-            } else {
+            } else if (!show_graph && selected_fill_box!=-1){
+                fill_box_left(arr_fill_box[selected_fill_box]);
+            }else{
                 fill_screen(BACKGROUND_COLOR);
                 show_graph = false;
                 selected_fill_box =- 1;
@@ -368,15 +372,13 @@ int Grapher()
         default :
             if (show_graph) {
                 if (last_pressed == PLUS) {
-                                        fill_rect(20,0,200,340,BACKGROUND_COLOR);
-
+                    fill_rect(20,0,200,340,BACKGROUND_COLOR);
                     x_min /= 2;
                     x_max /= 2;
                     y_min /= 2;
                     y_max /= 2;
                 } else if (last_pressed == MINUS) {
-                                                            fill_rect(20,0,200,340,BACKGROUND_COLOR);
-
+                    fill_rect(20,0,200,340,BACKGROUND_COLOR);
                     x_min *= 2;
                     x_max *= 2;
                     y_min *= 2;

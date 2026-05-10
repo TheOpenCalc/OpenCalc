@@ -42,6 +42,9 @@ typedef struct text_box_s text_box;
 
 typedef struct pontentiometer_s pontentiometer;
 
+
+void fill_box_left(fill_box * in);
+void fill_box_right(fill_box * in);
 fill_box *create_fill_box(int x, int y, int h, int w, int border);
 
 void display_text_box(text_box *in, int shift_y, int shift_text, bool is_selected);
