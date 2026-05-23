@@ -329,7 +329,7 @@ int Grapher()
             break;
         case DOWN :
             if(!show_graph) {
-                selected_fill_box = std::min(100, selected_fill_box + 1);
+                selected_fill_box = std::min(25, selected_fill_box + 1);
                 if (arr_fill_box[selected_fill_box] == nullptr) {
                     arr_fill_box[selected_fill_box] = create_fill_box(0, 20, 40, 320, 3);
                 }
@@ -337,7 +337,8 @@ int Grapher()
                     first_display++;
                 }
             } else {
-                selected_fill_box=min(27,selected_fill_box+1);
+                printf("D: %i\n",selected_fill_box);
+                selected_fill_box=min(25,selected_fill_box+1);
             }
             break;
         case RIGHT :

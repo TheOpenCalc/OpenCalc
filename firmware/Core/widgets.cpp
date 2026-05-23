@@ -149,7 +149,7 @@ void display_fill_box(fill_box *in, int shift_y, bool is_selected, int pos, char
 
     if (prefix == 'f') {
         char *t = (char*) malloc(sizeof(char*) * 6);
-        t[0] = 'f' + pos;
+        t[0] = (pos+5)%26+'a';
         t[1] = '(';
         t[2] = 'x';
         t[3] = ')';
