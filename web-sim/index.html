@@ -1,112 +1,258 @@
 <!doctype html>
-<html lang="fr">
+<html lang="fr" data-theme="light">
   <head>
-      <link rel = "icon" type = "logo.png" href = "logo.png">
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>OpenCalc – La calculatrice libre pour les lycéens</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-  <style>
-    body { font-family: 'Inter', sans-serif; }
-    .fade-up {
-      opacity: 0;
-      transform: translateY(40px);
-      transition: all 0.8s ease-out;
-    }
-    .fade-up.visible {
-      opacity: 1;
-      transform: translateY(0);
-    }
-    .slide-left {
-      opacity: 0;
-      transform: translateX(-40px);
-      transition: all 0.8s ease-out;
-    }
-    .slide-left.visible {
-      opacity: 1;
-      transform: translateX(0);
-    }
-    .slide-right {
-      opacity: 0;
-      transform: translateX(40px);
-      transition: all 0.8s ease-out;
-    }
-    .slide-right.visible {
-      opacity: 1;
-      transform: translateX(0);
-    }
-    header nav a.active {
-      color: #1e40af;
-      font-weight: 600;
-    }
-  </style>
-</head>
+    <link rel="icon" type="logo.png" href="logo.png">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OpenCalc – La calculatrice libre pour les lycéens</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+      :root, [data-theme="light"] {
+        --bg:         #ffffff;
+        --bg-soft:    #f3f4f6;
+        --surface:    #ffffff;
+        --border:     #e5e7eb;
+        --text:       #111827;
+        --text-muted: #6b7280;
+        --header-bg:  #ffffff;
+        --header-shadow: 0 1px 3px rgba(0,0,0,.12);
+        --blue:       #2563eb;
+        --blue-hover: #1d4ed8;
+        --link:       #374151;
+        --link-hover: #2563eb;
+        --mobile-menu-bg: #ffffff;
+      }
+
+      [data-theme="dark"] {
+        --bg:         #0f172a;
+        --bg-soft:    #1e293b;
+        --surface:    #1e293b;
+        --border:     #334155;
+        --text:       #f1f5f9;
+        --text-muted: #94a3b8;
+        --header-bg:  #0f172a;
+        --header-shadow: 0 1px 3px rgba(0,0,0,.5);
+        --blue:       #3b82f6;
+        --blue-hover: #60a5fa;
+        --link:       #cbd5e1;
+        --link-hover: #60a5fa;
+        --mobile-menu-bg: #1e293b;
+      }
+
+      /* ── Base ── */
+      body {
+        font-family: 'Inter', sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        transition: background .3s, color .3s;
+      }
+
+      /* ── Header ── */
+      header {
+        background: var(--header-bg) !important;
+        box-shadow: var(--header-shadow) !important;
+      }
+      header h1 { color: var(--blue) !important; }
+      #menuBtn { color: var(--link) !important; }
+
+      /* ── Nav links ── */
+      header nav a,
+      #mobileMenu a {
+        color: var(--link) !important;
+        transition: color .2s;
+      }
+      header nav a:hover,
+      #mobileMenu a:hover {
+        color: var(--link-hover) !important;
+      }
+
+      /* ── Mobile menu ── */
+      #mobileMenu {
+        background: var(--mobile-menu-bg);
+        border-top: 1px solid var(--border);
+      }
+
+      /* ── Table / emulator area ── */
+      table { background: var(--bg); }
+      td { color: var(--text); }
+      #root { background: var(--bg); }
+
+      /* ── Emulator headings ── */
+      .emu-heading { color: var(--text); }
+      .emu-sub     { color: var(--text-muted); }
+
+      /* ── Animations (unchanged) ── */
+      .fade-up {
+        opacity: 0;
+        transform: translateY(40px);
+        transition: all 0.8s ease-out;
+      }
+      .fade-up.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .slide-left {
+        opacity: 0;
+        transform: translateX(-40px);
+        transition: all 0.8s ease-out;
+      }
+      .slide-left.visible {
+        opacity: 1;
+        transform: translateX(0);
+      }
+      .slide-right {
+        opacity: 0;
+        transform: translateX(40px);
+        transition: all 0.8s ease-out;
+      }
+      .slide-right.visible {
+        opacity: 1;
+        transform: translateX(0);
+      }
+      header nav a.active {
+        color: var(--blue) !important;
+        font-weight: 600;
+      }
+
+      /* ── Dark mode toggle button ── */
+      #themeToggle {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 9999px;
+        border: 1.5px solid var(--border);
+        background: var(--bg-soft);
+        color: var(--text);
+        cursor: pointer;
+        font-size: .85rem;
+        font-weight: 600;
+        transition: background .2s, border-color .2s, color .2s, box-shadow .2s;
+        white-space: nowrap;
+      }
+      #themeToggle:hover {
+        box-shadow: 0 0 0 3px rgba(59,130,246,.25);
+        border-color: var(--blue);
+      }
+      /* sun / moon icons */
+      #themeToggle .icon-sun  { display: none; }
+      #themeToggle .icon-moon { display: inline; }
+      [data-theme="dark"] #themeToggle .icon-sun  { display: inline; }
+      [data-theme="dark"] #themeToggle .icon-moon { display: none; }
+    </style>
+  </head>
   <body>
- <header class="bg-white shadow sticky top-0 z-50">
-  <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
 
-    <!-- Logo -->
-    <h1 class="text-3xl font-extrabold text-blue-600">OpenCalc</h1>
+    <header class="shadow sticky top-0 z-50">
+      <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
 
-    <!-- Bouton burger (mobile) -->
-    <button id="menuBtn" class="md:hidden text-gray-700 focus:outline-none">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-          d="M4 6h16M4 12h16M4 18h16"/>
-      </svg>
-    </button>
+        <!-- Logo -->
+        <h1 class="text-3xl font-extrabold">OpenCalc</h1>
 
-    <!-- Menu desktop -->
-    <nav class="hidden md:flex space-x-6 text-base font-medium">
-      <a href="https://emulateur.opencalc.fr" class="text-gray-700 hover:text-blue-600" style = "font-weight: 900;">Emulateur !</a>
-      <a href="ht#features" class="text-gray-700 hover:text-blue-600">Fonctionnalités</a>
-      <a href="#open-source" class="text-gray-700 hover:text-blue-600">Open Source</a>
-      <a href="spec.html" class="text-gray-700 hover:text-blue-600">Composants</a>
-      <a href="#use-cases" class="text-gray-700 hover:text-blue-600">Usages</a>
-      <a href="#timeline" class="text-gray-700 hover:text-blue-600">Chronologie</a>
-      <a href="#team" class="text-gray-700 hover:text-blue-600">Équipe</a>
-      <a href="#contact" class="text-gray-700 hover:text-blue-600">Contact</a>
-    </nav>
-  </div>
+        <div class="flex items-center gap-3 md:gap-4">
 
-  <!-- Menu mobile -->
-  <div id="mobileMenu" class="hidden md:hidden px-6 pb-4 space-y-3 text-base font-medium">
-    <a href="https://emulateur.opencalc.fr" class="text-gray-700 hover:text-blue-600" style = "font-weight: 900;">Emulateur !</a>
-    <a href="#features" class="block text-gray-700 hover:text-blue-600">Fonctionnalités</a>
-    <a href="#open-source" class="block text-gray-700 hover:text-blue-600">Open Source</a>
-    <a href="spec.html" class="block text-gray-700 hover:text-blue-600">Composants</a>
-    <a href="#use-cases" class="block text-gray-700 hover:text-blue-600">Usages</a>
-    <a href="#timeline" class="block text-gray-700 hover:text-blue-600">Chronologie</a>
-    <a href="#team" class="block text-gray-700 hover:text-blue-600">Équipe</a>
-    <a href="#contact" class="block text-gray-700 hover:text-blue-600">Contact</a>
-  </div>
-</header>
-<table style ="width:100%;">
-<tr style ="width:100%"><td style = "width:50%">
-    <div id="root" >
-      
-          <script  type="module" src="/src/main.jsx"></script>
-      </div>
-      </td>
-      <td >
-        <div style = "margin-bottom:70%">
-          <h2 style = "font-size : 240%; font-weight : bold;text-align:center;">Emulateur en beta v0.9.5</h2> 
-          <p style = "font-size : 80%;text-align:center;" >N'hésitez pas a tester et à nous faire des retours via le discord ou instagram !</p>
+          <button id="themeToggle" aria-label="Basculer le thème sombre">
+            <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+            <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="5"/>
+              <line x1="12" y1="1" x2="12" y2="3"/>
+              <line x1="12" y1="21" x2="12" y2="23"/>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+              <line x1="1" y1="12" x2="3" y2="12"/>
+              <line x1="21" y1="12" x2="23" y2="12"/>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>
+            <span id="themeLabel">Mode sombre</span>
+          </button>
+
+          <!-- Burger (mobile) -->
+          <button id="menuBtn" class="md:hidden focus:outline-none">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+          </button>
+
+          <nav class="hidden md:flex space-x-6 text-base font-medium">
+            <a href="https://emulateur.opencalc.fr" style="font-weight:900;">Emulateur !</a>
+            <a href="#features">Fonctionnalités</a>
+            <a href="#open-source">Open Source</a>
+            <a href="spec.html">Composants</a>
+            <a href="#use-cases">Usages</a>
+            <a href="#timeline">Chronologie</a>
+            <a href="#team">Équipe</a>
+            <a href="#contact">Contact</a>
+          </nav>
         </div>
+      </div>
+
+      <!-- Mobile menu -->
+      <div id="mobileMenu" class="hidden md:hidden px-6 pb-4 space-y-3 text-base font-medium">
+        <a href="https://emulateur.opencalc.fr" class="block" style="font-weight:900;">Emulateur !</a>
+        <a href="#features" class="block">Fonctionnalités</a>
+        <a href="#open-source" class="block">Open Source</a>
+        <a href="spec.html" class="block">Composants</a>
+        <a href="#use-cases" class="block">Usages</a>
+        <a href="#timeline" class="block">Chronologie</a>
+        <a href="#team" class="block">Équipe</a>
+        <a href="#contact" class="block">Contact</a>
+      </div>
+    </header>
+
+    <table style="width:100%;">
+      <tr style="width:100%">
+        <td style="width:50%">
+          <div id="root">
+            <script type="module" src="/src/main.jsx"></script>
+          </div>
         </td>
-        </tr>
-</table>
+        <td>
+          <div style="margin-bottom:70%">
+            <h2 class="emu-heading" style="font-size:240%; font-weight:bold; text-align:center;">
+              Emulateur en beta v0.9.5
+            </h2>
+            <p class="emu-sub" style="font-size:80%; text-align:center;">
+              N'hésitez pas à tester et à nous faire des retours via le discord ou instagram&nbsp;!
+            </p>
+          </div>
+        </td>
+      </tr>
+    </table>
 
-<script>
-  const btn = document.getElementById("menuBtn");
-  const menu = document.getElementById("mobileMenu");
+    <script>
+      /* ── Burger menu ── */
+      const btn  = document.getElementById("menuBtn");
+      const menu = document.getElementById("mobileMenu");
+      btn.addEventListener("click", () => menu.classList.toggle("hidden"));
 
-  btn.addEventListener("click", () => {
-    menu.classList.toggle("hidden");
-  });
-</script>
+      /* ── Theme toggle ── */
+      const html        = document.documentElement;
+      const toggleBtn   = document.getElementById("themeToggle");
+      const themeLabel  = document.getElementById("themeLabel");
+
+      // Restore preference from localStorage
+      const saved = localStorage.getItem("opencalc-theme");
+      if (saved) applyTheme(saved);
+
+      toggleBtn.addEventListener("click", () => {
+        const next = html.dataset.theme === "dark" ? "light" : "dark";
+        applyTheme(next);
+        localStorage.setItem("opencalc-theme", next);
+      });
+
+      function applyTheme(theme) {
+        html.dataset.theme = theme;
+        themeLabel.textContent = theme === "dark" ? "Mode clair" : "Mode sombre";
+      }
+    </script>
   </body>
 </html>
