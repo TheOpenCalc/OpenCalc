@@ -356,17 +356,17 @@ static ASTNode *parse_base(Parser *p) {
         nd->type    = N_FUNC;
         nd->op      = ft->type;
         nd->src_pos = ft->src_pos;
-            nd->number=0;
+            nd->number=1;
 
         if (p_peek(p) && p_peek(p)->type == '(') {p_consume(p);
-            nd->number++;}
+            nd->number*=2;}
         token *next = p_peek(p);
         if (!next || next->type == ')')
             nd->left = make_placeholder();
         else
             nd->left = parse_expr(p);
         if (p_peek(p) && p_peek(p)->type == ')') {p_consume(p);
-            nd->number++;
+            nd->number*=3;
         };
         return nd;
     }
@@ -695,11 +695,11 @@ static int render_node(ASTNode *nd, int x, int y, int SIZE, int cursor_pos) {
                 int cy = draw_func_name(nd->op, x + (h-CH(SIZE))/2, y, SIZE);
                 int xc = x + (h-c.h)/2;
                 printf("%i\n",nd->number);
-                if(nd->number>0){
+                if((int)nd->number%2==0){
                 buf[0] = '('; draw_char(xc, cy, buf, 0x0000, 0x0000, SIZE); cy += CW(SIZE);
                 }
                 cy = render_node(nd->left, xc, cy, SIZE, cursor_pos);
-                if(nd->number>1){
+                if((int)nd->number%3==0){
                 buf[0] = ')'; draw_char(xc, cy, buf, 0x0000, 0x0000, SIZE);
                 }
                 return cy + CW(SIZE);
