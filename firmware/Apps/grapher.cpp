@@ -337,7 +337,7 @@ int Grapher()
                     first_display++;
                 }
             } else {
-                selected_fill_box++;
+                selected_fill_box=min(27,selected_fill_box+1);
             }
             break;
         case RIGHT :
