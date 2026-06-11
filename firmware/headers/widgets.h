@@ -2,8 +2,8 @@
 #define WIDGETS_H
 #include <stdint.h>
 
-
-struct fill_box_s {
+struct fill_box_s
+{
     int border;
     char *text;
     int t_size;
@@ -13,20 +13,21 @@ struct fill_box_s {
     uint16_t color;
 };
 
-
-struct text_box_s{
+struct text_box_s
+{
     int border;
     char *text;
     int t_size;
-    int x,y;
-    int h,w;
+    int x, y;
+    int h, w;
     int display_text_size;
     bool transparent;
     uint16_t col;
-    char allign ;
+    char allign;
 };
 
-struct pontentiometer_s {
+struct pontentiometer_s
+{
     int border;
     int x, y;
     int h, w;
@@ -42,9 +43,8 @@ typedef struct text_box_s text_box;
 
 typedef struct pontentiometer_s pontentiometer;
 
-
-void fill_box_left(fill_box * in);
-void fill_box_right(fill_box * in);
+void fill_box_left(fill_box *in);
+void fill_box_right(fill_box *in);
 fill_box *create_fill_box(int x, int y, int h, int w, int border);
 
 void display_text_box(text_box *in, int shift_y, int shift_text, bool is_selected);
@@ -62,8 +62,6 @@ void increment_potentiometer(pontentiometer *p);
 void decrement_potentiometer(pontentiometer *p);
 
 void blink_cursor();
-
-
 
 int menu_tools();
 

@@ -353,7 +353,7 @@ int Sequencer()
         }
         else if (tab == 1)
         {
-            axis(x_min,x_max, y_min,y_max);
+            axis(x_min, x_max, y_min, y_max);
             for (int i = 0; i < 100; i++)
             {
                 if (arr_fill_box[i] != nullptr)

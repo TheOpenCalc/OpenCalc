@@ -7,7 +7,7 @@
 
 fill_box *create_fill_box(int x, int y, int h, int w, int border)
 {
-    fill_box *out = (fill_box*) malloc(sizeof(fill_box));
+    fill_box *out = (fill_box *)malloc(sizeof(fill_box));
     out->curso_pos = 0;
     out->x = x;
     out->y = y;
@@ -16,8 +16,9 @@ fill_box *create_fill_box(int x, int y, int h, int w, int border)
     out->border = border;
     out->color = 0xffff;
     out->t_size = 0;
-    char *in = (char*) malloc(sizeof(char) * 1000);
-    for (int i = 0; i < 100; i++) {
+    char *in = (char *)malloc(sizeof(char) * 1000);
+    for (int i = 0; i < 100; i++)
+    {
         in[i] = '\0';
     }
     out->text = in;
@@ -26,7 +27,7 @@ fill_box *create_fill_box(int x, int y, int h, int w, int border)
 
 text_box *create_text_box(int x, int y, int h, int w, int border, bool transparent)
 {
-    text_box *out = (text_box*) malloc(sizeof(text_box));
+    text_box *out = (text_box *)malloc(sizeof(text_box));
     out->allign = 'c';
     out->display_text_size = 1;
     out->transparent = transparent;
@@ -37,27 +38,31 @@ text_box *create_text_box(int x, int y, int h, int w, int border, bool transpare
     out->border = border;
     out->t_size = 0;
     out->col = 0xffff;
-    char *in = (char*) malloc(sizeof(char) * 100);
-    for (int i = 0; i < 100; i++) {
+    char *in = (char *)malloc(sizeof(char) * 100);
+    for (int i = 0; i < 100; i++)
+    {
         in[i] = '\0';
     }
     out->text = in;
     return out;
 }
 
-void fill_box_left(fill_box * in){
-    do{
+void fill_box_left(fill_box *in)
+{
+    do
+    {
         in->curso_pos--;
-    }while(in->curso_pos>1 && in->text[in->curso_pos-1]=='/');
-    in->curso_pos=max(in->curso_pos,0);
-
+    } while (in->curso_pos > 1 && in->text[in->curso_pos - 1] == '/');
+    in->curso_pos = max(in->curso_pos, 0);
 }
 
-void fill_box_right(fill_box * in){
-    do{
+void fill_box_right(fill_box *in)
+{
+    do
+    {
         in->curso_pos++;
-    }while(in->curso_pos<in->t_size-1 &&in->text[in->curso_pos+1]=='/');
-    in->curso_pos=min(in->curso_pos,in->t_size);
+    } while (in->curso_pos < in->t_size - 1 && in->text[in->curso_pos + 1] == '/');
+    in->curso_pos = min(in->curso_pos, in->t_size);
 }
 
 pontentiometer *create_potentiometer(int x, int y, int h, int w, int border, char *name, int grad, bool transparent_back)
@@ -87,8 +92,6 @@ void decrement_potentiometer(pontentiometer *p)
 
 void display_text_box(text_box *in, int shift_y, int shift_text, bool is_selected)
 
-
-
 {
     if (in == nullptr)
         return;
@@ -99,13 +102,13 @@ void display_text_box(text_box *in, int shift_y, int shift_text, bool is_selecte
         fill_rect(in->y + shift_y, in->x, in->h, in->w, 0xfff0);
     if (in->allign == 'c')
     {
-        draw_char(in->y + shift_text + shift_y + in->h - 10, (in->w - in->t_size * 5) / 2 + in->x, in->text, 0x0000, 0xFF, in->display_text_size);
+        draw_char(in->y + shift_text + shift_y + in->h - 10, (in->w - in->t_size * in->display_text_size * 5) / 2 + in->x, in->text, 0x0000, 0xFF, in->display_text_size);
     }
     else if (in->allign == 'r')
     {
         draw_char(in->y + shift_text + shift_y + in->h - 10, in->x + 4, in->text, 0x0000, 0xFF, in->display_text_size);
     }
-    
+
     fill_rect(in->y + shift_y, in->x + 2, 1, in->w - 4, 0x0000);
     fill_rect(in->y + shift_y + 2, in->x, in->h - 4, 1, 0x0000);
 
@@ -124,48 +127,52 @@ void display_text_box(text_box *in, int shift_y, int shift_text, bool is_selecte
     fill_rect(in->y + shift_y + 1, in->x + in->w - 2, 1, 1, 0x0000);
 
     fill_rect(in->y + shift_y + in->h - 2, in->x + in->w - 2, 1, 1, 0x0000);
-
 }
-
-
 
 void display_fill_box(fill_box *in, int shift_y, bool is_selected, int pos, char prefix)
 {
-    if (in == nullptr) {
+    if (in == nullptr)
+    {
         return;
     }
-    if (!is_selected) {
+    if (!is_selected)
+    {
         fill_rect(in->y + shift_y, in->x, in->h, in->w, in->color);
-    } else {
+    }
+    else
+    {
         fill_rect(in->y + shift_y, in->x, in->h, in->w, 0xfff0);
     }
-    
-    for(int i =0 ; i<in->t_size;i++){
-        printf("%c ",in->text[i]);
+
+    for (int i = 0; i < in->t_size; i++)
+    {
+        printf("%c ", in->text[i]);
     }
     printf("\n");
 
     display_equation(in->text, 100, in->y + shift_y, in->x + (prefix == ' ' ? 0 : 55), 2, is_selected ? in->curso_pos : -10);
 
-    if (prefix == 'f') {
-        char *t = (char*) malloc(sizeof(char*) * 6);
-        t[0] = (pos+5)%26+'a';
+    if (prefix == 'f')
+    {
+        char *t = (char *)malloc(sizeof(char *) * 6);
+        t[0] = (pos + 5) % 26 + 'a';
         t[1] = '(';
         t[2] = 'x';
         t[3] = ')';
         t[4] = '=';
         t[5] = '\0';
-        draw_char( in->y+shift_y+25,in->x, t, 0X0000, 0X0000, 2);
+        draw_char(in->y + shift_y + 25, in->x, t, 0X0000, 0X0000, 2);
     }
-    if (prefix == 'u') {
-        char *t = (char*) malloc(sizeof(char*) * 3);
+    if (prefix == 'u')
+    {
+        char *t = (char *)malloc(sizeof(char *) * 3);
         t[0] = 'u' + pos;
         t[1] = '=';
         t[1] = '\0';
-        draw_char( in->y+25,in->x, t, 0X0000, 0X0000, 2);
+        draw_char(in->y + 25, in->x, t, 0X0000, 0X0000, 2);
 
         // display_equation(t, 2 /*+log(pos)*/, in->y + shift_y, in->x, 2, is_selected ? in->curso_pos : -10);
-        char *n = (char*) malloc(sizeof(char));
+        char *n = (char *)malloc(sizeof(char));
         n[0] = 'n';
         draw_char(in->x - 3, in->y, n, 0x0000, 0x0000, 1);
     }
@@ -173,497 +180,512 @@ void display_fill_box(fill_box *in, int shift_y, bool is_selected, int pos, char
 
 void update_fill_box(fill_box *in, int event, bool snd)
 {
-    printf("POS: %i \n",in->curso_pos);
-    int size_after_cursor =0;
-    while(size_after_cursor<100 && in->text[in->curso_pos+size_after_cursor]!='\0')
+    printf("POS: %i \n", in->curso_pos);
+    int size_after_cursor = 0;
+    while (size_after_cursor < 100 && in->text[in->curso_pos + size_after_cursor] != '\0')
         size_after_cursor++;
-    char * temp =(char*) malloc(sizeof(char)*size_after_cursor);
-    for(int i = 0 ; i < size_after_cursor;i++){
-        temp[i]=in->text[in->curso_pos+i];
+    char *temp = (char *)malloc(sizeof(char) * size_after_cursor);
+    for (int i = 0; i < size_after_cursor; i++)
+    {
+        temp[i] = in->text[in->curso_pos + i];
     }
     int in_tsize = in->t_size;
-    if (snd) {
-        switch (event) {
-        case ZERO :
+    if (snd)
+    {
+        switch (event)
+        {
+        case ZERO:
             in->text[in->curso_pos] = 'U';
             in->curso_pos++;
             in->t_size++;
             break;
-        case ONE :
+        case ONE:
             in->text[in->curso_pos] = 'P';
             in->curso_pos++;
             in->t_size++;
             break;
-        case TWO :
+        case TWO:
             in->text[in->curso_pos] = 'Q';
             in->curso_pos++;
             in->t_size++;
             break;
-        case THREE :
+        case THREE:
             in->text[in->curso_pos] = 'R';
             in->curso_pos++;
             in->t_size++;
             break;
-        case EQUAL :
+        case EQUAL:
             in->text[in->curso_pos] = '=';
             in->curso_pos++;
             in->t_size++;
             break;
-        case FOUR :
+        case FOUR:
             in->text[in->curso_pos] = 'K';
             in->curso_pos++;
             in->t_size++;
             break;
-        case FIVE :
+        case FIVE:
             in->text[in->curso_pos] = 'L';
             in->curso_pos++;
             in->t_size++;
             break;
-        case SIX :
+        case SIX:
             in->text[in->curso_pos] = 'M';
             in->curso_pos++;
             in->t_size++;
             break;
-        case SEVEN :
+        case SEVEN:
             in->text[in->curso_pos] = 'F';
             in->curso_pos++;
             in->t_size++;
             break;
-        case EIGHT : 
+        case EIGHT:
             in->text[in->curso_pos] = 'G';
             in->curso_pos++;
             in->t_size++;
             break;
-        case NINE :
+        case NINE:
             in->text[in->curso_pos] = 'H';
             in->curso_pos++;
             in->t_size++;
             break;
-        case PLUS :
+        case PLUS:
             in->text[in->curso_pos] = 'S';
             in->curso_pos++;
             in->t_size++;
             break;
-        case MINUS :
+        case MINUS:
             in->text[in->curso_pos] = 'N';
             in->curso_pos++;
             in->t_size++;
             break;
-        case TIMES :
+        case TIMES:
             in->text[in->curso_pos] = 'T';
             in->curso_pos++;
             in->t_size++;
             break;
-        case DIVIDE :
+        case DIVIDE:
             in->text[in->curso_pos] = 'O';
             in->curso_pos++;
             in->t_size++;
             break;
-        case OPENING_PARENTHESIS : 
+        case OPENING_PARENTHESIS:
             in->text[in->curso_pos] = 'I';
             in->curso_pos++;
             in->t_size++;
             break;
-        case CLOSING_PARENTHESIS :
+        case CLOSING_PARENTHESIS:
             in->text[in->curso_pos] = 'J';
             in->curso_pos++;
             in->t_size++;
             break;
-        case LN :
+        case LN:
             in->text[in->curso_pos] = 'l';
             in->text[in->curso_pos + 1] = '(';
             in->text[in->curso_pos + 2] = ')';
             in->t_size += 3;
             in->curso_pos += 2;
             break;
-        case E :
+        case E:
             in->text[in->curso_pos] = 'e';
             in->curso_pos += 2;
             in->t_size++;
             break;
-        case X :
+        case X:
             in->text[in->curso_pos] = 'X';
             in->curso_pos++;
             in->t_size++;
             break;
-        case COMA :
+        case COMA:
             in->text[in->curso_pos] = 'V';
             in->curso_pos++;
             in->t_size++;
             break;
-        case PI :
+        case PI:
             in->text[in->curso_pos] = 'W';
             in->curso_pos++;
             in->t_size++;
             break;
-        case COS :
+        case COS:
             in->text[in->curso_pos] = 'A';
             in->curso_pos++;
             in->t_size++;
             break;
-        case SIN :
+        case SIN:
             in->text[in->curso_pos] = 'B';
             in->curso_pos++;
             in->t_size++;
             break;
-        case TAN :
+        case TAN:
             in->text[in->curso_pos] = 'C';
             in->curso_pos++;
             in->t_size++;
             break;
-        case SQRT :
+        case SQRT:
             in->text[in->curso_pos] = 'D';
             in->curso_pos++;
             in->t_size++;
             break;
-        case POW :
+        case POW:
             in->text[in->curso_pos] = 'E';
             in->curso_pos++;
             in->t_size++;
             break;
-        case BACK :
-        
-            if (in->t_size > 0) {
-                
-                int size_text_after=0;
-                while(size_text_after<100 && in->text[in->curso_pos+size_after_cursor]!='\0'){
+        case BACK:
+
+            if (in->t_size > 0)
+            {
+
+                int size_text_after = 0;
+                while (size_text_after < 100 && in->text[in->curso_pos + size_after_cursor] != '\0')
+                {
                     size_after_cursor++;
                 }
-                char * temp = (char *)malloc(sizeof(char)*size_text_after);
-                for(int i =0 ; i < size_after_cursor;i++){
-                    temp[i]=in->text[in->curso_pos+i];
+                char *temp = (char *)malloc(sizeof(char) * size_text_after);
+                for (int i = 0; i < size_after_cursor; i++)
+                {
+                    temp[i] = in->text[in->curso_pos + i];
                 }
 
                 in->t_size--;
-                for(int i =0 ; i < size_after_cursor;i++){
-                    in->text[in->curso_pos+i]=temp[i];
+                for (int i = 0; i < size_after_cursor; i++)
+                {
+                    in->text[in->curso_pos + i] = temp[i];
                 }
                 free(temp);
                 in->text[in->t_size] = '\0';
-        
             }
-                        in->curso_pos--;
+            in->curso_pos--;
 
             break;
-               case FACT:
+        case FACT:
 
-                in->text[in->curso_pos] = '!';
-                in->curso_pos++;
+            in->text[in->curso_pos] = '!';
+            in->curso_pos++;
 
-                in->t_size++;
-                break;
-            case COSH:
+            in->t_size++;
+            break;
+        case COSH:
 
-                in->text[in->curso_pos] = 'f';
-                in->text[in->curso_pos + 1] = '(';
-                in->text[in->curso_pos + 2] = ')';
-                in->curso_pos += 2;
+            in->text[in->curso_pos] = 'f';
+            in->text[in->curso_pos + 1] = '(';
+            in->text[in->curso_pos + 2] = ')';
+            in->curso_pos += 2;
 
-                in->t_size += 3;
-                break;
+            in->t_size += 3;
+            break;
 
-            case SINH:
+        case SINH:
 
-                in->text[in->curso_pos] = 'g';
-                in->text[in->curso_pos + 1] = '(';
-                in->text[in->curso_pos + 2] = ')';
-                in->curso_pos += 2;
+            in->text[in->curso_pos] = 'g';
+            in->text[in->curso_pos + 1] = '(';
+            in->text[in->curso_pos + 2] = ')';
+            in->curso_pos += 2;
 
-                in->t_size += 3;
-                break;
+            in->t_size += 3;
+            break;
 
-            case TANH:
+        case TANH:
 
-                in->text[in->curso_pos] = 'h';
-                in->text[in->curso_pos + 1] = '(';
-                in->text[in->curso_pos + 2] = ')';
-                in->curso_pos += 2;
+            in->text[in->curso_pos] = 'h';
+            in->text[in->curso_pos + 1] = '(';
+            in->text[in->curso_pos + 2] = ')';
+            in->curso_pos += 2;
 
-                in->t_size += 3;
-                break;
+            in->t_size += 3;
+            break;
 
-            case ACOSH:
+        case ACOSH:
 
-                in->text[in->curso_pos] = 'i';
-                in->text[in->curso_pos + 1] = '(';
-                in->text[in->curso_pos + 2] = ')';
-                in->curso_pos += 2;
+            in->text[in->curso_pos] = 'i';
+            in->text[in->curso_pos + 1] = '(';
+            in->text[in->curso_pos + 2] = ')';
+            in->curso_pos += 2;
 
-                in->t_size += 3;
-                break;
+            in->t_size += 3;
+            break;
 
-            case ASINH:
+        case ASINH:
 
-                in->text[in->curso_pos] = 'j';
-                in->text[in->curso_pos + 1] = '(';
-                in->text[in->curso_pos + 2] = ')';
-                in->curso_pos += 2;
+            in->text[in->curso_pos] = 'j';
+            in->text[in->curso_pos + 1] = '(';
+            in->text[in->curso_pos + 2] = ')';
+            in->curso_pos += 2;
 
-                in->t_size += 3;
-                break;
+            in->t_size += 3;
+            break;
 
-            case ATANH:
+        case ATANH:
 
-                in->text[in->curso_pos] = 'k';
-                in->text[in->curso_pos + 1] = '(';
-                in->text[in->curso_pos + 2] = ')';
-                in->curso_pos += 2;
+            in->text[in->curso_pos] = 'k';
+            in->text[in->curso_pos + 1] = '(';
+            in->text[in->curso_pos + 2] = ')';
+            in->curso_pos += 2;
 
-                in->t_size += 3;
-                break;
+            in->t_size += 3;
+            break;
         default:
             break;
         }
-    } else {
-        switch (event) {
-        case ZERO :
+    }
+    else
+    {
+        switch (event)
+        {
+        case ZERO:
             in->text[in->curso_pos] = '0';
             in->curso_pos++;
             in->t_size++;
             break;
-        case ONE :
+        case ONE:
             in->text[in->curso_pos] = '1';
             in->curso_pos++;
             in->t_size++;
             break;
-        case TWO :
+        case TWO:
             in->text[in->curso_pos] = '2';
             in->curso_pos++;
             in->t_size++;
             break;
-        case THREE :
+        case THREE:
             in->text[in->curso_pos] = '3';
             in->curso_pos++;
             in->t_size++;
             break;
-        case EQUAL :
+        case EQUAL:
             in->text[in->curso_pos] = '=';
             in->curso_pos++;
             in->t_size++;
             break;
-        case FOUR :
+        case FOUR:
             in->text[in->curso_pos] = '4';
             in->curso_pos++;
             in->t_size++;
             break;
-        case FIVE :
+        case FIVE:
             in->text[in->curso_pos] = '5';
             in->curso_pos++;
             in->t_size++;
             break;
-        case SIX :
+        case SIX:
             in->text[in->curso_pos] = '6';
             in->curso_pos++;
             in->t_size++;
             break;
-        case SEVEN :
+        case SEVEN:
             in->text[in->curso_pos] = '7';
             in->curso_pos++;
             in->t_size++;
             break;
-        case EIGHT :
+        case EIGHT:
             in->text[in->curso_pos] = '8';
             in->curso_pos++;
             in->t_size++;
             break;
-        case NINE :
+        case NINE:
             in->text[in->curso_pos] = '9';
             in->curso_pos++;
             in->t_size++;
             break;
-        case PLUS :
+        case PLUS:
             in->text[in->curso_pos] = '+';
             in->curso_pos++;
             in->t_size++;
             break;
-        case MINUS :
+        case MINUS:
             in->text[in->curso_pos] = '-';
             in->curso_pos++;
             in->t_size++;
             break;
-        case TIMES :
+        case TIMES:
             in->text[in->curso_pos] = '*';
             in->curso_pos++;
             in->t_size++;
             break;
-        case DIVIDE :
+        case DIVIDE:
             in->text[in->curso_pos] = '/';
             in->curso_pos++;
             in->t_size++;
             break;
-        case OPENING_PARENTHESIS :
+        case OPENING_PARENTHESIS:
             in->text[in->curso_pos] = '(';
             in->curso_pos++;
             in->t_size++;
             break;
-        case CLOSING_PARENTHESIS :
+        case CLOSING_PARENTHESIS:
             in->text[in->curso_pos] = ')';
             in->curso_pos++;
             in->t_size++;
             break;
-        case LN :
+        case LN:
             in->text[in->curso_pos] = 'l';
             in->text[in->curso_pos + 1] = '(';
             in->text[in->curso_pos + 2] = ')';
             in->t_size += 3;
             in->curso_pos += 2;
             break;
-        case E :
+        case E:
             in->text[in->curso_pos] = 'e';
             in->curso_pos += 2;
             in->t_size++;
             break;
-        case X :
+        case X:
             in->text[in->curso_pos] = 'X';
             in->curso_pos++;
             in->t_size++;
             break;
-        case COMA :
+        case COMA:
             in->text[in->curso_pos] = '.';
             in->curso_pos++;
             in->t_size++;
             break;
-        case PI :
+        case PI:
             in->text[in->curso_pos] = 'p';
             in->curso_pos++;
             in->t_size++;
             break;
-        case COS :
+        case COS:
             in->text[in->curso_pos] = 'c';
             in->text[in->curso_pos + 1] = '(';
             in->text[in->curso_pos + 2] = ')';
             in->curso_pos += 2;
             in->t_size += 3;
             break;
-        case SIN :
+        case SIN:
             in->text[in->curso_pos] = 's';
             in->text[in->curso_pos + 1] = '(';
             in->text[in->curso_pos + 2] = ')';
             in->curso_pos += 2;
             in->t_size += 3;
             break;
-        case TAN :
+        case TAN:
             in->text[in->curso_pos] = 't';
             in->text[in->curso_pos + 1] = '(';
             in->text[in->curso_pos + 2] = ')';
             in->curso_pos += 2;
             in->t_size += 3;
             break;
-        case SQRT :
+        case SQRT:
             in->text[in->curso_pos] = 'r';
             in->text[in->curso_pos + 1] = '(';
             in->text[in->curso_pos + 2] = ')';
             in->curso_pos += 2;
             in->t_size += 3;
             break;
-        case POW :
+        case POW:
             in->text[in->curso_pos] = '^';
             in->text[in->curso_pos + 1] = '(';
             in->text[in->curso_pos + 2] = ')';
             in->curso_pos += 2;
             in->t_size += 3;
             break;
-        case BACK :
-            if (in->t_size > 0) {
-                
-                int size_text_after=0;
-                while(size_text_after<100 && in->text[in->curso_pos+size_after_cursor]!='\0'){
+        case BACK:
+            if (in->t_size > 0)
+            {
+
+                int size_text_after = 0;
+                while (size_text_after < 100 && in->text[in->curso_pos + size_after_cursor] != '\0')
+                {
                     size_after_cursor++;
                 }
-                char * temp = (char *)malloc(sizeof(char)*size_text_after);
-                for(int i =0 ; i < size_after_cursor;i++){
-                    temp[i]=in->text[in->curso_pos+i];
+                char *temp = (char *)malloc(sizeof(char) * size_text_after);
+                for (int i = 0; i < size_after_cursor; i++)
+                {
+                    temp[i] = in->text[in->curso_pos + i];
                 }
 
                 in->t_size--;
-                for(int i =0 ; i < size_after_cursor;i++){
-                    in->text[in->curso_pos+i]=temp[i];
+                for (int i = 0; i < size_after_cursor; i++)
+                {
+                    in->text[in->curso_pos + i] = temp[i];
                 }
                 free(temp);
                 in->text[in->t_size] = '\0';
-        
             }
             in->curso_pos--;
             break;
-               case FACT:
+        case FACT:
 
-                in->text[in->curso_pos] = '!';
-                in->curso_pos++;
+            in->text[in->curso_pos] = '!';
+            in->curso_pos++;
 
-                in->t_size++;
-                break;
-            case COSH:
+            in->t_size++;
+            break;
+        case COSH:
 
-                in->text[in->curso_pos] = 'f';
-                in->text[in->curso_pos + 1] = '(';
-                in->text[in->curso_pos + 2] = ')';
-                in->curso_pos += 2;
+            in->text[in->curso_pos] = 'f';
+            in->text[in->curso_pos + 1] = '(';
+            in->text[in->curso_pos + 2] = ')';
+            in->curso_pos += 2;
 
-                in->t_size += 3;
-                break;
+            in->t_size += 3;
+            break;
 
-            case SINH:
+        case SINH:
 
-                in->text[in->curso_pos] = 'g';
-                in->text[in->curso_pos + 1] = '(';
-                in->text[in->curso_pos + 2] = ')';
-                in->curso_pos += 2;
+            in->text[in->curso_pos] = 'g';
+            in->text[in->curso_pos + 1] = '(';
+            in->text[in->curso_pos + 2] = ')';
+            in->curso_pos += 2;
 
-                in->t_size += 3;
-                break;
+            in->t_size += 3;
+            break;
 
-            case TANH:
+        case TANH:
 
-                in->text[in->curso_pos] = 'h';
-                in->text[in->curso_pos + 1] = '(';
-                in->text[in->curso_pos + 2] = ')';
-                in->curso_pos += 2;
+            in->text[in->curso_pos] = 'h';
+            in->text[in->curso_pos + 1] = '(';
+            in->text[in->curso_pos + 2] = ')';
+            in->curso_pos += 2;
 
-                in->t_size += 3;
-                break;
+            in->t_size += 3;
+            break;
 
-            case ACOSH:
+        case ACOSH:
 
-                in->text[in->curso_pos] = 'i';
-                in->text[in->curso_pos + 1] = '(';
-                in->text[in->curso_pos + 2] = ')';
-                in->curso_pos += 2;
+            in->text[in->curso_pos] = 'i';
+            in->text[in->curso_pos + 1] = '(';
+            in->text[in->curso_pos + 2] = ')';
+            in->curso_pos += 2;
 
-                in->t_size += 3;
-                break;
+            in->t_size += 3;
+            break;
 
-            case ASINH:
+        case ASINH:
 
-                in->text[in->curso_pos] = 'j';
-                in->text[in->curso_pos + 1] = '(';
-                in->text[in->curso_pos + 2] = ')';
-                in->curso_pos += 2;
+            in->text[in->curso_pos] = 'j';
+            in->text[in->curso_pos + 1] = '(';
+            in->text[in->curso_pos + 2] = ')';
+            in->curso_pos += 2;
 
-                in->t_size += 3;
-                break;
+            in->t_size += 3;
+            break;
 
-            case ATANH:
+        case ATANH:
 
-                in->text[in->curso_pos] = 'k';
-                in->text[in->curso_pos + 1] = '(';
-                in->text[in->curso_pos + 2] = ')';
-                in->curso_pos += 2;
+            in->text[in->curso_pos] = 'k';
+            in->text[in->curso_pos + 1] = '(';
+            in->text[in->curso_pos + 2] = ')';
+            in->curso_pos += 2;
 
-                in->t_size += 3;
-                break;
-        default :
+            in->t_size += 3;
+            break;
+        default:
             break;
         }
     }
-    for(int i = 0 ; i < size_after_cursor;i++){
-        in->text[in->curso_pos+i]=temp[i];
+    for (int i = 0; i < size_after_cursor; i++)
+    {
+        in->text[in->curso_pos + i] = temp[i];
     }
     free(temp);
 }
 
-
 void draw_image(int x, int y, int h, int w, uint16_t *img, uint16_t bck)
 {
+    if (img == NULL)
+        return;
+
     for (int i = 0; i < w; i++)
     {
         for (int j = 0; j < h; j++)
@@ -689,9 +711,7 @@ void display_potentiometer(pontentiometer *in, bool is_selected)
         }
         else
             col = FRONTGROUND_COLOR_BIS;
-
     }
-
 
     draw_char(in->x + in->h + 15, in->y, in->name, 0x0000, BACKGROUND_COLOR, 1);
     fill_rect(in->x, in->y, 1, in->w, 0X0000);
@@ -986,7 +1006,6 @@ int menu_const_phy()
 
     items[6]->text = "Nombre d'avogadro N";
     items[7]->text = "Constante des gaz parfait R";
-
 
     items[0]->t_size = 11;
     items[1]->t_size = 10;

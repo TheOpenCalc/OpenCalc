@@ -5,24 +5,22 @@
 #include "Tools.h"
 #include "Evaluator.h"
 
-
-
 const int HISTORY_SIZE = 50;
 
-typedef struct {
+typedef struct
+{
     token *toks;
-    int    n;
-    int    pos;
+    int n;
+    int pos;
 } Parser;
 
 int min(int a, int b);
 
 int max(int a, int b);
 
-
-
-enum touches  {
-        ZERO,
+enum touches
+{
+    ZERO,
     COMA,
     PI,
     NOT2,
@@ -35,7 +33,7 @@ enum touches  {
     FOUR,
     FIVE,
     SIX,
-  MINUS,
+    MINUS,
     DIVIDE,
     SEVEN,
     EIGHT,
@@ -47,20 +45,20 @@ enum touches  {
     TAN,
     SQRT,
     POW,
-     LN,
+    LN,
     BACK,
     E,
     DOWN,
     RIGHT,
-     X,
+    X,
     TOOLS,
-        EQUAL,
- LEFT,
+    EQUAL,
+    LEFT,
     OK,
     PASS3,
     SECOND,
     PASS4,
-    UP,   
+    UP,
     END_KEYS,
     FACT,
     COSH,
@@ -69,10 +67,10 @@ enum touches  {
     ACOSH,
     ASINH,
     ATANH,
-    
-   
+
 };
-typedef enum {
+typedef enum
+{
     N_NUMBER,
     N_VARIABLE,
     N_CONST,
@@ -82,32 +80,36 @@ typedef enum {
     N_PARENTHESIS,
 } NodeType;
 
-typedef struct ASTNode {
-    NodeType       type;
-    char           op;
-    double         number;
-    char           variable;
-    int            src_pos;  
+typedef struct ASTNode
+{
+    NodeType type;
+    char op;
+    double number;
+    char variable;
+    int src_pos;
     struct ASTNode *left;
     struct ASTNode *right;
 } ASTNode;
-typedef struct { int w; int h; int baseline; } Dims;
+typedef struct
+{
+    int w;
+    int h;
+    int baseline;
+} Dims;
 
-void axis(double x_min,double x_max, double y_min,double y_max);
-ASTNode *parse_equation(Parser *p) ;
+void axis(double x_min, double x_max, double y_min, double y_max);
+ASTNode *parse_equation(Parser *p);
 
 Dims measure(ASTNode *nd, int SIZE);
 
 int fmt_number(double v, char *buf);
 
-void display_text(int x, int y, char * t,int SIZE, int t_size);
+void display_text(int x, int y, char *t, int SIZE, int t_size);
 
 void display_equation(char *in, int input_size, int x, int y, int SIZE, int cursor_pos);
-
 
 void draw_char(uint16_t x, uint16_t y, char *c, uint16_t color, uint16_t bg, uint8_t size);
 
 void draw_buffer(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t *buffer);
-
 
 #endif

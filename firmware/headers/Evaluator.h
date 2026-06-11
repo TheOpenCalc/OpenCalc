@@ -1,14 +1,15 @@
 #ifndef EVALUATOR_H
 #define EVALUATOR_H
 
-struct token_s {
+struct token_s
+{
     char type;
     int src_pos;
     double value;
 };
 
-
-struct operation_s {
+struct operation_s
+{
     char operator_type;
     void *el1;
     void *el2;

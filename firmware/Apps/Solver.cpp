@@ -305,11 +305,12 @@ int Solver()
     accuracy_box->t_size = 0;
     while (1)
     {
-        int mv = 0 ;
+        int mv = 0;
         if (!show_solution)
         {
-            for (int i = std::max(first_display, 0); i < first_display + 6; i++){
-            int old_mv = mv;
+            for (int i = std::max(first_display, 0); i < first_display + 6; i++)
+            {
+                int old_mv = mv;
                 int tok_n = 0;
                 int input_size;
                 token *toks = parse_string_to_token(arr_fill_box[i]->text, arr_fill_box[i]->t_size, &tok_n);
@@ -325,11 +326,10 @@ int Solver()
                         mv += max(0, measure(node, 2).h - 16);
                 }
                 arr_fill_box[i]->h = mv - old_mv + 40;
-//                display_fill_box(arr_fill_box[i], 160 - (i - selected_fill_box + 4) * 40 + old_mv, (i - selected_fill_box) % HISTORY_SIZE == 0, -1, ' ');
+                //                display_fill_box(arr_fill_box[i], 160 - (i - selected_fill_box + 4) * 40 + old_mv, (i - selected_fill_box) % HISTORY_SIZE == 0, -1, ' ');
                 display_fill_box(arr_fill_box[i],
-                                 160 - (i - std::max(first_display, 0)) * 40-mv,
+                                 160 - (i - std::max(first_display, 0)) * 40 - mv,
                                  i == selected_fill_box, -1, ' ');
-      
             }
         }
         else
@@ -395,138 +395,140 @@ int Solver()
             break;
 
         case RIGHT:
-        if(selected_fill_box==-1)
-        {
-            show_solution = true;
-
-            int NB_EQ = 0;
-            for (int i = 0; i < 30; i++)
+            if (selected_fill_box == -1)
             {
-                if (arr_fill_box[i] != nullptr && arr_fill_box[i]->t_size > 0)
-                    NB_EQ++;
-                else
-                    break;
-            }
+                show_solution = true;
 
-            bool var_present[26] = {false};
-            for (int i = 0; i < NB_EQ; i++)
-                for (int c = 0; c < arr_fill_box[i]->t_size; c++)
+                int NB_EQ = 0;
+                for (int i = 0; i < 30; i++)
                 {
-                    char ch = arr_fill_box[i]->text[c];
-                    if (ch >= 'A' && ch <= 'Z')
-                        var_present[ch - 'A'] = true;
+                    if (arr_fill_box[i] != nullptr && arr_fill_box[i]->t_size > 0)
+                        NB_EQ++;
+                    else
+                        break;
                 }
-            int var_index[26];
-            int NB_VAR = 0;
-            for (int v = 0; v < 26; v++)
-                if (var_present[v])
-                    var_index[NB_VAR++] = v;
 
-            if (NB_VAR == 0 || NB_EQ == 0)
-                break;
+                bool var_present[26] = {false};
+                for (int i = 0; i < NB_EQ; i++)
+                    for (int c = 0; c < arr_fill_box[i]->t_size; c++)
+                    {
+                        char ch = arr_fill_box[i]->text[c];
+                        if (ch >= 'A' && ch <= 'Z')
+                            var_present[ch - 'A'] = true;
+                    }
+                int var_index[26];
+                int NB_VAR = 0;
+                for (int v = 0; v < 26; v++)
+                    if (var_present[v])
+                        var_index[NB_VAR++] = v;
 
-            token **left_tok = (token **)malloc(NB_EQ * sizeof(token *));
-            token **right_tok = (token **)malloc(NB_EQ * sizeof(token *));
-            int *left_sz = (int *)malloc(NB_EQ * sizeof(int));
-            int *right_sz = (int *)malloc(NB_EQ * sizeof(int));
+                if (NB_VAR == 0 || NB_EQ == 0)
+                    break;
 
-            for (int i = 0; i < NB_EQ; i++)
-            {
-                int k = 0;
-                while (k < arr_fill_box[i]->t_size && arr_fill_box[i]->text[k] != '=')
-                    k++;
+                token **left_tok = (token **)malloc(NB_EQ * sizeof(token *));
+                token **right_tok = (token **)malloc(NB_EQ * sizeof(token *));
+                int *left_sz = (int *)malloc(NB_EQ * sizeof(int));
+                int *right_sz = (int *)malloc(NB_EQ * sizeof(int));
 
-                int ts = 0;
-                token *tl = parse_string_to_token(arr_fill_box[i]->text, k, &ts);
-                left_tok[i] = shunting_yard(tl, ts);
-                left_sz[i] = ts;
-                free(tl);
+                for (int i = 0; i < NB_EQ; i++)
+                {
+                    int k = 0;
+                    while (k < arr_fill_box[i]->t_size && arr_fill_box[i]->text[k] != '=')
+                        k++;
 
-                int ts2 = 0;
-                token *tr = parse_string_to_token(&arr_fill_box[i]->text[k + 1],
-                                                  arr_fill_box[i]->t_size - k - 1, &ts2);
-                right_tok[i] = shunting_yard(tr, ts2);
-                right_sz[i] = ts2;
-                free(tr);
-            }
+                    int ts = 0;
+                    token *tl = parse_string_to_token(arr_fill_box[i]->text, k, &ts);
+                    left_tok[i] = shunting_yard(tl, ts);
+                    left_sz[i] = ts;
+                    free(tl);
 
-            double **mat = init_2d_Mat(NB_EQ, NB_VAR + 1, 0.0);
-            for (int i = 0; i < NB_EQ; i++)
-            {
+                    int ts2 = 0;
+                    token *tr = parse_string_to_token(&arr_fill_box[i]->text[k + 1],
+                                                      arr_fill_box[i]->t_size - k - 1, &ts2);
+                    right_tok[i] = shunting_yard(tr, ts2);
+                    right_sz[i] = ts2;
+                    free(tr);
+                }
+
+                double **mat = init_2d_Mat(NB_EQ, NB_VAR + 1, 0.0);
+                for (int i = 0; i < NB_EQ; i++)
+                {
+                    for (int v = 0; v < NB_VAR; v++)
+                    {
+                        int letter = var_index[v];
+                        double lc = evaluate_npi(left_tok[i], left_sz[i], 1, 'A' + letter) - evaluate_npi(left_tok[i], left_sz[i], 0, 'A' + letter);
+                        double rc = evaluate_npi(right_tok[i], right_sz[i], 1, 'A' + letter) - evaluate_npi(right_tok[i], right_sz[i], 0, 'A' + letter);
+                        mat[i][v] = lc - rc;
+                    }
+                    double lk = evaluate_npi(left_tok[i], left_sz[i], 0, 'A' + var_index[0]);
+                    double rk = evaluate_npi(right_tok[i], right_sz[i], 0, 'A' + var_index[0]);
+                    mat[i][NB_VAR] = rk - lk;
+                }
+                double *sol = solve(mat, NB_VAR, NB_EQ);
+                for (int i = 0; i < NB_EQ; i++)
+                    free(mat[i]);
+                free(mat);
+
+                double max_res = 0.0;
+                for (int i = 0; i < NB_EQ; i++)
+                {
+                    double lv = eval_multi(left_tok[i], left_sz[i], sol, NB_VAR, var_index);
+                    double rv = eval_multi(right_tok[i], right_sz[i], sol, NB_VAR, var_index);
+                    double r = fabs(lv - rv);
+                    if (r > max_res)
+                        max_res = r;
+                }
+
+                if (max_res > 1e-4)
+                {
+                    free(sol);
+                    sol = solve_nonlinear(left_tok, left_sz,
+                                          right_tok, right_sz,
+                                          NB_EQ, NB_VAR, var_index);
+                }
+
+                bool is_exact = (max_res <= 1e-4);
+
                 for (int v = 0; v < NB_VAR; v++)
                 {
-                    int letter = var_index[v];
-                    double lc = evaluate_npi(left_tok[i], left_sz[i], 1, 'A' + letter) - evaluate_npi(left_tok[i], left_sz[i], 0, 'A' + letter);
-                    double rc = evaluate_npi(right_tok[i], right_sz[i], 1, 'A' + letter) - evaluate_npi(right_tok[i], right_sz[i], 0, 'A' + letter);
-                    mat[i][v] = lc - rc;
+                    arr_solution[v]->text[0] = 'A' + var_index[v];
+                    arr_solution[v]->text[1] = '=';
+                    int written = double_to_string_scientific(sol[v], arr_solution[v]->text + 2);
+                    arr_solution[v]->t_size = written + 2;
                 }
-                double lk = evaluate_npi(left_tok[i], left_sz[i], 0, 'A' + var_index[0]);
-                double rk = evaluate_npi(right_tok[i], right_sz[i], 0, 'A' + var_index[0]);
-                mat[i][NB_VAR] = rk - lk;
-            }
-            double *sol = solve(mat, NB_VAR, NB_EQ);
-            for (int i = 0; i < NB_EQ; i++)
-                free(mat[i]);
-            free(mat);
 
-            double max_res = 0.0;
-            for (int i = 0; i < NB_EQ; i++)
-            {
-                double lv = eval_multi(left_tok[i], left_sz[i], sol, NB_VAR, var_index);
-                double rv = eval_multi(right_tok[i], right_sz[i], sol, NB_VAR, var_index);
-                double r = fabs(lv - rv);
-                if (r > max_res)
-                    max_res = r;
-            }
+                if (is_exact)
+                {
+                    accuracy_box->text = "Exact";
+                    accuracy_box->t_size = 5;
+                }
+                else
+                {
+                    accuracy_box->text = "Approche";
+                    accuracy_box->t_size = 8;
+                }
 
-            if (max_res > 1e-4)
-            {
                 free(sol);
-                sol = solve_nonlinear(left_tok, left_sz,
-                                      right_tok, right_sz,
-                                      NB_EQ, NB_VAR, var_index);
-            }
-
-            bool is_exact = (max_res <= 1e-4);
-
-            for (int v = 0; v < NB_VAR; v++)
-            {
-                arr_solution[v]->text[0] = 'A' + var_index[v];
-                arr_solution[v]->text[1] = '=';
-                int written = double_to_string_scientific(sol[v], arr_solution[v]->text + 2);
-                arr_solution[v]->t_size = written + 2;
-            }
-
-            if (is_exact)
-            {
-                accuracy_box->text = "Exact";
-                accuracy_box->t_size = 5;
+                for (int i = 0; i < NB_EQ; i++)
+                {
+                    free(left_tok[i]);
+                    free(right_tok[i]);
+                }
+                free(left_tok);
+                free(right_tok);
+                free(left_sz);
+                free(right_sz);
             }
             else
             {
-                accuracy_box->text = "Approche";
-                accuracy_box->t_size = 8;
+                fill_box_right(arr_fill_box[selected_fill_box]);
             }
-
-            free(sol);
-            for (int i = 0; i < NB_EQ; i++)
-            {
-                free(left_tok[i]);
-                free(right_tok[i]);
-            }
-            free(left_tok);
-            free(right_tok);
-            free(left_sz);
-            free(right_sz);
-        }else{
-            fill_box_right(arr_fill_box[selected_fill_box]);
-        }
-        break;
+            break;
         case LEFT:
             show_solution = false;
-            if(selected_fill_box!=-1){
+            if (selected_fill_box != -1)
+            {
                 fill_box_left(arr_fill_box[selected_fill_box]);
-
             }
             break;
 

@@ -1,12 +1,14 @@
 #ifndef STACK_H
 #define STACK_H
 
-struct Stack {
+struct Stack
+{
     char *arr;
     int top;
 };
 
-struct Stack_d {
+struct Stack_d
+{
     double *arr;
     int top;
 };
@@ -28,7 +30,6 @@ int pop(Stack *stack);
 int peek(Stack *stack);
 
 void free(Stack *stack);
-
 
 void init(Stack_d *stack, int size);
 

@@ -7,7 +7,8 @@
 #include <emscripten/emscripten.h>
 static uint16_t g_framebuffer[SCREEN_HEIGHT * SCREEN_WIDTH];
 
-extern "C" {
+extern "C"
+{
     EMSCRIPTEN_KEEPALIVE uint16_t *opencalc_framebuffer() { return g_framebuffer; }
     EMSCRIPTEN_KEEPALIVE int opencalc_fb_width() { return SCREEN_WIDTH; }
     EMSCRIPTEN_KEEPALIVE int opencalc_fb_height() { return SCREEN_HEIGHT; }
@@ -28,7 +29,6 @@ void ili_cmd(uint8_t cmd)
 #endif
 }
 
-
 void ili_data(uint8_t data)
 {
 #ifdef OPENCALC_WASM
@@ -42,7 +42,6 @@ void ili_data(uint8_t data)
 #endif
 }
 
-
 void ili_reset()
 {
 #ifdef OPENCALC_WASM
@@ -54,7 +53,6 @@ void ili_reset()
     sleep_ms(50);
 #endif
 }
-
 
 void ili_init()
 {
@@ -76,11 +74,11 @@ void ili_init()
 #endif
 }
 
-
 void fill_screen(uint16_t color)
 {
 #ifdef OPENCALC_WASM
-    for (int i = 0; i < SCREEN_HEIGHT * SCREEN_WIDTH; ++i) {
+    for (int i = 0; i < SCREEN_HEIGHT * SCREEN_WIDTH; ++i)
+    {
         g_framebuffer[i] = color;
     }
 #else
@@ -98,7 +96,8 @@ void fill_screen(uint16_t color)
 
     gpio_put(PIN_DC, 1);
     gpio_put(PIN_CS, 0);
-    for (int i = 0; i < 320 * 240; ++i) {
+    for (int i = 0; i < 320 * 240; ++i)
+    {
         uint8_t hi = color >> 8;
         uint8_t lo = color & 0xFF;
         uint8_t data[2] = {hi, lo};
@@ -108,35 +107,42 @@ void fill_screen(uint16_t color)
 #endif
 }
 
-
 void fill_rect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color)
 {
 #ifdef OPENCALC_WASM
-    if ((x >= SCREEN_HEIGHT) || (y >= SCREEN_WIDTH)) {
+    if ((x >= SCREEN_HEIGHT) || (y >= SCREEN_WIDTH))
+    {
         return;
     }
-    if ((x + w - 1) >= SCREEN_HEIGHT) {
+    if ((x + w - 1) >= SCREEN_HEIGHT)
+    {
         w = SCREEN_HEIGHT - x;
     }
-    if ((y + h - 1) >= SCREEN_WIDTH) {
+    if ((y + h - 1) >= SCREEN_WIDTH)
+    {
         h = SCREEN_WIDTH - y;
     }
 
-    for (uint16_t row = x; row < x + w; ++row) {
+    for (uint16_t row = x; row < x + w; ++row)
+    {
         uint16_t mapped_row = (uint16_t)(SCREEN_HEIGHT - 1 - row);
         uint32_t base = (uint32_t)mapped_row * SCREEN_WIDTH;
-        for (uint16_t col = y; col < y + h; ++col) {
+        for (uint16_t col = y; col < y + h; ++col)
+        {
             g_framebuffer[base + col] = color;
         }
     }
 #else
-    if ((x >= SCREEN_HEIGHT) || (y >= SCREEN_WIDTH)) {
+    if ((x >= SCREEN_HEIGHT) || (y >= SCREEN_WIDTH))
+    {
         return;
     }
-    if ((x + w - 1) >= SCREEN_HEIGHT) {
+    if ((x + w - 1) >= SCREEN_HEIGHT)
+    {
         w = SCREEN_HEIGHT - x;
     }
-    if ((y + h - 1) >= SCREEN_WIDTH) {
+    if ((y + h - 1) >= SCREEN_WIDTH)
+    {
         h = SCREEN_WIDTH - y;
     }
 
@@ -162,7 +168,8 @@ void fill_rect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color)
     const uint8_t lo = color & 0xFF;
 
     // Remplir le buffer avec la couleur
-    for (int i = 0; i < BUF_PIXELS; ++i) {
+    for (int i = 0; i < BUF_PIXELS; ++i)
+    {
         buf[2 * i] = hi;
         buf[2 * i + 1] = lo;
     }
@@ -171,7 +178,8 @@ void fill_rect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color)
     gpio_put(PIN_CS, 0);
 
     int total_pixels = w * h;
-    while (total_pixels > 0) {
+    while (total_pixels > 0)
+    {
         int batch = (total_pixels > BUF_PIXELS) ? BUF_PIXELS : total_pixels;
         spi_write_blocking(spi0, buf, batch * 2);
         total_pixels -= batch;
@@ -181,21 +189,25 @@ void fill_rect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color)
 #endif
 }
 
-
 void draw_char(uint16_t x, uint16_t y, char *c, uint16_t color, uint16_t bg, uint8_t size)
 {
     int i = 0;
-    while (c[i] != '\0') {
-        if (c[i] < 32 || c[i] > 126) {
-            return; 
+    while (c[i] != '\0')
+    {
+        if (c[i] < 32 || c[i] > 126)
+        {
+            return;
         }
         const uint8_t *glyph = &font5x7[(c[i] - 32) * 5];
 
-        for (int col = 0; col < 5; col++) {
+        for (int col = 0; col < 5; col++)
+        {
             uint8_t line = glyph[col];
-            for (int row = 0; row < 8; row++) {
+            for (int row = 0; row < 8; row++)
+            {
                 // uint16_t pixel_color = (line & 0x01) ? color : bg;
-                if (line & 0x01) {
+                if (line & 0x01)
+                {
                     fill_rect(x - row * size, y + col * size, size, size, color);
                 }
                 line >>= 1;
@@ -206,13 +218,13 @@ void draw_char(uint16_t x, uint16_t y, char *c, uint16_t color, uint16_t bg, uin
     }
 }
 
-
 void display_battery(uint16_t x, uint16_t y, int level)
 {
     fill_rect(x + 1, y + 1, 6 * level, 13, 0x1dc0);
     fill_rect(x + 1, y + 6 * level, 6 * (4 - level), 13, 0xe503);
 
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 5; i++)
+    {
         fill_rect(x, y + i * 6, 13, 1, 0x0000);
     }
     fill_rect(x, y, 1, 25, 0x0000);
