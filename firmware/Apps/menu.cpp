@@ -141,11 +141,11 @@ int main()
     menu_button[6]->text = "Convertisseur";
     menu_button[6]->t_size = 13;
 
-    menu_button[7]->text = "Suites";
-    menu_button[7]->t_size = 6;
+    menu_button[7]->text = "Coming Soon";
+    menu_button[7]->t_size = 11;
 
-    menu_button[8]->text = "Tableau periodique";
-    menu_button[8]->t_size = 18;
+    menu_button[8]->text = "Coming Soon";
+    menu_button[8]->t_size = 11;
     fill_screen(BACKGROUND_COLOR);
     int start = 0;
     while (true)
@@ -230,6 +230,8 @@ int main()
             default:
                 break;
             }
+                        fill_screen(BACKGROUND_COLOR);
+
             break;
 
         default:
