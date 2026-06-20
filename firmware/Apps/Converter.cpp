@@ -398,7 +398,7 @@ int Converter()
                 break;
 
             case BACK:
-                if (cursor == 0 && vbox->t_size > 0)
+                if (cursor == 2 && vbox->t_size > 0)
                 {
                     update_fill_box(vbox, key, snd);
                 }
