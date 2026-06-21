@@ -99,7 +99,7 @@ void display_text_box(text_box *in, int shift_y, int shift_text, bool is_selecte
     if (!is_selected)
         fill_rect(in->y + 1 + shift_y, in->x + 1, in->h - 2, in->w - 2, in->col);
     else
-        fill_rect(in->y + shift_y, in->x, in->h, in->w, 0xfff0);
+        fill_rect(in->y + shift_y, in->x, in->h, in->w, 0x631f);
     if (in->allign == 'c')
     {
         draw_char(in->y + shift_text + shift_y + in->h - 10, (in->w - in->t_size * in->display_text_size * 5) / 2 + in->x, in->text, 0x0000, 0xFF, in->display_text_size);
