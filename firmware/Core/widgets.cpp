@@ -99,7 +99,7 @@ void display_text_box(text_box *in, int shift_y, int shift_text, bool is_selecte
     if (!is_selected)
         fill_rect(in->y + 1 + shift_y, in->x + 1, in->h - 2, in->w - 2, in->col);
     else
-        fill_rect(in->y + shift_y, in->x, in->h, in->w, 0x631f);
+        fill_rect(in->y + shift_y, in->x, in->h, in->w, 0xfff0);
     if (in->allign == 'c')
     {
         draw_char(in->y + shift_text + shift_y + in->h - 10, (in->w - in->t_size * in->display_text_size * 5) / 2 + in->x, in->text, 0x0000, 0xFF, in->display_text_size);
@@ -129,7 +129,7 @@ void display_text_box(text_box *in, int shift_y, int shift_text, bool is_selecte
     fill_rect(in->y + shift_y + in->h - 2, in->x + in->w - 2, 1, 1, 0x0000);
 }
 
-void display_fill_box(fill_box *in, int shift_y, bool is_selected, int pos, char prefix)
+void display_fill_box(fill_box *in, int shift_y, bool is_selected, int pos, char prefix,bool left)
 {
     if (in == nullptr)
     {
@@ -150,7 +150,7 @@ void display_fill_box(fill_box *in, int shift_y, bool is_selected, int pos, char
     }
     printf("\n");
 
-    display_equation(in->text, 100, in->y + shift_y, in->x + (prefix == ' ' ? 0 : 55), 2, is_selected ? in->curso_pos : -10);
+    display_equation(in->text, 100, in->y + shift_y, in->x + (prefix == ' ' ? 0 : 55), 2, is_selected ? in->curso_pos : -10,left);
 
     if (prefix == 'f')
     {
@@ -171,7 +171,6 @@ void display_fill_box(fill_box *in, int shift_y, bool is_selected, int pos, char
         t[1] = '\0';
         draw_char(in->y + 25, in->x, t, 0X0000, 0X0000, 2);
 
-        // display_equation(t, 2 /*+log(pos)*/, in->y + shift_y, in->x, 2, is_selected ? in->curso_pos : -10);
         char *n = (char *)malloc(sizeof(char));
         n[0] = 'n';
         draw_char(in->x - 3, in->y, n, 0x0000, 0x0000, 1);

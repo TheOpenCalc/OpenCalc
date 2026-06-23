@@ -306,7 +306,7 @@ int Grapher()
                 arr_fill_box[i]->h = mv - old_mv + 40;
                 //                display_fill_box(arr_fill_box[i], 160 - (i - selected_fill_box + 4) * 40 + old_mv, (i - selected_fill_box) % HISTORY_SIZE == 0, -1, ' ');
 
-                display_fill_box(arr_fill_box[i], 160 - (i - std::max(first_display, 0)) * 40 - mv, i == selected_fill_box, i, 'f');
+                display_fill_box(arr_fill_box[i], 160 - (i - std::max(first_display, 0)) * 40 - mv, i == selected_fill_box, i, 'f',false);
             }
         }
         else

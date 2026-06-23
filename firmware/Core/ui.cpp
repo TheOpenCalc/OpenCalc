@@ -839,7 +839,7 @@ static int render_node(ASTNode *nd, int x, int y, int SIZE, int cursor_pos)
     return y + d.w;
 }
 
-void display_equation(char *in, int input_size, int x, int y, int SIZE, int cursor_pos)
+void display_equation(char *in, int input_size, int x, int y, int SIZE, int cursor_pos,bool left)
 {
     x += 10;
     reset_pool();
@@ -854,11 +854,20 @@ void display_equation(char *in, int input_size, int x, int y, int SIZE, int curs
     while (p.pos < p.n)
     {
         int before = p.pos;
-        ASTNode *node = parse_equation(&p);
-        if (node)
-            cy = render_node(node, x + 14, cy, SIZE, cursor_pos);
-        if (p.pos == before)
-            p.pos++;
+        if(!left){
+            ASTNode *node = parse_equation(&p);
+            if (node)
+                cy = render_node(node, x + 14, cy, SIZE, cursor_pos);
+            if (p.pos == before)
+                p.pos++;
+        }else{
+            ASTNode *node = parse_equation(&p);
+            Dims d = measure(node,SIZE);
+            if (node)
+                cy = render_node(node, x + 14, 320-d.w-5, SIZE, cursor_pos);
+            if (p.pos == before)
+                p.pos++;
+        }
     }
 
     free(toks);

@@ -51,7 +51,7 @@ void display_text_box(text_box *in, int shift_y, int shift_text, bool is_selecte
 text_box *create_text_box(int x, int y, int h, int w, int border, bool transparent);
 void update_fill_box(fill_box *in, int event, bool snd);
 
-void display_fill_box(fill_box *in, int shift_y, bool is_selected, int pos, char prefix);
+void display_fill_box(fill_box *in, int shift_y, bool is_selected, int pos, char prefix,bool left);
 
 void display_potentiometer(pontentiometer *in, bool is_selected);
 

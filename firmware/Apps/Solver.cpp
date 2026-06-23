@@ -329,7 +329,7 @@ int Solver()
                 //                display_fill_box(arr_fill_box[i], 160 - (i - selected_fill_box + 4) * 40 + old_mv, (i - selected_fill_box) % HISTORY_SIZE == 0, -1, ' ');
                 display_fill_box(arr_fill_box[i],
                                  160 - (i - std::max(first_display, 0)) * 40 - mv,
-                                 i == selected_fill_box, -1, ' ');
+                                 i == selected_fill_box, -1, ' ',false);
             }
         }
         else
@@ -337,7 +337,7 @@ int Solver()
             for (int i = std::max(first_display, 0); i < first_display + 6; i++)
                 display_fill_box(arr_solution[i],
                                  160 - (i - std::max(first_display, 0)) * 40,
-                                 i == selected_fill_box, -1, ' ');
+                                 i == selected_fill_box, -1, ' ',false);
             display_text_box(accuracy_box, 0, 0, false);
         }
 

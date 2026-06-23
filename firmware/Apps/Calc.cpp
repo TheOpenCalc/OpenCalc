@@ -52,7 +52,7 @@ int Calc()
                         mv += max(0, measure(node, 2).h - 16);
                 }
                 history[a]->h = mv - old_mv + 40;
-                display_fill_box(history[a], 160 - (i - cur_selected + 4) * 40 + old_mv, (a - cur_selected) % HISTORY_SIZE == 0, -1, ' ');
+                display_fill_box(history[a], 160 - (i - cur_selected + 4) * 40 + old_mv, (a - cur_selected) % HISTORY_SIZE == 0, -1, ' ',a%2==1);
             }
         }
 

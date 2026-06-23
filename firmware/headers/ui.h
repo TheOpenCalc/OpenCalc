@@ -106,7 +106,7 @@ int fmt_number(double v, char *buf);
 
 void display_text(int x, int y, char *t, int SIZE, int t_size);
 
-void display_equation(char *in, int input_size, int x, int y, int SIZE, int cursor_pos);
+void display_equation(char *in, int input_size, int x, int y, int SIZE, int cursor_pos,bool left);
 
 void draw_char(uint16_t x, uint16_t y, char *c, uint16_t color, uint16_t bg, uint8_t size);
 

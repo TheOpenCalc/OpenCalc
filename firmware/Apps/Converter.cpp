@@ -299,7 +299,7 @@ int Converter()
             tbox(168, 63, 22, 144, tu->name, slen(tu->name),
                  BACKGROUND_COLOR, false, 'c', 1);
 
-            display_fill_box(vbox, 0, cursor == 2, -1, ' ');
+            display_fill_box(vbox, 0, cursor == 2, -1, ' ',false);
         }
 
         key = scan_keypad();
