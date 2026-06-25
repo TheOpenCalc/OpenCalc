@@ -694,10 +694,10 @@ static int render_node(ASTNode *nd, int x, int y, int SIZE, int cursor_pos)
     case N_PLACEHOLDER:
     {
         int w = CW(SIZE), h = CH(SIZE);
-        fill_rect(x - 13, y, 1, w, 0x0000);
-        fill_rect(x + h - 14, y, 1, w, 0x0000);
-        fill_rect(x - 13, y, h, 1, 0x0000);
-        fill_rect(x - 13, y + w - 1, h, 1, 0x0000);
+        //fill_rect(x - 13, y, 1, w, 0x0000);
+        //fill_rect(x + h - 14, y, 1, w, 0x0000);
+        //fill_rect(x - 13, y, h, 1, 0x0000);
+        //fill_rect(x - 13, y + w - 1, h, 1, 0x0000);
         return y + w;
     }
 
