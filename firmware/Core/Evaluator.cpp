@@ -213,6 +213,12 @@ token *shunting_yard(token *input, int n)
     return output;
 }
 
+
+bool almost_equal(double a, double b) {
+    double eps = 1e-10;
+    return std::fabs(a - b) < eps;
+}
+
 double evaluate_npi(token *in, int n, double x, int letter)
 {
     stack_d nb_stack;
@@ -281,10 +287,19 @@ double evaluate_npi(token *in, int n, double x, int letter)
                 a = log(a);
                 break;
             case 'c':
+                printf("VAL: %f ",a);
                 a = cos(a);
+                if(almost_equal(a,0))
+                    a=0;
+                if(almost_equal(a,1))
+                    a=1;
                 break;
             case 's':
                 a = sin(a);
+                if(almost_equal(a,0))
+                    a=0;
+                if(almost_equal(a,1))
+                    a=1;
                 break;
             case 't':
                 a = tan(a);
@@ -337,7 +352,6 @@ double evaluate_npi(token *in, int n, double x, int letter)
     free(&nb_stack);
     return a;
 }
-
 double evaluate_npi(token *in, int n)
 {
     stack_d nb_stack;
@@ -391,10 +405,19 @@ double evaluate_npi(token *in, int n)
                 a = log(a);
                 break;
             case 'c':
+                printf("VAL: %f ",a);
                 a = cos(a);
+                if(almost_equal(a,0))
+                    a=0;
+                if(almost_equal(a,1))
+                    a=1;
                 break;
             case 's':
                 a = sin(a);
+                if(almost_equal(a,0))
+                    a=0;
+                if(almost_equal(a,1))
+                    a=1;
                 break;
             case 't':
                 a = tan(a);
@@ -445,6 +468,7 @@ double evaluate_npi(token *in, int n)
     }
     a = peek(&nb_stack);
     free(&nb_stack);
+    printf("Result: %.20f\n",a);
     return a;
 }
 

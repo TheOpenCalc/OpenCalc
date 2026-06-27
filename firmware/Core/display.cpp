@@ -194,7 +194,7 @@ void draw_char(uint16_t x, uint16_t y, char *c, uint16_t color, uint16_t bg, uin
     int i = 0;
     while (c[i] != '\0')
     {
-        if (c[i] < 32 || c[i] > 126)
+        if (c[i] < 32 || c[i] > 128)
         {
             return;
         }
