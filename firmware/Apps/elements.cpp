@@ -1,13 +1,13 @@
-#include "headers/elements.h"
-#include "headers/ui.h"
+#include "elements.h"
+#include "ui.h"
 #include "pico/stdlib.h"
-#include <headers/Evaluator.h>
+#include <Evaluator.h>
 #include "hardware/spi.h"
 #include <stdio.h>
 #include "menu.h"
 #include <string>
 #include <stdlib.h>
-#include "headers/colors.h"
+#include "colors.h"
 
 void display_table()
 {

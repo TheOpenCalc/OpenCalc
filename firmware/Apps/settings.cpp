@@ -1,11 +1,11 @@
-#include "headers/ui.h"
-#include "headers/menu.h"
-#include "headers/settings.h"
-#include "headers/widgets.h"
+#include "ui.h"
+#include "menu.h"
+#include "settings.h"
+#include "widgets.h"
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
 #include <malloc.h>
-#include "headers/colors.h"
+#include "colors.h"
 
 int g_angle_mode = 0;
 int g_decimals = 6;

@@ -1,14 +1,14 @@
-#include "headers/ui.h"
-#include "headers/Evaluator.h"
-#include "headers/grapher.h"
+#include "ui.h"
+#include "Evaluator.h"
+#include "grapher.h"
 #include <math.h>
-#include "headers/menu.h"
+#include "menu.h"
 #include <algorithm>
 #include <stdlib.h>
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
 #include <cstdio>
-#include "headers/colors.h"
+#include "colors.h"
 
 int X_cursor = 0;
 int Y_cursor = 0;

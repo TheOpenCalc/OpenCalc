@@ -4,8 +4,8 @@
 #include <math.h>
 #include <stdio.h>
 #include <string>
-#include "headers/stack.h"
-#include "headers/Evaluator.h"
+#include "stack.h"
+#include "Evaluator.h"
 
 double fact_r(double in)
 {

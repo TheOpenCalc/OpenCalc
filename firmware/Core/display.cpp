@@ -1,7 +1,7 @@
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
-#include "headers/display.h"
-#include "headers/colors.h"
+#include "display.h"
+#include "colors.h"
 #ifdef OPENCALC_WASM
 
 #include <emscripten/emscripten.h>

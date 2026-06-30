@@ -2,17 +2,17 @@
 #include "hardware/spi.h"
 #include <malloc.h>
 
-#include "headers/grapher.h"
-#include "headers/elements.h"
-#include "headers/menu.h"
-#include "headers/sequences.h"
-#include "headers/settings.h"
+#include "grapher.h"
+#include "elements.h"
+#include "menu.h"
+#include "sequences.h"
+#include "settings.h"
 #include "Solver.h"
-#include "headers/Calc.h"
-#include "headers/ui.h"
-#include "headers/Tools.h"
-#include "headers/Converter.h"
-#include "headers/colors.h"
+#include "Calc.h"
+#include "ui.h"
+#include "Tools.h"
+#include "Converter.h"
+#include "colors.h"
 #include <stdio.h>
 #include <string>
 int x_cursor = 0;
@@ -162,7 +162,7 @@ int main()
             display_text_box(menu_button[i], select_item_menu < 6 ? 0 : 103, -77, i == select_item_menu);
             draw_buffer(menu_button[i]->y + 2 + (select_item_menu < 6 ? 10 : 103), menu_button[i]->x + 2, 79, 79, arr_img[i]);
 #ifdef OPENCALC_WASM
-            draw_image(menu_button[i]->y + 2 + (select_item_menu < 6 ? 0 : 103), menu_button[i]->x + 2, 79, 79, arr_img[i], 0x0000);
+            draw_image(menu_button[i]->y + 2 + (select_item_menu < 6 ? 10 : 103), menu_button[i]->x + 2, 79, 79, arr_img[i], 0x0000);
 #endif
         }
 

@@ -1,11 +1,11 @@
-#include "headers/ui.h"
-#include "headers/Evaluator.h"
-#include "headers/Converter.h"
-#include "headers/widgets.h"
-#include "headers/menu.h"
+#include "ui.h"
+#include "Evaluator.h"
+#include "Converter.h"
+#include "widgets.h"
+#include "menu.h"
 #include <stdlib.h>
 #include <math.h>
-#include "headers/colors.h"
+#include "colors.h"
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
 

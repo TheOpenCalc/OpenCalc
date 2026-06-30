@@ -1,7 +1,7 @@
 #ifndef UI_H
 #define UI_H
 #include <stdint.h>
-#include "headers/display.h"
+#include "display.h"
 #include "Tools.h"
 #include "Evaluator.h"
 

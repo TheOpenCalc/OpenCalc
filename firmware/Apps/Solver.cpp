@@ -1,17 +1,17 @@
-#include "headers/ui.h"
-#include "headers/Evaluator.h"
-#include "headers/sequences.h"
-#include "headers/stack.h"
+#include "ui.h"
+#include "Evaluator.h"
+#include "sequences.h"
+#include "stack.h"
 #include <math.h>
-#include "headers/menu.h"
+#include "menu.h"
 #include <algorithm>
 #include <stdlib.h>
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
 #include <cstdio>
-#include "headers/Solver.h"
+#include "Solver.h"
 #include <stdio.h>
-#include "headers/colors.h"
+#include "colors.h"
 
 #include <time.h>
 

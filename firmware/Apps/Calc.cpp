@@ -1,13 +1,13 @@
-#include "headers/ui.h"
-#include "headers/Calc.h"
-#include "headers/Evaluator.h"
-#include "headers/menu.h"
+#include "ui.h"
+#include "Calc.h"
+#include "Evaluator.h"
+#include "menu.h"
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
 #include <stdio.h>
 #include <cstdlib>
 #include "Tools.h"
-#include "headers/colors.h"
+#include "colors.h"
 int Calc()
 {
     bool snd = false;

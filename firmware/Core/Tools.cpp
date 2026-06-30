@@ -1,6 +1,6 @@
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
-#include "headers/Tools.h"
+#include "Tools.h"
 #include <stdlib.h>
 
 #ifndef OPENCALC_WASM

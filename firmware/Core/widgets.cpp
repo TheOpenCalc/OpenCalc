@@ -1,8 +1,8 @@
-#include "headers/widgets.h"
-#include "headers/display.h"
-#include "headers/ui.h"
+#include "widgets.h"
+#include "display.h"
+#include "ui.h"
 #include <malloc.h>
-#include "headers/colors.h"
+#include "colors.h"
 #include <stdio.h>
 
 fill_box *create_fill_box(int x, int y, int h, int w, int border)

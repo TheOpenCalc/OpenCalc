@@ -1,6 +1,6 @@
 #ifndef SETTINGS_H
 #define SETTINGS_H
-#include "headers/widgets.h"
+#include "widgets.h"
 
 void settings();
 

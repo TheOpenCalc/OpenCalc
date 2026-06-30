@@ -1,6 +1,6 @@
 #ifndef CALC_H
 #define CALC_H
-#include "headers/widgets.h"
+#include "widgets.h"
 
 int Calc();
 

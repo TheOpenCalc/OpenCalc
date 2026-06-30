@@ -6,11 +6,11 @@
 #include <string.h>
 #include <string>
 
-#include "headers/ui.h"
-#include "headers/menu.h"
-#include "headers/Evaluator.h"
-#include "headers/widgets.h"
-#include "headers/colors.h"
+#include "ui.h"
+#include "menu.h"
+#include "Evaluator.h"
+#include "widgets.h"
+#include "colors.h"
 
 #define MAX_NODES 128
 
