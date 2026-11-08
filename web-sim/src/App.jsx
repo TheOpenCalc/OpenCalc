@@ -1,53 +1,87 @@
 import { useEffect, useRef, useState } from 'react';
 
+// Doit rester identique à `enum touches` dans firmware/headers/ui.h.
 const KEY_CODES = {
-  ZERO: 0,
-  COMA: 1,
-  PI: 2,
-  NOT2: 3,
+  COMA: 0,
+  ZERO: 1,
+  OPENING_PARENTHESIS: 2,
+  CLOSING_PARENTHESIS: 3,
   ENTER: 4,
-  ONE: 5,
-  TWO: 6,
-  THREE: 7,
-  PLUS: 8,
-  TIMES: 9,
-  FOUR: 10,
-  FIVE: 11,
-  SIX: 12,
-  MINUS: 13,
-  DIVIDE: 14,
-  SEVEN: 15,
-  EIGHT: 16,
-  NINE: 17,
-  OPENING_PARENTHESIS: 18,
-  CLOSING_PARENTHESIS: 19,
-  COS: 20,
-  SIN: 21,
-  TAN: 22,
-  SQRT: 23,
-  POW: 24,
-  LN: 25,
-  BACK: 26,
-  E: 27,
-  DOWN: 28,
-  RIGHT: 29,
-  X: 30,
-  TOOLS: 31,
-  EQUAL: 32,
-  LEFT: 33,
-  OK: 34,
-  PASS3: 35,
-  SECOND: 36,
-  PASS4: 37,
-  UP: 38,
-  END_KEYS: 39,
-  FACT: 40,
-  COSH: 41,
-  SINH: 42,
-  TANH: 43,
-  ACOSH: 44,
-  ASINH: 45,
-  ATANH: 46
+  NOT2: 5,
+  NOT3: 6,
+  ONE: 7,
+  TWO: 8,
+  THREE: 9,
+  PLUS: 10,
+  ANS: 11,
+  NOT4: 12,
+  NOT5: 13,
+  FOUR: 14,
+  FIVE: 15,
+  SIX: 16,
+  MINUS: 17,
+  PI: 18,
+  NOT6: 19,
+  NOT7: 20,
+  SEVEN: 21,
+  EIGHT: 22,
+  NINE: 23,
+  TIMES: 24,
+  POW: 25,
+  NNNN: 26,
+  NN: 27,
+  COS: 28,
+  SIN: 29,
+  TAN: 30,
+  DIVIDE: 31,
+  SQRT: 32,
+  NNN: 33,
+  NNNNN: 34,
+  X: 35,
+  TOOLS: 36,
+  HOME: 37,
+  CONST: 38,
+  BACK: 39,
+  NOTTTT: 40,
+  NOTTT: 41,
+  E: 42,
+  LOG: 43,
+  LN: 44,
+  DOWN: 45,
+  LEFT: 46,
+  OK: 47,
+  RIGHT: 48,
+  PHY: 49,
+  NOTN: 50,
+  EQUAL: 51,
+  SECOND: 52,
+  ALPHA: 53,
+  PASS4: 54,
+  UP: 55,
+  END_KEYS: 56,
+  FACT: 57,
+  COSH: 58,
+  SINH: 59,
+  TANH: 60,
+  ACOSH: 61,
+  ASINH: 62,
+  ATANH: 63,
+  IMAGINARY: 64,
+  CONJ: 65,
+  ARG: 66,
+  MOD: 67,
+  ACOS: 68,
+  ASIN: 69,
+  ATAN: 70,
+  MATRIX_2X2: 71,
+  MATRIX_3X3: 72,
+  MATRIX_4X4: 73,
+  MATRIX_2X3: 74,
+  MATRIX_3X2: 75,
+  MATRIX_CUSTOM: 76,
+  FUNC_DET: 77,
+  FUNC_INV: 78,
+  FUNC_TRANS: 79,
 };
 
 const KEYBOARD_MAP = {
@@ -131,7 +165,7 @@ const MAIN_KEYS = [
     { label: '2',   code: KEY_CODES.TWO,  second: 'Q' },
     { label: '3',   code: KEY_CODES.THREE,second: 'R' },
     { label: '+',   code: KEY_CODES.PLUS, second: 'S' },
-    { label: 'Ans', code: KEY_CODES.E },                   // pas de 2nd
+    { label: 'Ans', code: KEY_CODES.ANS },                 // pas de 2nd
   ],
   [
     { label: '.',  code: KEY_CODES.COMA,                second: 'V' },
@@ -227,15 +261,18 @@ export default function App() {
         );
 
         const data = imageData.data;
+        // Luminosite logicielle (0..20), identique au firmware : 25 %..100 %.
+        const level = Module._opencalc_brightness ? Module._opencalc_brightness() : 20;
+        const dim = (64 + (192 * Math.max(0, Math.min(20, level))) / 20) / 256;
         for (let i = 0; i < fb.length; i++) {
           const color = fb[i];
           const r = (color >> 11) & 0x1f;
           const g = (color >> 5) & 0x3f;
           const b = color & 0x1f;
           const idx = i * 4;
-          data[idx] = (r << 3) | (r >> 2);
-          data[idx + 1] = (g << 2) | (g >> 4);
-          data[idx + 2] = (b << 3) | (b >> 2);
+          data[idx] = ((r << 3) | (r >> 2)) * dim;
+          data[idx + 1] = ((g << 2) | (g >> 4)) * dim;
+          data[idx + 2] = ((b << 3) | (b >> 2)) * dim;
           data[idx + 3] = 255;
         }
 
@@ -260,13 +297,23 @@ export default function App() {
         setShowSplash(false);
         return;
       }
-      const code = KEYBOARD_MAP[event.key];
-      if (code === undefined || !moduleRef.current) return;
+      const key = event.key;
+      const printable =
+        key.length === 1 &&
+        !event.ctrlKey && !event.metaKey && !event.altKey;
+      const code = KEYBOARD_MAP[key];
+      if (code === undefined && !printable) return;
+      if (!moduleRef.current) return;
       event.preventDefault();
       if (code === KEY_CODES.SECOND) {
         setSnd(s => !s);
       }
-      moduleRef.current._opencalc_key_down(code);
+      if (code !== undefined) {
+        moduleRef.current._opencalc_key_down(code);
+      }
+      if (printable) {
+        moduleRef.current._opencalc_text_char(key.charCodeAt(0));
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -343,17 +390,17 @@ export default function App() {
               >
                 2nd
               </button>
-              <button className="key key-fn key-small" type="button">alpha</button>
-              <button className="key key-fn key-small" type="button"></button>
+              <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.ALPHA)} type="button">alpha</button>
+              <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.IMAGINARY)} type="button">i</button>
             </div>
             <div className="function-row">
-              <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.X)} type="button">phy</button>
-              <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.TOOLS)} type="button"></button>
+              <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.PHY)} type="button">phy</button>
+              <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.NOTN)} type="button" aria-label="Touche non attribuée"></button>
               <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.EQUAL)} type="button">=</button>
             </div>
             <div className="function-row">
               <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.E)} type="button">exp</button>
-              <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.BACK)} type="button">log</button>
+              <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.LOG)} type="button">log</button>
               <button className="key key-fn key-small" onPointerDown={() => sendKey(KEY_CODES.LN)} type="button">ln</button>
             </div>
           </div>
