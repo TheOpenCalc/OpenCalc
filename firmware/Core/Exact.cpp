@@ -1,6 +1,7 @@
 /* Ecriture exacte des resultats. Voir headers/Exact.h. */
 #include "Exact.h"
 #include <math.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 

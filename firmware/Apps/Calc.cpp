@@ -10,6 +10,7 @@
 #include "colors.h"
 #include "Exact.h"
 #include "Calculus.h"
+#include "Cas.h"
 #include "widgets.h"
 #include <math.h>
 #include <string.h>
@@ -29,10 +30,45 @@ static void fill_box_insert_char(fill_box *in, char c)
  * (fraction, racine, multiple de pi). Vide pour les autres lignes. */
 static char s_approx[HISTORY_SIZE + 1][32];
 
+/* Un texte de s_approx qui commence par ce caractere est un message
+ * ("Aucune solution", erreur du calcul formel), affiche sans "~~". */
+#define APPROX_MSG '\x01'
+/* Valeur decimale exacte (1/2 = 0.5) : affichee apres "=" au lieu de "~~". */
+#define APPROX_EQ '\x02'
+
+/* Vrai si dec (ecriture decimale affichee) montre la valeur exacte : pas de
+ * notation scientifique et au moins `needed` chiffres apres la virgule. */
+static bool decimal_is_exact(const char *dec, int needed)
+{
+    if (needed < 0)
+        return false;
+    const char *dot = NULL;
+    for (const char *c = dec; *c; c++)
+    {
+        if (*c == '.')
+            dot = c;
+        else if (!((*c >= '0' && *c <= '9') || *c == '-'))
+            return false; /* 1.5*10^(3), e, inf... */
+    }
+    int shown = dot ? (int)strlen(dot + 1) : 0;
+    return shown >= needed;
+}
+
 /* "~~ 0.5" en petit, a gauche de la ligne de resultat. */
 static void draw_approx(int band_bottom, int band_h, const char *txt)
 {
     int x = band_bottom + band_h / 2 + 4; /* haut du texte (x compte depuis le bas) */
+    if (txt[0] == APPROX_MSG)
+    {
+        draw_char(x, 6, (char *)txt + 1, 0x4208, 0, 2);
+        return;
+    }
+    if (txt[0] == APPROX_EQ)
+    {
+        draw_char(x, 6, (char *)"=", 0x4208, 0, 2);
+        draw_char(x, 20, (char *)txt + 1, 0x4208, 0, 2);
+        return;
+    }
     draw_char(x + 1, 6, (char *)"~", 0x4208, 0, 2);
     draw_char(x - 3, 6, (char *)"~", 0x4208, 0, 2);
     draw_char(x, 20, (char *)txt, 0x4208, 0, 2);
@@ -60,6 +96,70 @@ static void insert_ans_if_empty(fill_box *in, bool have_ans, int key, int ch)
 static bool result_ok(complex z)
 {
     return !isnan(z.re) && !isnan(z.im);
+}
+
+/* Ecrit un resultat (texte de l'editeur) sur la ligne de resultat. */
+static void set_result_text(fill_box *res, const char *txt)
+{
+    int len = (int)strlen(txt);
+    if (len > 999)
+        len = 999;
+    memcpy(res->text, txt, len);
+    res->text[len] = '\0';
+    res->t_size = len;
+}
+
+/* Calcul formel. force : la saisie contient X ou une commande (developper...),
+ * le resultat ou le message du moteur est toujours affiche. Sinon, le moteur
+ * ne sert qu'a donner une forme exacte algebrique (fractions, racines, pi) ;
+ * il rend la main (false) pour le reste.
+ * approx : valeur approchee a afficher a gauche (vide si inutile). */
+static bool calc_cas(const char *text, int len, bool force, fill_box *res, char *approx, int approx_cap,
+                     complex *value, bool *value_ok)
+{
+    static char out[512];
+    *value_ok = false;
+    approx[0] = '\0';
+    cas_result r = cas_eval(text, len, out, sizeof(out));
+    if (!force)
+    {
+        if (r.status != CAS_OK || !r.numeric || r.transcendental || !isfinite(r.approx) ||
+            strlen(out) > 24 || r.solutions)
+            return false;
+    }
+    if (r.status == CAS_OK)
+    {
+        set_result_text(res, out);
+        if (r.numeric && isfinite(r.approx))
+        {
+            complex z = {r.approx, 0};
+            if (!r.solutions)
+            {
+                *value = z;
+                *value_ok = true;
+            }
+            char dec[32];
+            complex_to_string(z, dec);
+            /* Pas de "~~ 12" a cote de "12" ni de "X=0.739" approche. */
+            if (strcmp(dec, out) != 0 && !(r.solutions && r.approximate))
+            {
+                const char *eqp = strchr(out, '=');
+                if (!(eqp && strcmp(eqp + 1, dec) == 0))
+                {
+                    if (decimal_is_exact(dec, r.dec_digits))
+                        snprintf(approx, approx_cap, "%c%s", APPROX_EQ, dec);
+                    else
+                        snprintf(approx, approx_cap, "%s", dec);
+                }
+            }
+        }
+        if (r.msg[0])
+            snprintf(approx, approx_cap, "%c%s", APPROX_MSG, r.msg);
+        return true;
+    }
+    set_result_text(res, "");
+    snprintf(approx, approx_cap, "%c%s", APPROX_MSG, r.status == CAS_ERROR ? r.msg : "Non supporte");
+    return true;
 }
 
 static void matrix_view(matrix *m)
@@ -187,13 +287,10 @@ int Calc()
             {
                 scan_keypad_nowait();
                 /* Clavier du PC (simulateur) : la variable est X majuscule,
-                 * comme avec la touche X, et seulement dans somme / produit /
-                 * derivee / integrale. */
+                 * comme avec la touche X. */
                 if (ch == 'x' || ch == 'X')
                 {
-                    fill_box *in = history[cur_last_history];
-                    if (cursor_in_calculus_call(in->text, in->curso_pos))
-                        update_fill_box(in, X, snd);
+                    update_fill_box(history[cur_last_history], X, snd);
                     break;
                 }
                 insert_ans_if_empty(history[cur_last_history], have_ans, -1, ch);
@@ -253,7 +350,25 @@ int Calc()
 
             token *out = shunting_yard(t, tokenized_size);
             int yarded = count_yarded(t, tokenized_size);
-            if (has_matrix && !has_calculus)
+            const char *src = history[l]->text;
+            int src_len = history[l]->t_size;
+            /* X hors de somme/derivee... ou commande : calcul formel. */
+            bool force_cas = has_calculus ? cas_has_command(src, src_len) : cas_required(src, src_len);
+            complex cas_value;
+            bool cas_value_ok = false;
+            bool done_cas = false;
+            if (force_cas || (!has_matrix && !has_calculus && exact_input_allowed(src, src_len)))
+                done_cas = calc_cas(src, src_len, force_cas, history[cur_last_history], s_approx[cur_last_history],
+                                    sizeof(s_approx[cur_last_history]), &cas_value, &cas_value_ok);
+            if (done_cas)
+            {
+                if (cas_value_ok && result_ok(cas_value))
+                {
+                    set_ans(cas_value);
+                    have_ans = true;
+                }
+            }
+            else if (has_matrix && !has_calculus)
             {
                 calc_result cr = evaluate_calc(out, yarded);
                 if (cr.is_matrix)
@@ -326,9 +441,8 @@ int Calc()
                 fill_box_right(history[cur_selected]);
             break;
         case X:
-            /* La variable X n'a de sens que dans somme/produit/derivee/integrale. */
-            if (cursor_in_calculus_call(history[cur_last_history]->text, history[cur_last_history]->curso_pos))
-                update_fill_box(history[cur_last_history], X, snd);
+            /* X : variable de somme/derivee..., ou variable du calcul formel. */
+            update_fill_box(history[cur_last_history], X, snd);
             break;
         case BACK:
             if (history[cur_last_history]->t_size > 0)

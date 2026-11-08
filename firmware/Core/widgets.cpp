@@ -597,7 +597,9 @@ static int call_name_lookup(const char *text, int lparen, int *arity)
                  {"arith", 5, 1}, {"geom", 4, 1}, {"arigeo", 6, 2}, {"arithn", 6, 2},
                  {"exp", 3, 1}, {"min", 3, 2}, {"max", 3, 2}, {"ent", 3, 1},
                  {"signe", 5, 1}, {"racine", 6, 2}, {"alea", 4, 0}, {"randint", 7, 2},
-                 {"somme", 5, 3}, {"produit", 7, 3}, {"derivee", 7, 2}, {"integrale", 9, 3}};
+                 {"somme", 5, 3}, {"produit", 7, 3}, {"derivee", 7, 2}, {"integrale", 9, 3},
+                 {"developper", 10, 1}, {"factoriser", 10, 1}, {"deriver", 7, 1},
+                 {"primitive", 9, 1}, {"resoudre", 8, 1}};
     for (int k = 0; k < (int)(sizeof(names) / sizeof(names[0])); k++)
     {
         int len = names[k].len;
@@ -923,7 +925,7 @@ void update_fill_box(fill_box *in, int event, bool snd)
     int post_back = 0;
     if (tail_len > 0)
         memcpy(tail, in->text + in->curso_pos, tail_len);
-if (event >= MATRIX_2X2 && event <= FUNC_INTEG)    {
+if (event >= MATRIX_2X2 && event <= FUNC_SOLVE)    {
         const char *tmpl = NULL;
         int cursor_back = 0;
         bool is_matrix_tmpl = false;
@@ -1068,6 +1070,26 @@ if (event >= MATRIX_2X2 && event <= FUNC_INTEG)    {
         case FUNC_INTEG:
             tmpl = "integrale(,,)";
             cursor_back = 3;
+            break;
+        case FUNC_EXPAND:
+            tmpl = "developper()";
+            cursor_back = 1;
+            break;
+        case FUNC_FACTOR:
+            tmpl = "factoriser()";
+            cursor_back = 1;
+            break;
+        case FUNC_DERIVE:
+            tmpl = "deriver()";
+            cursor_back = 1;
+            break;
+        case FUNC_PRIMITIVE:
+            tmpl = "primitive()";
+            cursor_back = 1;
+            break;
+        case FUNC_SOLVE:
+            tmpl = "resoudre()";
+            cursor_back = 1;
             break;
         default:
             break;
@@ -2289,13 +2311,22 @@ int menu_analysis()
     return code_menu("Analyse", labels, codes, 4);
 }
 
+/* Calcul formel : commandes en X (touche X), voir Core/Cas.cpp. */
+static int menu_cas()
+{
+    const char *labels[5] = {"Developper", "Factoriser", "Deriver (en X)", "Primitive (en X)",
+                             "Resoudre f(X)=0"};
+    const int codes[5] = {FUNC_EXPAND, FUNC_FACTOR, FUNC_DERIVE, FUNC_PRIMITIVE, FUNC_SOLVE};
+    return code_menu("Calcul formel", labels, codes, 5);
+}
+
 int menu_tools(bool with_analysis)
 {
-    static const char *labels[9] = {"Probabilites", "Matrices", "Arithmetique", "Hyperboliques",
-                                    "Nombres decimaux", "Nombres complexes", "Fonctions",
-                                    "Constantes physiques", "Analyse"};
+    static const char *labels[10] = {"Probabilites", "Matrices", "Arithmetique", "Hyperboliques",
+                                     "Nombres decimaux", "Nombres complexes", "Fonctions",
+                                     "Constantes physiques", "Analyse", "Calcul formel"};
     static int sel = 0; // reste sur la derniere rubrique utilisee
-    int count = with_analysis ? 9 : 8;
+    int count = with_analysis ? 10 : 8;
     if (sel >= count)
         sel = 0;
     while (true)
@@ -2315,6 +2346,7 @@ int menu_tools(bool with_analysis)
         case 6: code = menu_functions(); break;
         case 7: code = menu_const_phy(); break;
         case 8: code = menu_analysis(); break;
+        case 9: code = menu_cas(); break;
         }
         if (code != END_KEYS) // BACK dans le sous-menu : on reste dans Outils
             return code;

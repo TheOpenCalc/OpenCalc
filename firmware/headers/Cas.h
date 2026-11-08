@@ -33,7 +33,10 @@
  * et jeton interne a la fois ; affiche ';'. */
 #define CAS_SEPARATOR '\x06'
 
-bool is_cas_type(char t);
+static inline bool is_cas_type(char t)
+{
+    return t >= CAS_TOK_EXPAND && t <= CAS_TOK_SOLVE;
+}
 
 enum cas_status
 {
@@ -51,12 +54,20 @@ typedef struct
     bool solutions;  /* resultat de resoudre() */
     bool approximate; /* solutions approchees (methode numerique) */
     double approx;
+    /* Nombre de chiffres apres la virgule pour ecrire le resultat exactement
+     * en decimal (1/2 -> 1, 3/8 -> 3, 7 -> 0) ; -1 quand c'est impossible
+     * (1/3, r(2), pi...). Sert a choisir "=" ou "~~" devant la valeur. */
+    int dec_digits;
     char msg[40];    /* message (erreur, "Aucune solution"...) */
 } cas_result;
 
 /* Vrai si la saisie doit passer par le calcul formel : elle contient X ou
  * une fonction du calcul formel. */
 bool cas_required(const char *text, int len);
+
+/* Vrai si la saisie contient developper(, factoriser(, deriver(, primitive(
+ * ou resoudre( (X seul ne compte pas : somme(X,1,3) reste numerique). */
+bool cas_has_command(const char *text, int len);
 
 /* Calcule la saisie. out recoit le resultat (texte de l'editeur, termine par
  * '\0'), vide quand il n'y a qu'un message. */

@@ -1,6 +1,7 @@
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
 #include <malloc.h>
+#include <stdlib.h>
 
 #include "grapher.h"
 #include "elements.h"

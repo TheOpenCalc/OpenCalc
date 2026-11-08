@@ -1,3 +1,4 @@
+#include "Cas.h"
 #include <vector>
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
@@ -364,7 +365,7 @@ static ASTNode *parse_base(Parser *p)
         return inner;
     }
 
-    char *funcs = (char *)"lrcstuvwfghjak!bdmFGHoqyPLDRSO@#&?$:;<>%|`{}_\"";
+    char *funcs = (char *)"lrcstuvwfghjak!bdmFGHoqyPLDRSO@#&?$:;<>%|`{}_\"\x01\x02\x03\x04\x05";
     if (is_in(t->type, funcs))
     {
         token *ft = p_consume(p);
@@ -523,6 +524,19 @@ ASTNode *parse_equation(Parser *p)
         nd->src_pos = ot->src_pos;
         nd->left = left;
         nd->right = parse_expr(p);
+        left = nd;
+    }
+    /* Plusieurs solutions du calcul formel : "X=1 ; X=2". */
+    t = p_peek(p);
+    if (t && t->type == CAS_SEPARATOR)
+    {
+        token *ot = p_consume(p);
+        ASTNode *nd = alloc_node();
+        nd->type = N_BINOP;
+        nd->op = ';';
+        nd->src_pos = ot->src_pos;
+        nd->left = left;
+        nd->right = parse_equation(p);
         return nd;
     }
     return left;
@@ -970,6 +984,16 @@ static int func_name_width(char op, int SIZE)
         return 7 * CW(SIZE); // derivee
     case '"':
         return 9 * CW(SIZE); // integrale
+    case CAS_TOK_EXPAND:
+        return 10 * CW(SIZE); // developper
+    case CAS_TOK_FACTOR:
+        return 10 * CW(SIZE); // factoriser
+    case CAS_TOK_DERIVE:
+        return 7 * CW(SIZE); // deriver
+    case CAS_TOK_PRIMITIVE:
+        return 9 * CW(SIZE); // primitive
+    case CAS_TOK_SOLVE:
+        return 8 * CW(SIZE); // resoudre
     case 'F':
     case 'G':
         return 3 * CW(SIZE);
@@ -1376,6 +1400,16 @@ static int draw_func_name(char op, int x, int y, int SIZE)
         return draw_str(x, y, "dérivée", SIZE);
     case '"':
         return draw_str(x, y, "integrale", SIZE);
+    case CAS_TOK_EXPAND:
+        return draw_str(x, y, "developper", SIZE);
+    case CAS_TOK_FACTOR:
+        return draw_str(x, y, "factoriser", SIZE);
+    case CAS_TOK_DERIVE:
+        return draw_str(x, y, "deriver", SIZE);
+    case CAS_TOK_PRIMITIVE:
+        return draw_str(x, y, "primitive", SIZE);
+    case CAS_TOK_SOLVE:
+        return draw_str(x, y, "resoudre", SIZE);
     case 'O':
         return draw_str(x, y, "arrondi", SIZE);
     case 'F':

@@ -25,11 +25,6 @@
 
 extern int g_angle_mode;
 
-bool is_cas_type(char t)
-{
-    return t >= CAS_TOK_EXPAND && t <= CAS_TOK_SOLVE;
-}
-
 /* ===================== 1. Memoire et erreurs ============================= */
 
 static uint8_t *g_buf;
@@ -1823,7 +1818,9 @@ static int rational_roots(Q *P, int *deg, Q *roots, int *mult, int cap)
     unsigned long long a0, an;
     if (!big_fits_u64(big_abs(P[0].n), &a0) || !big_fits_u64(big_abs(P[*deg].n), &an))
         return nr;
-    static unsigned long long dp[512], dq[512];
+    /* tableaux dans la zone de calcul : pas de RAM permanente */
+    unsigned long long *dp = (unsigned long long *)amalloc(sizeof(unsigned long long) * 512);
+    unsigned long long *dq = (unsigned long long *)amalloc(sizeof(unsigned long long) * 512);
     int np = divisors(a0, dp, 512);
     int nq = divisors(an, dq, 512);
     if (np < 0 || nq < 0)
@@ -3167,13 +3164,13 @@ static void pr(W *w, Expr *e, int ctx)
 
 static const char *const g_cas_names[] = {"developper(", "factoriser(", "deriver(", "primitive(", "resoudre("};
 
-bool cas_required(const char *text, int len)
+static bool scan_cas(const char *text, int len, bool with_x)
 {
     if (!text)
         return false;
     for (int i = 0; i < len && text[i]; i++)
     {
-        if (text[i] == 'X')
+        if (with_x && text[i] == 'X')
             return true;
         for (unsigned k = 0; k < sizeof(g_cas_names) / sizeof(g_cas_names[0]); k++)
         {
@@ -3185,6 +3182,55 @@ bool cas_required(const char *text, int len)
     return false;
 }
 
+bool cas_required(const char *text, int len)
+{
+    return scan_cas(text, len, true);
+}
+
+bool cas_has_command(const char *text, int len)
+{
+    return scan_cas(text, len, false);
+}
+
+/* Valeur approchee ecrite en decimal : 0.7390851332 */
+static void w_decimal(W *w, double v)
+{
+    char b[40];
+    if (fabs(v) < 1e-12)
+        v = 0;
+    snprintf(b, sizeof(b), "%.10g", v);
+    if (strchr(b, 'e'))
+        snprintf(b, sizeof(b), "%.6f", v);
+    w_str(w, b);
+}
+
+/* Chiffres apres la virgule d'une fraction p/q quand q = 2^a 5^b : max(a, b).
+ * -1 pour toute autre expression. */
+static int dec_digits_of(const Expr *e)
+{
+    if (!is_num(e))
+        return -1;
+    Big d = e->q.d;
+    int a = 0, b = 0;
+    while (!big_is_one(d))
+    {
+        Big q;
+        if (divmod_small(d, 2, &q) == 0)
+        {
+            d = q;
+            a++;
+        }
+        else if (divmod_small(d, 5, &q) == 0)
+        {
+            d = q;
+            b++;
+        }
+        else
+            return -1;
+    }
+    return a > b ? a : b;
+}
+
 static token *g_toks;
 
 static cas_result g_res; /* hors pile : relu apres longjmp */
@@ -3194,6 +3240,7 @@ cas_result cas_eval(const char *text, int len, char *out, int cap)
     cas_result &res = g_res;
     memset(&res, 0, sizeof(res));
     res.approx = NAN;
+    res.dec_digits = -1;
     if (!out || cap < 2)
     {
         res.status = CAS_UNSUPPORTED;
@@ -3230,6 +3277,7 @@ cas_result cas_eval(const char *text, int len, char *out, int cap)
         out[0] = '\0';
         memset(&res, 0, sizeof(res));
         res.approx = NAN;
+        res.dec_digits = -1;
         if (g_err)
         {
             res.status = CAS_ERROR;
@@ -3280,12 +3328,17 @@ cas_result cas_eval(const char *text, int len, char *out, int cap)
                         w_str(&w, sep);
                     }
                     w_str(&w, "X=");
-                    pr(&w, s.v[i], 0);
+                    if (s.approx && !has_sym_i(s.v[i]))
+                        w_decimal(&w, nv(s.v[i], NAN));
+                    else
+                        pr(&w, s.v[i], 0);
                 }
                 if (s.n == 1)
                 {
                     res.numeric = !has_sym_i(s.v[0]);
                     res.approx = nv(s.v[0], NAN);
+                    if (!s.approx)
+                        res.dec_digits = dec_digits_of(s.v[0]);
                 }
             }
         }
@@ -3305,7 +3358,10 @@ cas_result cas_eval(const char *text, int len, char *out, int cap)
             res.numeric = !res.symbolic;
             res.transcendental = has_transc(r);
             if (res.numeric)
+            {
                 res.approx = nv(r, NAN);
+                res.dec_digits = dec_digits_of(r);
+            }
         }
         res.status = CAS_OK;
     }

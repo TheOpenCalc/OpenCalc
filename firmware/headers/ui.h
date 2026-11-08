@@ -135,6 +135,12 @@ HOME,CONST,
     FUNC_PROD,
     FUNC_DERIV,
     FUNC_INTEG,
+    /* Calcul formel (Core/Cas.cpp) */
+    FUNC_EXPAND,
+    FUNC_FACTOR,
+    FUNC_DERIVE,
+    FUNC_PRIMITIVE,
+    FUNC_SOLVE,
 };
 typedef enum
 {
