@@ -156,15 +156,13 @@ static void tbox(int x, int y, int h, int w,
                  uint16_t bg, bool sel, char al, int sz)
 {
     text_box *tb = create_text_box(x, y, h, w, 1, false);
-    free(tb->text);
     tb->col = bg;
     tb->text = (char *)txt;
     tb->t_size = tsz;
     tb->display_text_size = sz;
     tb->allign = al;
     display_text_box(tb, 0, 0, sel);
-    tb->text = nullptr;
-    free(tb);
+    free_text_box(tb);
 }
 
 static int build_unit_str(const char *prefix,
@@ -202,7 +200,7 @@ int Converter()
 
     fill_screen(BACKGROUND_COLOR);
 
-    int key = scan_keypad();
+    int key = scan_keypad_nowait(); // pas bloquant : l'ecran s'affiche tout de suite
 
     while (true)
     {
@@ -302,6 +300,7 @@ int Converter()
             display_fill_box(vbox, 0, cursor == 2, -1, ' ',false);
         }
 
+        flush_display();
         key = scan_keypad();
         while (key == -1)
         {
@@ -365,11 +364,11 @@ int Converter()
             case LEFT:
                 if (cursor == 0)
                 {
-                    sel_from = (sel_from - 1) % cats[sel_cat].count;
+                    sel_from = (sel_from - 1 + cats[sel_cat].count) % cats[sel_cat].count;
                 }
                 else if (cursor == 1)
                 {
-                    sel_to = (sel_to - 1) % cats[sel_cat].count;
+                    sel_to = (sel_to - 1 + cats[sel_cat].count) % cats[sel_cat].count;
                 }
                 break;
 

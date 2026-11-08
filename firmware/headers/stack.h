@@ -1,6 +1,14 @@
 #ifndef STACK_H
 #define STACK_H
 
+struct complex_s
+{
+    double re;
+    double im;
+};
+
+typedef struct complex_s complex;
+
 struct Stack
 {
     char *arr;
@@ -16,6 +24,14 @@ struct Stack_d
 typedef struct Stack stack;
 
 typedef struct Stack_d stack_d;
+
+struct Stack_c
+{
+    complex *arr;
+    int top;
+};
+
+typedef struct Stack_c stack_c;
 
 void init(Stack *stack, int size);
 
@@ -44,5 +60,19 @@ double pop(Stack_d *stack);
 double peek(Stack_d *stack);
 
 void free(Stack_d *stack);
+
+void init(Stack_c *stack, int size);
+
+bool isEmpty(Stack_c *stack);
+
+bool isFull(Stack_c *stack);
+
+void push(Stack_c *stack, complex value);
+
+complex pop(Stack_c *stack);
+
+complex peek(Stack_c *stack);
+
+void free(Stack_c *stack);
 
 #endif

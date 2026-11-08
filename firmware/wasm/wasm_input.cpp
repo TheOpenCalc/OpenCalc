@@ -10,6 +10,11 @@ static int g_key_queue[kQueueSize];
 static int g_key_head = 0;
 static int g_key_tail = 0;
 
+// Simple fixed-size ring buffer for raw text characters.
+static int g_char_queue[kQueueSize];
+static int g_char_head = 0;
+static int g_char_tail = 0;
+
 static bool queue_is_empty()
 {
     return g_key_head == g_key_tail;
@@ -29,6 +34,44 @@ EMSCRIPTEN_KEEPALIVE void opencalc_key_down(int key)
     g_key_queue[g_key_tail] = key;
     g_key_tail = (g_key_tail + 1) % kQueueSize;
 }
+
+EMSCRIPTEN_KEEPALIVE void opencalc_text_char(int c)
+{
+    if (c < 0 || c > 255) {
+        return;
+    }
+    int next = (g_char_tail + 1) % kQueueSize;
+    if (next == g_char_head) {
+        return;
+    }
+    g_char_queue[g_char_tail] = c;
+    g_char_tail = next;
+}
+}
+
+static bool char_queue_is_empty()
+{
+    return g_char_head == g_char_tail;
+}
+
+int scan_text_char()
+{
+    if (char_queue_is_empty()) {
+        return -1;
+    }
+    int c = g_char_queue[g_char_head];
+    g_char_head = (g_char_head + 1) % kQueueSize;
+    return c;
+}
+
+int scan_keypad_nowait()
+{
+    if (queue_is_empty()) {
+        return -1;
+    }
+    int key = g_key_queue[g_key_head];
+    g_key_head = (g_key_head + 1) % kQueueSize;
+    return key;
 }
 
 void init_keypad()

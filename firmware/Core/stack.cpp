@@ -113,3 +113,63 @@ void free(Stack_d *stack)
     free(stack->arr);
     return;
 }
+
+///////////////////////
+
+void init(Stack_c *stack, int size)
+{
+    stack->arr = (complex *)malloc(sizeof(complex) * size);
+    stack->top = -1;
+    for (int i = 0; i < size; i++)
+    {
+        stack->arr[i].re = 0;
+        stack->arr[i].im = 0;
+    }
+}
+
+bool isEmpty(Stack_c *stack)
+{
+    return stack->top == -1;
+}
+
+bool isFull(Stack_c *stack)
+{
+    return false;
+}
+
+void push(Stack_c *stack, complex value)
+{
+    if (isFull(stack))
+    {
+        return;
+    }
+    stack->arr[++stack->top] = value;
+}
+
+complex pop(Stack_c *stack)
+{
+    if (isEmpty(stack))
+    {
+        complex z = {0, 0};
+        return z;
+    }
+    complex popped = stack->arr[stack->top];
+    stack->top = stack->top - 1;
+    return popped;
+}
+
+complex peek(Stack_c *stack)
+{
+    if (isEmpty(stack))
+    {
+        complex z = {0, 0};
+        return z;
+    }
+    return stack->arr[stack->top];
+}
+
+void free(Stack_c *stack)
+{
+    free(stack->arr);
+    return;
+}

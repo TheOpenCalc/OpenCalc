@@ -98,10 +98,57 @@ const uint8_t font5x7[] = {
     0x00, 0x00, 0x7F, 0x00, 0x00, // '|'
     0x00, 0x41, 0x36, 0x08, 0x00, // '}'
     0x10, 0x08, 0x08, 0x10, 0x08,  // '~'
-    0x08, 0x30, 0x40, 0x38, 0x07, // √   65
-    0x10, 0x08, 0x3E, 0x01, 0x02  // ∫   66
-
+    0x08, 0x30, 0x40, 0x38, 0x07, // √   95 (U+221A, aussi l'octet 127)
+    0x10, 0x08, 0x3E, 0x01, 0x02, // ∫   96 (U+222B)
+    0x63, 0x55, 0x49, 0x41, 0x41, // Σ   97 (U+03A3)
+    0x7F, 0x01, 0x01, 0x01, 0x7F, // Π   98 (U+03A0)
+    0x04, 0x7C, 0x04, 0x7C, 0x04, // π   99 (U+03C0)
+    0x3E, 0x49, 0x49, 0x49, 0x3E, // θ   100 (U+03B8)
+    0x38, 0x44, 0x44, 0x3C, 0x04, // σ   101 (U+03C3)
+    0xFC, 0x40, 0x40, 0x20, 0x7C, // μ   102 (U+03BC)
+    0x24, 0x12, 0x12, 0x24, 0x12, // ≈   103 (U+2248)
+    0x40, 0x44, 0x4A, 0x51, 0x40, // ≤   104 (U+2264)
+    0x40, 0x51, 0x4A, 0x44, 0x40, // ≥   105 (U+2265)
+    0x14, 0x34, 0x1C, 0x16, 0x14, // ≠   106 (U+2260)
+    0x06, 0x09, 0x09, 0x06, 0x00, // °   107 (U+00B0)
+    0x00, 0x09, 0x0D, 0x0A, 0x00, // ²   108 (U+00B2)
+    0x22, 0x14, 0x08, 0x14, 0x22, // ×   109 (U+00D7)
+    0x08, 0x08, 0x2A, 0x08, 0x08, // ÷   110 (U+00F7)
+    0x08, 0x08, 0x2A, 0x1C, 0x08, // →   111 (U+2192)
+    0x1C, 0x14, 0x08, 0x14, 0x1C, // ∞   112 (U+221E)
+    0x38, 0x54, 0x56, 0x55, 0x18, // é   113 (U+00E9)
+    0x38, 0x55, 0x56, 0x54, 0x18, // è   114 (U+00E8)
+    0x38, 0x56, 0x55, 0x56, 0x18, // ê   115 (U+00EA)
+    0x38, 0x55, 0x54, 0x55, 0x18, // ë   116 (U+00EB)
+    0x20, 0x55, 0x56, 0x54, 0x78, // à   117 (U+00E0)
+    0x20, 0x56, 0x55, 0x56, 0x78, // â   118 (U+00E2)
+    0x38, 0x44, 0xC4, 0x44, 0x20, // ç   119 (U+00E7)
+    0x3C, 0x41, 0x42, 0x20, 0x7C, // ù   120 (U+00F9)
+    0x3C, 0x42, 0x41, 0x22, 0x7C, // û   121 (U+00FB)
+    0x38, 0x46, 0x45, 0x46, 0x38, // ô   122 (U+00F4)
+    0x00, 0x46, 0x7D, 0x42, 0x00, // î   123 (U+00EE)
+    0x00, 0x45, 0x7C, 0x41, 0x00, // ï   124 (U+00EF)
+    0x7C, 0x54, 0x56, 0x55, 0x44 // É   125 (U+00C9)
 };
+
+/* Glyphes hors ASCII : point de code Unicode -> indice dans font5x7.
+ * draw_char lit le texte en UTF-8 ("Dérivée", "Σ", "≤"...). Un caractère
+ * absent de la table s'affiche '?'. */
+struct font_extra_s
+{
+    uint16_t cp;
+    uint8_t index;
+};
+const font_extra_s font_extra[] = {
+    {0x221A, 95}, {0x222B, 96},
+    {0x03A3, 97}, {0x03A0, 98}, {0x03C0, 99}, {0x03B8, 100}, {0x03C3, 101}, {0x03BC, 102},
+    {0x2248, 103}, {0x2264, 104}, {0x2265, 105}, {0x2260, 106}, {0x00B0, 107}, {0x00B2, 108},
+    {0x00D7, 109}, {0x00F7, 110}, {0x2192, 111}, {0x221E, 112}, {0x00E9, 113}, {0x00E8, 114},
+    {0x00EA, 115}, {0x00EB, 116}, {0x00E0, 117}, {0x00E2, 118}, {0x00E7, 119}, {0x00F9, 120},
+    {0x00FB, 121}, {0x00F4, 122}, {0x00EE, 123}, {0x00EF, 124}, {0x00C9, 125},
+};
+const int FONT_EXTRA_COUNT = (int)(sizeof(font_extra) / sizeof(font_extra[0]));
+
 
 #define PIN_CS 17
 #define PIN_DC 16
@@ -111,6 +158,16 @@ const uint8_t font5x7[] = {
 
 const int SCREEN_HEIGHT = 240;
 const int SCREEN_WIDTH = 320;
+
+/* Badge "unité d'angle" (DEG/RAD) affiché en haut à gauche sur toutes les apps.
+ * Convention de coordonnées (même que fill_rect / draw_char) :
+ *   - x = ligne verticale (bornée à SCREEN_HEIGHT=240, grand = haut)
+ *   - y = colonne horizontale (bornée à SCREEN_WIDTH=320, petit = gauche)
+ * Le badge est un rectangle de fond (H x W) + un texte de 3 caractères. */
+#define ANGLE_LBL_X0 (SCREEN_HEIGHT - 10)
+#define ANGLE_LBL_Y0 2
+#define ANGLE_LBL_H 10
+#define ANGLE_LBL_W 19
 
 void ili_cmd(uint8_t cmd);
 
@@ -125,9 +182,16 @@ void fill_screen(uint16_t color);
 void fill_rect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color);
 
 void draw_char(uint16_t x, uint16_t y, char *c, uint16_t color, uint16_t bg, uint8_t size);
+/* Nombre de caracteres affiches par draw_char pour les nbytes premiers octets
+ * de s (texte UTF-8 : un caractere accentue compte pour un). */
+int utf8_glyph_count(const char *s, int nbytes);
 
 void draw_image(int x, int y, int h, int w, uint16_t *img, uint16_t bck);
 
 void display_battery(uint16_t x, uint16_t y, int level);
+
+void flush_display();
+
+void blit_buffer(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const uint16_t *buffer);
 
 #endif DISPLAY_H
