@@ -1,0 +1,274 @@
+:root {
+  --plastic: #5B5462;
+  --key: #5B5462;
+  --key-fn: #80768A;
+  --key-text: #fafafa;
+  --shadow: 0 24px 50px rgba(16, 12, 8, 0.35);
+
+  /* Largeur de la calculatrice : 520 px au maximum, reduite pour tenir dans
+   * la largeur ET la hauteur de la fenetre (la calculatrice fait ~2,08 fois
+   * sa largeur en hauteur ; 96 px = bandeau du site + marges). */
+  --dw: min(520px, calc(100vw - 24px), calc((100vh - 96px) / 2.08));
+}
+
+@supports (height: 100dvh) {
+  :root {
+    --dw: min(520px, calc(100vw - 24px), calc((100dvh - 96px) / 2.08));
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.sim-root {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+}
+
+.device {
+  /* Plancher pour rester utilisable sur de tres petites fenetres. */
+  --dw-eff: max(var(--dw), 300px);
+  /* Toutes les dimensions sont des multiples de --u (1 px a 380 px de large). */
+  --u: calc(var(--dw-eff) / 380);
+  --key-size: calc(var(--u) * 56);
+  --key-gap: calc(var(--u) * 9);
+  --fn-key-size: calc(var(--u) * 44);
+  --fn-gap: calc(var(--u) * 8);
+  --dpad-size: calc(var(--u) * 128);
+
+  width: var(--dw-eff);
+  background: linear-gradient(160deg, #5B5462, var(--plastic));
+  border-radius: calc(var(--u) * 28);
+  padding: calc(var(--u) * 24) calc(var(--u) * 20) calc(var(--u) * 28);
+  box-shadow:
+    var(--shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 16);
+  position: relative;
+}
+
+.device::after {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border-radius: calc(var(--u) * 22);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.04);
+  pointer-events: none;
+}
+
+/* Screen section */
+.screen-shell {
+  width: 100%;
+  background: #5B5462;
+  border-radius: calc(var(--u) * 12);
+  padding: calc(var(--u) * 10);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.18),
+    inset 0 -2px 3px rgba(64, 59, 70, 0.7),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.10);
+}
+
+/* Le canvas occupe toute la largeur en 4:3. Sa resolution interne est un
+ * multiple entier de 320x240 (voir App.jsx) : le navigateur ne fait que
+ * reduire l'image, sans sauter ni doubler de lignes de pixels. */
+.screen-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  background: #f0f0e8;
+  border-radius: calc(var(--u) * 6);
+}
+
+/* Control section with function keys and dpad */
+.control-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--u) * 12);
+  padding: 0 calc(var(--u) * 8);
+}
+
+.function-area {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fn-gap);
+}
+
+.function-row {
+  display: flex;
+  gap: var(--fn-gap);
+}
+
+/* D-pad - 5 touches carrées */
+.dpad {
+  position: relative;
+  width: var(--dpad-size);
+  height: var(--dpad-size);
+  flex-shrink: 0;
+}
+
+.dpad-key {
+  position: absolute;
+  width: 28%;
+  height: 28%;
+  border: none;
+  border-radius: calc(var(--u) * 6);
+  cursor: pointer;
+  background: #675e70;
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.15);
+  transition: filter 0.1s ease;
+  color: var(--key-text);
+  font-size: calc(var(--u) * 15);
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  touch-action: manipulation;
+}
+
+.dpad-key:active {
+  filter: brightness(0.9);
+}
+
+.dpad-up {
+  left: 36%;
+  top: 0;
+}
+
+.dpad-down {
+  left: 36%;
+  bottom: 0;
+}
+
+.dpad-left {
+  left: 0;
+  top: 36%;
+}
+
+.dpad-right {
+  right: 0;
+  top: 36%;
+}
+
+.dpad-center {
+  position: absolute;
+  width: 28%;
+  height: 28%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: calc(var(--u) * 6);
+  background: #80768A;
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* Main button grid */
+.main-grid {
+  display: grid;
+  grid-template-columns: repeat(5, var(--key-size));
+  gap: var(--key-gap);
+  justify-content: center;
+  padding-top: calc(var(--u) * 6);
+}
+
+/* Key styles */
+.key {
+  appearance: none;
+  border: none;
+  border-radius: calc(var(--u) * 8);
+  background: var(--key);
+  color: var(--key-text);
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  font-weight: 600;
+  font-size: calc(var(--u) * 16);
+  letter-spacing: 0.01em;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+  width: var(--key-size);
+  height: calc(var(--key-size) * 0.8);
+  padding: 0;
+  box-shadow:
+    inset 0 -2px 0 rgba(0, 0, 0, 0.15),
+    0 4px 8px rgba(5, 5, 5, 0.3);
+  cursor: pointer;
+  transition: transform 0.08s ease, box-shadow 0.12s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+}
+
+.key-small {
+  font-size: calc(var(--u) * 13);
+  width: var(--fn-key-size);
+  height: calc(var(--fn-key-size) * 0.8);
+  border-radius: calc(var(--u) * 6);
+}
+
+.key-fn {
+  background: var(--key-fn);
+}
+
+.key-ok {
+  background: #5B5462;
+  font-weight: 700;
+  font-size: calc(var(--u) * 17);
+}
+
+/* Symboles d'une seule glyphe (÷ × − + ^ √ ← π ( )) */
+.key-sym {
+  font-size: calc(var(--u) * 21);
+  font-weight: 500;
+}
+
+/* Label 2nd (lettre) en haut à gauche */
+.key-second {
+  position: absolute;
+  top: calc(var(--u) * 3);
+  left: calc(var(--u) * 5);
+  font-size: calc(var(--u) * 10);
+  font-weight: 700;
+  line-height: 1;
+  color: #d4cce6;
+  text-shadow: none;
+  pointer-events: none;
+  transition: color 0.15s;
+}
+
+.key-second.active {
+  color: #ffe066;
+}
+
+.key:active {
+  transform: translateY(3px);
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.06);
+}
+
+/* Status indicator */
+.status-chip {
+  position: absolute;
+  right: 20px;
+  bottom: 16px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #121212;
+  color: #2a2219;
+  font-weight: 600;
+  font-size: 11px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  opacity: 0;
+}
