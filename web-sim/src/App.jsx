@@ -143,22 +143,22 @@ const MAIN_KEYS = [
     { label: 'COS', code: KEY_CODES.COS,    second: 'A' },  // acos → var A
     { label: 'SIN', code: KEY_CODES.SIN,    second: 'B' },  // asin → var B
     { label: 'TAN', code: KEY_CODES.TAN,    second: 'C' },  // atan → var C
-    { label: '/',   code: KEY_CODES.DIVIDE, second: 'O' },  // var O
+    { label: '÷',   code: KEY_CODES.DIVIDE, second: 'O' },  // var O
     { label: '√',   code: KEY_CODES.SQRT,   second: 'D' },  // var D
   ],
   [
     { label: '7', code: KEY_CODES.SEVEN, second: 'F' },
     { label: '8', code: KEY_CODES.EIGHT, second: 'G' },
     { label: '9', code: KEY_CODES.NINE,  second: 'H' },
-    { label: '*', code: KEY_CODES.TIMES, second: 'T' },
+    { label: '×', code: KEY_CODES.TIMES, second: 'T' },
     { label: '^', code: KEY_CODES.POW,   second: 'E' },  // var E
   ],
   [
     { label: '4',  code: KEY_CODES.FOUR,  second: 'K' },
     { label: '5',  code: KEY_CODES.FIVE,  second: 'L' },
     { label: '6',  code: KEY_CODES.SIX,   second: 'M' },
-    { label: '-',  code: KEY_CODES.MINUS, second: 'N' },
-    { label: 'Pi', code: KEY_CODES.PI,    second: 'W' },  // var W
+    { label: '−',  code: KEY_CODES.MINUS, second: 'N' },
+    { label: 'π',  code: KEY_CODES.PI,    second: 'W' },  // var W
   ],
   [
     { label: '1',   code: KEY_CODES.ONE,  second: 'P' },
@@ -176,6 +176,9 @@ const MAIN_KEYS = [
   ]
 ];
 
+const FB_W = 320;
+const FB_H = 240;
+
 export default function App() {
   const canvasRef = useRef(null);
   const moduleRef = useRef(null);
@@ -185,6 +188,59 @@ export default function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [snd, setSnd] = useState(false);
   const logoRef = useRef(null);
+  // Image 320x240 de l'ecran, agrandie ensuite dans le canvas visible.
+  const offRef = useRef(null);
+  if (!offRef.current && typeof document !== 'undefined') {
+    const off = document.createElement('canvas');
+    off.width = FB_W;
+    off.height = FB_H;
+    offRef.current = off;
+  }
+
+  // Copie l'image 320x240 dans le canvas visible. Sa resolution interne est
+  // un multiple entier de 320x240 >= sa taille affichee : l'agrandissement
+  // (pixels nets) est exact et le navigateur ne fait que reduire en lissant,
+  // donc aucune ligne de pixels n'est sautee ou doublee.
+  const presentTo = (canvas) => {
+    if (!canvas) return;
+    const dpr = window.devicePixelRatio || 1;
+    const shown = canvas.clientWidth || FB_W;
+    const n = Math.max(1, Math.ceil((shown * dpr) / FB_W));
+    if (canvas.width !== FB_W * n) {
+      canvas.width = FB_W * n;
+      canvas.height = FB_H * n;
+    }
+    const ctx = canvas.getContext('2d', { alpha: false });
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(offRef.current, 0, 0, canvas.width, canvas.height);
+  };
+
+  // Ecran de l'emulateur + copie agrandie a cote (canvas #bigScreen de index.html).
+  const present = () => {
+    presentTo(canvasRef.current);
+    presentTo(document.getElementById('bigScreen'));
+  };
+
+  const drawSplash = () => {
+    const logo = logoRef.current;
+    if (!logo) return;
+    const ctx = offRef.current.getContext('2d', { alpha: false });
+    ctx.fillStyle = '#f0f0e8';
+    ctx.fillRect(0, 0, FB_W, FB_H);
+    ctx.drawImage(logo, (FB_W - logo.width) / 2, (FB_H - logo.height) / 2);
+    present();
+  };
+
+  // Redessine quand la taille d'affichage change (fenetre, zoom...).
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(() => present());
+    ro.observe(canvas);
+    const big = document.getElementById('bigScreen');
+    if (big) ro.observe(big);
+    return () => ro.disconnect();
+  }, []);
 
   // Load the logo image
   useEffect(() => {
@@ -192,34 +248,12 @@ export default function App() {
     logo.src = '/logo.png';
     logo.onload = () => {
       logoRef.current = logo;
-      const canvas = canvasRef.current;
-      if (canvas && showSplash) {
-        canvas.width = 320;
-        canvas.height = 240;
-        const ctx = canvas.getContext('2d', { alpha: false });
-        ctx.fillStyle = '#121212';
-        ctx.fillRect(0, 0, 320, 240);
-        const x = (320 - logo.width) / 2;
-        const y = (240 - logo.height) / 2;
-        ctx.drawImage(logo, x, y);
-      }
+      if (showSplash) drawSplash();
     };
   }, []);
 
   useEffect(() => {
-    if (showSplash && logoRef.current) {
-      const canvas = canvasRef.current;
-      if (canvas) {
-        canvas.width = 320;
-        canvas.height = 240;
-        const ctx = canvas.getContext('2d', { alpha: false });
-        ctx.fillStyle = '#f0f0e8';
-        ctx.fillRect(0, 0, 320, 240);
-        const x = (320 - logoRef.current.width) / 2;
-        const y = (240 - logoRef.current.height) / 2;
-        ctx.drawImage(logoRef.current, x, y);
-      }
-    }
+    if (showSplash) drawSplash();
   }, [showSplash]);
 
   useEffect(() => {
@@ -241,14 +275,8 @@ export default function App() {
 
       framePtrRef.current = ptr;
 
-      const canvas = canvasRef.current;
-      canvas.width = width;
-      canvas.height = height;
-
-      const ctx = canvas.getContext('2d', { alpha: false });
-      ctx.imageSmoothingEnabled = false;
-
-      const imageData = ctx.createImageData(width, height);
+      const offCtx = offRef.current.getContext('2d', { alpha: false });
+      const imageData = offCtx.createImageData(width, height);
 
       setStatus('Pret');
 
@@ -276,7 +304,8 @@ export default function App() {
           data[idx + 3] = 255;
         }
 
-        ctx.putImageData(imageData, 0, 0);
+        offCtx.putImageData(imageData, 0, 0);
+        present();
         rafRef.current = requestAnimationFrame(render);
       };
 
@@ -335,7 +364,7 @@ export default function App() {
   const renderKey = (key, index, extraClass = '') => (
     <button
       key={`${key.label || 'blank'}-${index}`}
-      className={`key ${key.variant ? `key-${key.variant}` : ''} ${extraClass}`.trim()}
+      className={`key ${key.variant ? `key-${key.variant}` : ''} ${/^[^\w]$/.test(key.label) ? 'key-sym' : ''} ${extraClass}`.replace(/\s+/g, ' ').trim()}
       style={{ position: 'relative' }}
       onPointerDown={() => {
         if (key.code !== null) {
@@ -346,19 +375,7 @@ export default function App() {
     >
       {/* Label 2nd en haut à gauche */}
       {key.second && (
-        <span style={{
-          position: 'absolute',
-          top: '3px',
-          left: '4px',
-          fontSize: '8px',
-          fontWeight: '700',
-          lineHeight: 1,
-          color: snd ? '#ffe066' : '#a89fc0',
-          opacity: snd ? 1 : 0.75,
-          transition: 'color 0.15s, opacity 0.15s',
-          pointerEvents: 'none',
-          letterSpacing: '0.2px',
-        }}>
+        <span className={`key-second${snd ? ' active' : ''}`}>
           {key.second}
         </span>
       )}
@@ -405,10 +422,10 @@ export default function App() {
             </div>
           </div>
           <div className="dpad">
-            <button className="dpad-key dpad-up" onPointerDown={() => sendKey(KEY_CODES.UP)} type="button" />
-            <button className="dpad-key dpad-down" onPointerDown={() => sendKey(KEY_CODES.DOWN)} type="button" />
-            <button className="dpad-key dpad-left" onPointerDown={() => sendKey(KEY_CODES.LEFT)} type="button" />
-            <button className="dpad-key dpad-right" onPointerDown={() => sendKey(KEY_CODES.RIGHT)} type="button" />
+            <button className="dpad-key dpad-up" onPointerDown={() => sendKey(KEY_CODES.UP)} type="button" aria-label="up">▲</button>
+            <button className="dpad-key dpad-down" onPointerDown={() => sendKey(KEY_CODES.DOWN)} type="button" aria-label="down">▼</button>
+            <button className="dpad-key dpad-left" onPointerDown={() => sendKey(KEY_CODES.LEFT)} type="button" aria-label="left">◀</button>
+            <button className="dpad-key dpad-right" onPointerDown={() => sendKey(KEY_CODES.RIGHT)} type="button" aria-label="right">▶</button>
             <div className="dpad-center" />
           </div>
         </div>
