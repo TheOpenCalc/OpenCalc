@@ -82,6 +82,24 @@
       td { color: var(--text); }
       #root { background: var(--bg); }
 
+      /* ── Ecran agrandi (copie en direct de l'ecran de l'emulateur) ── */
+      .big-screen-shell {
+        width: 80%;
+        margin: 24px auto 0;
+        background: #5B5462;
+        border-radius: 18px;
+        padding: 14px;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,.18), 0 10px 30px rgba(0,0,0,.15);
+      }
+      .big-screen {
+        display: block;
+        width: 100%;
+        height: auto;
+        aspect-ratio: 4 / 3;
+        background: #f0f0e8;
+        border-radius: 8px;
+      }
+
       /* ── Emulator headings ── */
       .emu-heading { color: var(--text); }
       .emu-sub     { color: var(--text-muted); }
@@ -131,6 +149,24 @@
         color: var(--text);
         text-decoration: none;
         transition: border-color .2s, box-shadow .2s, transform .2s;
+      }
+      .capture-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 14px auto 0;
+        padding: 10px 18px;
+        border-radius: 10px;
+        border: 2px solid var(--border);
+        background: var(--banner-bg);
+        color: var(--text);
+        font-weight: 700;
+        cursor: pointer;
+        transition: border-color .2s, box-shadow .2s;
+      }
+      .capture-btn:hover {
+        border-color: var(--blue);
+        box-shadow: 0 0 0 4px rgba(59,130,246,.15);
       }
       .github-banner:hover {
         border-color: var(--blue);
@@ -229,15 +265,15 @@
 
     <table style="width:100%;">
       <tr style="width:100%">
-        <td style="width:50%">
+        <td style="width:50%; vertical-align:top;">
           <div id="root">
             <script type="module" src="/src/main.jsx"></script>
           </div>
         </td>
-        <td>
-          <div style="margin-bottom:70%; padding: 0 24px;">
+        <td style="vertical-align:top;">
+          <div style="padding: 8px 24px 40px;">
             <h2 class="emu-heading" style="font-size:240%; font-weight:bold; text-align:center;">
-              Emulateur en beta v0.9.6
+              Emulateur en beta v0.9.7
             </h2>
             <p class="emu-sub" style="font-size:80%; text-align:center;">
               N'hésitez pas à tester et à nous faire des retours via le discord ou instagram&nbsp;!
@@ -265,6 +301,16 @@
                 <polyline points="12 5 19 12 12 19"/>
               </svg>
             </a>
+            <div class="big-screen-shell">
+              <canvas id="bigScreen" class="big-screen" aria-label="Écran de la calculatrice agrandi"></canvas>
+            </div>
+            <button id="captureBtn" class="capture-btn" type="button">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                <circle cx="12" cy="13" r="4"/>
+              </svg>
+              Capture d'écran
+            </button>
           </div>
         </td>
       </tr>
@@ -275,6 +321,23 @@
       const btn  = document.getElementById("menuBtn");
       const menu = document.getElementById("mobileMenu");
       btn.addEventListener("click", () => menu.classList.toggle("hidden"));
+
+      /* ── Capture d'ecran : telecharge le contenu du grand ecran en PNG ── */
+      document.getElementById("captureBtn").addEventListener("click", () => {
+        const canvas = document.getElementById("bigScreen");
+        const d = new Date();
+        const pad = (n) => String(n).padStart(2, "0");
+        const name = `opencalc-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.png`;
+        canvas.toBlob((blob) => {
+          if (!blob) return;
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = name;
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }, "image/png");
+      });
 
       /* ── Theme toggle ── */
       const html        = document.documentElement;
