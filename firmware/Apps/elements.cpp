@@ -328,12 +328,26 @@ static int scroll_for(int first, int C)
     return first;
 }
 
+/* Zones de texte de l'ecran, gardees ici pour pouvoir les rendre meme apres
+ * une sortie par HOME (voir elements_release). */
+static text_box *s_cell = nullptr;
+static text_box *s_panel = nullptr;
+
+void elements_release()
+{
+    free_text_box(s_cell);
+    free_text_box(s_panel);
+    s_cell = nullptr;
+    s_panel = nullptr;
+}
+
 void display_table()
 {
     build_map();
 
-    text_box *cell = create_text_box(0, 0, 30, 30, 0, false);
-    text_box *panel = create_text_box(72, 134, 93, 124, 2, true);
+    elements_release(); /* au cas ou une sortie precedente n'aurait rien rendu */
+    text_box *cell = s_cell = create_text_box(0, 0, 30, 30, 0, false);
+    text_box *panel = s_panel = create_text_box(72, 134, 93, 124, 2, true);
 
     int C = zcol[1], L = zrow[1]; /* on demarre sur l'hydrogene */
     int first_col = scroll_for(0, C);
@@ -372,8 +386,7 @@ void display_table()
                 detail = false;
                 break;
             }
-            free_text_box(cell);
-            free_text_box(panel);
+            elements_release();
             return;
         case OK:
         case ENTER:

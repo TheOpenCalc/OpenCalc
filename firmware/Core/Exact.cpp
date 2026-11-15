@@ -1,5 +1,6 @@
 /* Ecriture exacte des resultats. Voir headers/Exact.h. */
 #include "Exact.h"
+#include <float.h>
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -10,6 +11,8 @@
 #define PI_MAX_DEN 360
 #define SQ_MAX_DEN 1000
 #define MAX_NUM 1e9
+/* Ecart maximal entre v et p/q, en unites de 1/q^2 (voir to_fraction). */
+#define FRAC_COINCIDENCE 1e-6
 
 static long long gcdll(long long a, long long b)
 {
@@ -53,7 +56,16 @@ static bool to_fraction(double v, long long max_den, long long *p, long long *q)
         h1 = h2;
         k0 = k1;
         k1 = k2;
-        if (close_to((double)h1 / (double)k1, fabs(v)))
+        /* Tout reel est a moins de 1/q^2 d'une fraction de denominateur q :
+         * avec la seule tolerance relative, un grand irrationnel trouvait
+         * toujours sa fraction (e^(12) = 246573509/1515). On exige un ecart
+         * tres inferieur a 1/q^2, ce qu'un irrationnel n'atteint presque
+         * jamais. Quand cette limite passe sous l'arrondi de v (v grand et q
+         * grand), on ne peut plus rien verifier : pas de fraction. */
+        double q2 = (double)k1 * (double)k1;
+        double err = fabs((double)h1 / (double)k1 - fabs(v));
+        if (close_to((double)h1 / (double)k1, fabs(v)) && err * q2 <= FRAC_COINCIDENCE &&
+            4 * DBL_EPSILON * fabs(v) * q2 <= FRAC_COINCIDENCE)
         {
             *p = v < 0 ? -h1 : h1;
             *q = k1;

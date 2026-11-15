@@ -8,4 +8,7 @@ void python_files_save(void);
 void python_files_load(void);
 void python_files_erase(void);
 
+/* Rend la memoire des programmes (apres une sortie par HOME). */
+void python_app_release(void);
+
 #endif

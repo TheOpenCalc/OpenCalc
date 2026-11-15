@@ -988,17 +988,20 @@ static void field_set(fill_box *b, double v)
     b->curso_pos = n;
 }
 
-// Formulaire Xmin / Xmax / Ymin / Ymax / Pas. true si valide par OK.
-static bool window_menu(win_t *w)
+/* Formulaire de n champs numeriques (n <= 5) : vals sert de valeurs
+ * initiales et recoit le resultat. check() renvoie un message d'erreur, ou
+ * NULL si les valeurs conviennent. true si valide par OK. */
+typedef const char *(*form_check_t)(const double *v);
+
+static bool form_menu(const char *title, const char *const *labels, double *vals, int n,
+                      const char *hint, form_check_t check)
 {
-    static const char *labels[5] = {"Xmin", "Xmax", "Ymin", "Ymax", "Pas"};
-    double init[5] = {w->x_min, w->x_max, w->y_min, w->y_max, w->step};
     fill_box *b[5];
-    for (int i = 0; i < 5; i++)
+    for (int i = 0; i < n; i++)
     {
         b[i] = create_fill_box(70, 0, 34, 250, 2);
         b[i]->color = FRONTGROUND_COLOR;
-        field_set(b[i], init[i]);
+        field_set(b[i], vals[i]);
     }
 
     int sel = 0;
@@ -1008,16 +1011,15 @@ static bool window_menu(win_t *w)
     while (true)
     {
         fill_screen(BACKGROUND_COLOR);
-        draw_char(236, 100, (char *)"Fenetre", 0x0000, BACKGROUND_COLOR, 2);
-        for (int i = 0; i < 5; i++)
+        draw_char(236, 100, (char *)title, 0x0000, BACKGROUND_COLOR, 2);
+        for (int i = 0; i < n; i++)
         {
             int v = 185 - i * 38;
             display_fill_box(b[i], v, i == sel, -1, ' ', false);
             draw_char(v + 25, 6, (char *)labels[i], 0x0000, BACKGROUND_COLOR, 2);
         }
         draw_char(28, 10, err, 0xF800, BACKGROUND_COLOR, 1);
-        draw_char(14, 10, (char *)"OK=valider  BACK=effacer/quitter  Pas 0=auto",
-                  0x0000, BACKGROUND_COLOR, 1);
+        draw_char(14, 10, (char *)hint, 0x0000, BACKGROUND_COLOR, 1);
         flush_display();
 
         int key = scan_keypad();
@@ -1031,7 +1033,7 @@ static bool window_menu(win_t *w)
         if (key == UP)
             sel = max(0, sel - 1);
         else if (key == DOWN)
-            sel = min(4, sel + 1);
+            sel = min(n - 1, sel + 1);
         else if (key == LEFT)
             fill_box_left(b[sel]);
         else if (key == RIGHT)
@@ -1049,23 +1051,15 @@ static bool window_menu(win_t *w)
         {
             double v[5];
             bool ok = true;
-            for (int i = 0; i < 5 && ok; i++)
+            for (int i = 0; i < n && ok; i++)
                 ok = field_value(b[i], &v[i]);
-            if (!ok)
-                snprintf(err, sizeof(err), "Valeur invalide");
-            else if (!(v[0] < v[1]))
-                snprintf(err, sizeof(err), "Il faut Xmin < Xmax");
-            else if (!(v[2] < v[3]))
-                snprintf(err, sizeof(err), "Il faut Ymin < Ymax");
-            else if (v[4] < 0)
-                snprintf(err, sizeof(err), "Pas >= 0");
+            const char *e = ok ? check(v) : "Valeur invalide";
+            if (e)
+                snprintf(err, sizeof(err), "%s", e);
             else
             {
-                w->x_min = v[0];
-                w->x_max = v[1];
-                w->y_min = v[2];
-                w->y_max = v[3];
-                w->step = v[4];
+                for (int i = 0; i < n; i++)
+                    vals[i] = v[i];
                 done = true;
                 break;
             }
@@ -1077,7 +1071,7 @@ static bool window_menu(win_t *w)
         }
     }
 
-    for (int i = 0; i < 5; i++)
+    for (int i = 0; i < n; i++)
     {
         free(b[i]->text);
         free(b[i]);
@@ -1085,37 +1079,41 @@ static bool window_menu(win_t *w)
     return done;
 }
 
-// Menu TOOLS du graphe. true si la fenetre a change.
-static bool window_tools(win_t *w, fill_box **arr)
+static const char *check_window(const double *v)
 {
-    const char *labels[4] = {"Fenetre", "ZStandard", "ZTrig", "ZoomFit"};
-    fill_screen(BACKGROUND_COLOR);
-    int c = small_menu(labels, 4);
-    fill_screen(BACKGROUND_COLOR);
-    switch (c)
-    {
-    case 0:
-        return window_menu(w);
-    case 1:
-        zoom_standard(w);
-        return true;
-    case 2:
-        zoom_trig(w);
-        return true;
-    case 3:
-        return zoom_fit(w, arr);
-    default:
+    if (!(v[0] < v[1]))
+        return "Il faut Xmin < Xmax";
+    if (!(v[2] < v[3]))
+        return "Il faut Ymin < Ymax";
+    if (v[4] < 0)
+        return "Pas >= 0";
+    return NULL;
+}
+
+// Formulaire Xmin / Xmax / Ymin / Ymax / Pas. true si valide par OK.
+static bool window_menu(win_t *w)
+{
+    static const char *const labels[5] = {"Xmin", "Xmax", "Ymin", "Ymax", "Pas"};
+    double v[5] = {w->x_min, w->x_max, w->y_min, w->y_max, w->step};
+    if (!form_menu("Fenetre", labels, v, 5, "OK=valider  BACK=effacer/quitter  Pas 0=auto", check_window))
         return false;
-    }
+    w->x_min = v[0];
+    w->x_max = v[1];
+    w->y_min = v[2];
+    w->y_max = v[3];
+    w->step = v[4];
+    return true;
 }
 
 /* ============ Types de courbes (polaire, parametrique) =================
- * Chaque ligne de fonction a un type. La variable se tape avec la touche X :
+ * Chaque ligne de fonction a un type :
  *   cartesienne   y = f(X)
- *   polaire       r = f(X), X etant l'angle theta
- *   parametrique  z = x(X) + i*y(X) : partie reelle = abscisse, partie
- *                 imaginaire = ordonnee (on reutilise le moteur complexe).
- * Le parametre parcourt [0 ; 2pi] (ou [0 ; 360] en degres). */
+ *   polaire       r = f(T), T etant l'angle theta
+ *   parametrique  deux champs, x(T) et y(T) ; x(T) est dans arr_fill_box[i],
+ *                 y(T) dans s_fn_y[i].
+ * Dans les courbes polaires et parametriques, la touche X tape la variable
+ * T (convertie au changement de type). T parcourt [Tmin ; Tmax], reglable
+ * dans TOOLS ; par defaut [0 ; 2pi] (ou [0 ; 360] en degres). */
 enum
 {
     FT_CART = 0,
@@ -1123,43 +1121,155 @@ enum
     FT_PARAM
 };
 static int s_fn_type[100];
+static fill_box *s_fn_y[100]; // champ y(t) des courbes parametriques
+static bool s_sel_y = false;  // ecran Fonctions : le champ y(t) a le focus
+
+static bool s_t_custom = false; // false = intervalle par defaut (suit le mode d'angle)
+static double s_t_min = 0, s_t_max = 0;
+static double s_t_step = 0; // 0 = auto (720 points)
+static double s_t_cur = 0;  // position du curseur sur une courbe en t
 
 static void param_range(double *t0, double *t1)
 {
+    if (s_t_custom)
+    {
+        *t0 = s_t_min;
+        *t1 = s_t_max;
+        return;
+    }
     *t0 = 0;
     *t1 = g_angle_mode == 1 ? 360.0 : 2 * M_PI;
 }
 
-static void graph_curve(fill_box *b, int type, double x_min, double x_max, double y_min, double y_max,
-                        uint16_t color)
+/* Pas du parcours en t : celui de l'utilisateur, sinon 720 points. */
+static double param_step(void)
 {
-    int n = 0;
-    token *t = parse_string_to_token(b->text, b->t_size, &n);
-    token *o = shunting_yard(t, n);
-    int y = count_yarded(t, n);
     double t0, t1;
     param_range(&t0, &t1);
-    const int N = 720;
+    if (s_t_step > 0 && (t1 - t0) / s_t_step <= 4000)
+        return s_t_step;
+    return (t1 - t0) / 720;
+}
+
+/* Remplace la variable 'from' par 'to' dans un champ (X <-> T). */
+static void retarget_var(fill_box *b, char from, char to)
+{
+    if (!b)
+        return;
+    for (int k = 0; k < b->t_size; k++)
+        if (b->text[k] == from)
+            b->text[k] = to;
+}
+
+/* Champ d'une ligne : x(t) (ou f, r) si sub = 0, y(t) si sub = 1. */
+static fill_box *fn_field(fill_box **arr, int i, bool sub)
+{
+    if (i < 0 || i >= 100)
+        return nullptr;
+    return (sub && s_fn_type[i] == FT_PARAM) ? s_fn_y[i] : arr[i];
+}
+
+/* Vrai si la ligne i a de quoi etre tracee. */
+static bool fn_drawable(fill_box **arr, int i)
+{
+    if (i < 0 || i >= 100 || !arr[i] || arr[i]->t_size == 0)
+        return false;
+    return s_fn_type[i] != FT_PARAM || (s_fn_y[i] && s_fn_y[i]->t_size > 0);
+}
+
+/* Expression compilee une fois, evaluee pour beaucoup de valeurs de t. */
+typedef struct
+{
+    token *raw, *rpn;
+    int n, ny;
+} expr_t;
+
+static void expr_build(fill_box *b, expr_t *e)
+{
+    e->n = 0;
+    e->raw = parse_string_to_token(b->text, b->t_size, &e->n);
+    e->rpn = shunting_yard(e->raw, e->n);
+    e->ny = count_yarded(e->raw, e->n);
+}
+
+static void expr_free(expr_t *e)
+{
+    token_free_matrices(e->raw, e->n);
+    free(e->raw);
+    free(e->rpn);
+}
+
+/* Courbe polaire ou parametrique prete a etre evaluee. */
+typedef struct
+{
+    int type;
+    expr_t a, b; // a : r(t) ou x(t) ; b : y(t)
+} curve_t;
+
+static bool curve_build(fill_box **arr, int i, curve_t *c)
+{
+    if (!fn_drawable(arr, i) || s_fn_type[i] == FT_CART)
+        return false;
+    c->type = s_fn_type[i];
+    expr_build(arr[i], &c->a);
+    if (c->type == FT_PARAM)
+        expr_build(s_fn_y[i], &c->b);
+    return true;
+}
+
+static void curve_free(curve_t *c)
+{
+    expr_free(&c->a);
+    if (c->type == FT_PARAM)
+        expr_free(&c->b);
+}
+
+/* Point (X, Y) de la courbe pour le parametre t. false hors domaine. */
+static bool curve_point(curve_t *c, double t, double *X, double *Y)
+{
+    if (c->type == FT_POLAR)
+    {
+        double r = evaluate_npi(c->a.rpn, c->a.ny, t, 'T');
+        double th = g_angle_mode == 1 ? t * M_PI / 180.0 : t;
+        *X = r * cos(th);
+        *Y = r * sin(th);
+    }
+    else
+    {
+        *X = evaluate_npi(c->a.rpn, c->a.ny, t, 'T');
+        *Y = evaluate_npi(c->b.rpn, c->b.ny, t, 'T');
+    }
+    return isfinite(*X) && isfinite(*Y);
+}
+
+/* Point de la ligne i pour t (compile, evalue, libere). */
+static bool fn_point(fill_box **arr, int i, double t, double *X, double *Y)
+{
+    curve_t c;
+    if (!curve_build(arr, i, &c))
+        return false;
+    bool ok = curve_point(&c, t, X, Y);
+    curve_free(&c);
+    return ok;
+}
+
+static void graph_curve(fill_box **arr, int i, double x_min, double x_max, double y_min, double y_max,
+                        uint16_t color)
+{
+    curve_t c;
+    if (!curve_build(arr, i, &c))
+        return;
+    double t0, t1;
+    param_range(&t0, &t1);
+    double st = param_step();
+    int N = (int)ceil((t1 - t0) / st - 1e-9);
     bool has_prev = false;
     int ppx = 0, ppy = 0;
-    for (int i = 0; i <= N; i++)
+    for (int k = 0; k <= N; k++)
     {
-        double tt = t0 + (t1 - t0) * i / N;
+        double tt = k == N ? t1 : t0 + st * k;
         double X, Y;
-        if (type == FT_POLAR)
-        {
-            double r = evaluate_npi(o, y, tt, 'X');
-            double th = g_angle_mode == 1 ? tt * M_PI / 180.0 : tt;
-            X = r * cos(th);
-            Y = r * sin(th);
-        }
-        else
-        {
-            complex z = evaluate_npi_c_var(o, y, complex{tt, 0}, 'X');
-            X = z.re;
-            Y = z.im;
-        }
-        if (!isfinite(X) || !isfinite(Y))
+        if (!curve_point(&c, tt, &X, &Y))
         {
             has_prev = false;
             continue;
@@ -1181,17 +1291,212 @@ static void graph_curve(fill_box *b, int type, double x_min, double x_max, doubl
         ppx = px;
         ppy = py;
     }
-    token_free_matrices(t, n);
-    free(t);
-    free(o);
+    curve_free(&c);
+}
+
+/* Curseur sur une courbe en t : recale s_t_cur dans l'intervalle. */
+static void trace_clamp(void)
+{
+    double t0, t1;
+    param_range(&t0, &t1);
+    if (!(s_t_cur >= t0))
+        s_t_cur = t0;
+    if (s_t_cur > t1)
+        s_t_cur = t1;
+}
+
+/* Deplace le curseur d'un pas (dir = +1 / -1), sur la grille du pas. */
+static void trace_move(int dir)
+{
+    double t0, t1;
+    param_range(&t0, &t1);
+    double st = s_t_step > 0 ? s_t_step : (t1 - t0) / 100;
+    double k = round((s_t_cur - t0) / st) + dir;
+    s_t_cur = t0 + k * st;
+    if (fabs(s_t_cur) < 1e-12 * st)
+        s_t_cur = 0;
+    trace_clamp();
 }
 
 /* Copie de arr ou seules les fonctions cartesiennes restent : les outils
- * d'analyse (zero, extremum, intersections, ZoomFit) ne valent que pour elles. */
+ * d'analyse (zero, extremum, intersections) ne valent que pour elles. */
 static void cart_only(fill_box **arr, fill_box **out)
 {
     for (int i = 0; i < 100; i++)
         out[i] = (arr[i] && s_fn_type[i] == FT_CART) ? arr[i] : nullptr;
+}
+
+/* ZoomFit des courbes polaires et parametriques : etendue en x et en y
+ * (1 % des valeurs extremes ignorees de chaque cote). false si aucune. */
+static bool curves_extent(fill_box **arr, double *xl, double *xh, double *yl, double *yh)
+{
+    const int N = 400;
+    double *vx = (double *)malloc(sizeof(double) * N);
+    double *vy = (double *)malloc(sizeof(double) * N);
+    if (!vx || !vy)
+    {
+        free(vx);
+        free(vy);
+        return false;
+    }
+    double t0, t1;
+    param_range(&t0, &t1);
+    bool any = false;
+    for (int i = 0; i < 100; i++)
+    {
+        curve_t c;
+        if (!curve_build(arr, i, &c))
+            continue;
+        int n = 0;
+        for (int k = 0; k < N; k++)
+        {
+            double X, Y;
+            if (curve_point(&c, t0 + (t1 - t0) * k / (N - 1), &X, &Y))
+            {
+                vx[n] = X;
+                vy[n] = Y;
+                n++;
+            }
+        }
+        curve_free(&c);
+        if (n == 0)
+            continue;
+        qsort(vx, n, sizeof(double), cmp_d);
+        qsort(vy, n, sizeof(double), cmp_d);
+        int cut = n / 100;
+        if (!any)
+        {
+            *xl = vx[cut];
+            *xh = vx[n - 1 - cut];
+            *yl = vy[cut];
+            *yh = vy[n - 1 - cut];
+            any = true;
+        }
+        else
+        {
+            *xl = fmin(*xl, vx[cut]);
+            *xh = fmax(*xh, vx[n - 1 - cut]);
+            *yl = fmin(*yl, vy[cut]);
+            *yh = fmax(*yh, vy[n - 1 - cut]);
+        }
+    }
+    free(vx);
+    free(vy);
+    return any;
+}
+
+/* ZoomFit : y ajuste sur les fonctions cartesiennes (x inchange). S'il y a
+ * des courbes en t, la fenetre les englobe aussi ; sans fonction
+ * cartesienne, le repere devient orthonorme (un cercle reste rond). */
+static bool zoom_fit_all(win_t *w, fill_box **arr)
+{
+    fill_box *cart[100];
+    cart_only(arr, cart);
+    bool has_cart = false;
+    for (int i = 0; i < 100; i++)
+        if (cart[i] && cart[i]->t_size > 0)
+            has_cart = true;
+    bool ok = has_cart && zoom_fit(w, cart);
+
+    double xl, xh, yl, yh;
+    if (!curves_extent(arr, &xl, &xh, &yl, &yh))
+        return ok;
+    if (xh - xl < 1e-9)
+    {
+        xl -= 1;
+        xh += 1;
+    }
+    if (yh - yl < 1e-9)
+    {
+        yl -= 1;
+        yh += 1;
+    }
+    // Marge plus large en y : les onglets et le bandeau du curseur couvrent
+    // le haut et le bas du graphe.
+    double px = (xh - xl) * 0.1, py = (yh - yl) * 0.2;
+    xl -= px;
+    xh += px;
+    yl -= py;
+    yh += py;
+    if (ok)
+    {
+        w->x_min = fmin(w->x_min, xl);
+        w->x_max = fmax(w->x_max, xh);
+        w->y_min = fmin(w->y_min, yl);
+        w->y_max = fmax(w->y_max, yh);
+    }
+    else
+    {
+        // Meme unite sur les deux axes : on elargit l'axe trop court.
+        double ratio = (double)SCREEN_WIDTH / SCREEN_HEIGHT;
+        double cx = 0.5 * (xl + xh), cy = 0.5 * (yl + yh);
+        double hw = 0.5 * (xh - xl), hh = 0.5 * (yh - yl);
+        if (hw < hh * ratio)
+            hw = hh * ratio;
+        else
+            hh = hw / ratio;
+        w->x_min = cx - hw;
+        w->x_max = cx + hw;
+        w->y_min = cy - hh;
+        w->y_max = cy + hh;
+    }
+    w->step = 0;
+    return finite_d(w->x_min) && finite_d(w->x_max) && finite_d(w->y_min) && finite_d(w->y_max);
+}
+
+static const char *check_t(const double *v)
+{
+    if (!(v[0] < v[1]))
+        return "Il faut Tmin < Tmax";
+    if (v[2] < 0)
+        return "Pas >= 0";
+    if (v[2] > 0 && (v[1] - v[0]) / v[2] > 4000)
+        return "Pas trop petit";
+    return NULL;
+}
+
+/* Formulaire Tmin / Tmax / Pas de t. true si valide par OK. */
+static bool t_menu(void)
+{
+    static const char *const labels[3] = {"Tmin", "Tmax", "Pas"};
+    double v[3];
+    param_range(&v[0], &v[1]);
+    v[2] = s_t_step;
+    if (!form_menu("Intervalle de t", labels, v, 3, "OK=valider  BACK=quitter  Pas 0=auto", check_t))
+        return false;
+    s_t_min = v[0];
+    s_t_max = v[1];
+    s_t_step = v[2];
+    s_t_custom = true;
+    trace_clamp();
+    return true;
+}
+
+// Menu TOOLS du graphe. true si la fenetre a change.
+static bool window_tools(win_t *w, fill_box **arr)
+{
+    const char *labels[5] = {"Fenetre", "Intervalle t", "ZStandard", "ZTrig", "ZoomFit"};
+    fill_screen(BACKGROUND_COLOR);
+    int c = small_menu(labels, 5);
+    fill_screen(BACKGROUND_COLOR);
+    switch (c)
+    {
+    case 0:
+        return window_menu(w);
+    case 1:
+        t_menu();
+        return false;
+    case 2:
+        zoom_standard(w);
+        return true;
+    case 3:
+        zoom_trig(w);
+        return true;
+    case 4:
+        return zoom_fit_all(w, arr);
+    default:
+        return false;
+    }
 }
 
 /* ========================= Tableau de valeurs ========================== */
@@ -1201,10 +1506,26 @@ static double s_tbl_start = 0, s_tbl_step = 1;
 /* Retourne 0 = onglet Graphe, 1 = onglet Fonctions, 2 = quitter l'app. */
 static int values_table(fill_box **arr, const uint16_t *palet, text_box *Formula, text_box *Graph, text_box *Table)
 {
-    int idx[100], m = 0;
+    /* Colonnes : f(x) pour une cartesienne, r(t) pour une polaire, x(t) puis
+     * y(t) pour une parametrique. La premiere colonne sert de x ou de t. */
+    int idx[200], sub[200], m = 0;
+    bool has_cart = false, has_t = false;
     for (int i = 0; i < 100; i++)
-        if (arr[i] && arr[i]->t_size > 0 && s_fn_type[i] == FT_CART)
-            idx[m++] = i;
+    {
+        if (!fn_drawable(arr, i))
+            continue;
+        int ns = s_fn_type[i] == FT_PARAM ? 2 : 1;
+        for (int k = 0; k < ns; k++)
+        {
+            idx[m] = i;
+            sub[m++] = k;
+        }
+        if (s_fn_type[i] == FT_CART)
+            has_cart = true;
+        else
+            has_t = true;
+    }
+    const char *var = has_cart && has_t ? "x, t" : (has_t ? "t" : "x");
 
     const int TB_NCOL = 3, ROW_H = 20, TOP = 24, XW = 80;
     const int VIS = (SCREEN_HEIGHT - TOP - 20 - UK_FOOTER_H) / ROW_H;
@@ -1220,7 +1541,7 @@ static int values_table(fill_box **arr, const uint16_t *palet, text_box *Formula
         int ncol = m - first_col < TB_NCOL ? m - first_col : TB_NCOL;
         int cw = ncol > 0 ? (SCREEN_WIDTH - XW) / ncol : SCREEN_WIDTH - XW;
         uk_rect(0, TOP, SCREEN_WIDTH, ROW_H, FRONTGROUND_COLOR_BIS);
-        uk_text_center(0, TOP + 6, XW, "x", COLOR_BLACK, 1);
+        uk_text_center(0, TOP + 6, XW, var, COLOR_BLACK, 1);
         token *rpn[3] = {NULL, NULL, NULL};
         token *raw[3] = {NULL, NULL, NULL};
         int ny[3] = {0, 0, 0}, nt[3] = {0, 0, 0};
@@ -1228,10 +1549,16 @@ static int values_table(fill_box **arr, const uint16_t *palet, text_box *Formula
         {
             int f = idx[first_col + c];
             char name[8];
-            snprintf(name, sizeof(name), "%c(x)", (char)((f + 5) % 26 + 'a'));
+            if (s_fn_type[f] == FT_POLAR)
+                snprintf(name, sizeof(name), "r(t)");
+            else if (s_fn_type[f] == FT_PARAM)
+                snprintf(name, sizeof(name), "%c(t)", sub[first_col + c] ? 'y' : 'x');
+            else
+                snprintf(name, sizeof(name), "%c(x)", (char)((f + 5) % 26 + 'a'));
             uk_rect(XW + c * cw + 4, TOP + 7, 6, 6, palet[f % 14]);
             uk_text_center(XW + c * cw + 8, TOP + 6, cw - 8, name, COLOR_BLACK, 1);
-            raw[c] = parse_string_to_token(arr[f]->text, arr[f]->t_size, &nt[c]);
+            fill_box *fb = fn_field(arr, f, sub[first_col + c]);
+            raw[c] = parse_string_to_token(fb->text, fb->t_size, &nt[c]);
             rpn[c] = shunting_yard(raw[c], nt[c]);
             ny[c] = count_yarded(raw[c], nt[c]);
         }
@@ -1244,12 +1571,16 @@ static int values_table(fill_box **arr, const uint16_t *palet, text_box *Formula
             int y = TOP + ROW_H * (r + 1);
             uint16_t bg = (!tabs && k == sel) ? UK_SEL_BG : (k % 2 ? FRONTGROUND_COLOR_BIS : FRONTGROUND_COLOR);
             uk_rect(0, y, SCREEN_WIDTH, ROW_H - 1, bg);
-            char buf[24];
+            /* uk_fmt ecrit jusqu'a 31 caracteres + '\0' : avec une seule
+             * colonne (cw / 5 - 1 = 47, ramene a 31) un tampon de 24
+             * debordait de 8 octets sur la pile. */
+            char buf[32];
             uk_fmt(x, buf, 12);
             uk_text_center(0, y + 6, XW, buf, COLOR_BLACK, 1);
             for (int c = 0; c < ncol; c++)
             {
-                double v = evaluate_npi(rpn[c], ny[c], x, 'X');
+                int f = idx[first_col + c];
+                double v = evaluate_npi(rpn[c], ny[c], x, s_fn_type[f] == FT_CART ? 'X' : 'T');
                 if (isfinite(v))
                     uk_fmt(v, buf, cw / 5 - 1);
                 else
@@ -1265,7 +1596,7 @@ static int values_table(fill_box **arr, const uint16_t *palet, text_box *Formula
             free(rpn[c]);
         }
         if (m == 0)
-            uk_text_center(0, 110, SCREEN_WIDTH, "Aucune fonction cartesienne a tabuler", COLOR_GRAY, 1);
+            uk_text_center(0, 110, SCREEN_WIDTH, "Aucune fonction a tabuler", COLOR_GRAY, 1);
         char hint[64];
         if (tabs)
             snprintf(hint, sizeof(hint), "LEFT: Graphe   DOWN: tableau   BACK: quitter");
@@ -1310,7 +1641,7 @@ static int values_table(fill_box **arr, const uint16_t *palet, text_box *Formula
             const char *opts[2] = {"Valeur de depart", "Pas"};
             int c = uk_menu("Parametres du tableau", opts, 2, 0);
             double v;
-            if (c == 0 && uk_input("Tableau de valeurs", "x de depart =", &v, -1))
+            if (c == 0 && uk_input("Tableau de valeurs", "Valeur de depart =", &v, -1))
             {
                 s_tbl_start = v;
                 sel = first = 0;
@@ -1333,23 +1664,85 @@ static int values_table(fill_box **arr, const uint16_t *palet, text_box *Formula
     }
 }
 
+/* Ecran Fonctions : rang (0 = en haut) de la ligne (sel, sub) quand
+ * l'affichage commence a la fonction first. Une parametrique prend 2 lignes. */
+static int row_of(fill_box **arr, int first, int sel, bool sub)
+{
+    int r = 0;
+    for (int i = std::max(first, 0); i < sel; i++)
+        if (arr[i])
+            r += s_fn_type[i] == FT_PARAM ? 2 : 1;
+    return r + (sub ? 1 : 0);
+}
+
+static void free_field(fill_box *b)
+{
+    if (!b)
+        return;
+    free(b->text);
+    free(b);
+}
+
+/* Change le type de la ligne i (variable X <-> T, champ y(t) cree). */
+static void set_fn_type(fill_box **arr, int i, int type)
+{
+    if (type == FT_PARAM && !s_fn_y[i])
+        s_fn_y[i] = create_fill_box(0, 20, 40, 320, 3);
+    char from = type == FT_CART ? 'T' : 'X', to = type == FT_CART ? 'X' : 'T';
+    retarget_var(arr[i], from, to);
+    retarget_var(s_fn_y[i], from, to);
+    s_fn_type[i] = type;
+    s_sel_y = false;
+}
+
+/* Fonctions, types de courbe et fenetre survivent a la sortie de l'appli
+ * (BACK ou HOME) : elles sont creees au premier lancement puis gardees. */
+static fill_box **s_arr = nullptr;
+static text_box *s_tab_graph = nullptr, *s_tab_formula = nullptr, *s_tab_table = nullptr;
+static double s_x_min = -5, s_x_max = 5, s_y_min = -5, s_y_max = 5;
+static double s_cursor_step = 0;
+
 int Grapher()
 {
     bool snd = false;
 
-    text_box *Graph = create_text_box(107, 220, 20, 106, 1, false);
-    text_box *Formula = create_text_box(0, 220, 20, 107, 1, false);
-    text_box *Table = create_text_box(213, 220, 20, 107, 1, false);
-    Graph->text = (char *)"Graphe";
-    Graph->t_size = 6;
-    Formula->text = (char *)"Fonctions";
-    Formula->t_size = 9;
-    Table->text = (char *)"Tableau";
-    Table->t_size = 7;
-    memset(s_fn_type, 0, sizeof(s_fn_type));
+    if (s_tab_graph == nullptr)
+    {
+        s_tab_graph = create_text_box(107, 220, 20, 106, 1, false);
+        s_tab_formula = create_text_box(0, 220, 20, 107, 1, false);
+        s_tab_table = create_text_box(213, 220, 20, 107, 1, false);
+        s_tab_graph->text = (char *)"Graphe";
+        s_tab_graph->t_size = 6;
+        s_tab_formula->text = (char *)"Fonctions";
+        s_tab_formula->t_size = 9;
+        s_tab_table->text = (char *)"Tableau";
+        s_tab_table->t_size = 7;
+    }
+    text_box *Graph = s_tab_graph;
+    text_box *Formula = s_tab_formula;
+    text_box *Table = s_tab_table;
+    if (s_arr == nullptr)
+    {
+        fill_box **a = (fill_box **)calloc(100, sizeof(fill_box *));
+        fill_box *first = create_fill_box(0, 20, 40, 320, 3);
+        if (a == nullptr || first == nullptr)
+        {
+            free(a);
+            free_field(first);
+            return 0;
+        }
+        a[0] = first;
+        memset(s_fn_type, 0, sizeof(s_fn_type));
+        for (int i = 0; i < 100; i++)
+        {
+            free_field(s_fn_y[i]);
+            s_fn_y[i] = nullptr;
+        }
+        s_arr = a;
+    }
+    s_sel_y = false;
     fill_box *cart_arr[100];
 
-    fill_box *n = create_fill_box(0, 20, 40, 320, 3);
     const uint16_t palet[] = {
         COLOR_RED,
         COLOR_LIME,
@@ -1366,14 +1759,9 @@ int Grapher()
         COLOR_TEAL,
         COLOR_NAVY};
 
-    fill_box **arr_fill_box = (fill_box **)malloc(sizeof(fill_box *) * 100);
-    for (int i = 0; i < 100; i++)
-    {
-        arr_fill_box[i] = nullptr;
-    }
+    fill_box **arr_fill_box = s_arr;
 
     int selected_fill_box = 0;
-    arr_fill_box[0] = n;
     int first_display = 0;
     bool show_graph = false;
     calc_state cs;
@@ -1383,12 +1771,12 @@ int Grapher()
     int prev_snap = -1;
     bool cross_valid = false; // croix du curseur actuellement dessinee
     int cross_x = 0, cross_y = 0;
-    double x_min = -5;
-    double x_max = 5;
-    double y_min = -5;
-    double y_max = 5;
-    double cursor_pos = 0;
-    double cursor_step = 0;
+    double &x_min = s_x_min;
+    double &x_max = s_x_max;
+    double &y_min = s_y_min;
+    double &y_max = s_y_max;
+    double cursor_pos = 0.5 * (x_min + x_max);
+    double &cursor_step = s_cursor_step;
     bool follow =true;
     int last_pressed = scan_keypad_nowait(); // pas bloquant : l'ecran s'affiche tout de suite
     fill_screen(BACKGROUND_COLOR);
@@ -1433,33 +1821,42 @@ int Grapher()
     }
         if (!show_graph)
         {
-            for (int i = std::max(first_display, 0); i < first_display + 6; i++)
+            int row = 0;
+            for (int i = std::max(first_display, 0); i < 100 && row < 6; i++)
             {
                 if (arr_fill_box[i] == nullptr)
                     continue;
-                int old_mv = mv;
-                int tok_n = 0;
-                int input_size;
-                display_set_source(arr_fill_box[i]->text, arr_fill_box[i]->t_size);
-                token *toks = parse_string_to_token(arr_fill_box[i]->text, arr_fill_box[i]->t_size, &tok_n);
-                Parser p = {toks, tok_n, 0};
-
-                while (p.pos < p.n)
+                int nsub = s_fn_type[i] == FT_PARAM ? 2 : 1;
+                for (int sb = 0; sb < nsub && row < 6; sb++, row++)
                 {
-                    int before = p.pos;
-                    ASTNode *node = parse_equation(&p);
-                    if (p.pos == before)
-                        p.pos++;
-                    if (node)
-                        mv += max(0, measure(node, 2).h - 16);
-                }
-                token_free_matrices(toks, tok_n);
-                free(toks);
-                arr_fill_box[i]->h = mv - old_mv + 40;
-                //                display_fill_box(arr_fill_box[i], 160 - (i - selected_fill_box + 4) * 40 + old_mv, (i - selected_fill_box) % HISTORY_SIZE == 0, -1, ' ');
+                    fill_box *fb = fn_field(arr_fill_box, i, sb);
+                    int old_mv = mv;
+                    int tok_n = 0;
+                    display_set_source(fb->text, fb->t_size);
+                    token *toks = parse_string_to_token(fb->text, fb->t_size, &tok_n);
+                    Parser p = {toks, tok_n, 0};
 
-                char pfx = s_fn_type[i] == FT_POLAR ? 'r' : (s_fn_type[i] == FT_PARAM ? 'z' : 'f');
-                display_fill_box(arr_fill_box[i], 160 - (i - std::max(first_display, 0)) * 40 - mv, i == selected_fill_box, i, pfx, false);
+                    while (p.pos < p.n)
+                    {
+                        int before = p.pos;
+                        ASTNode *node = parse_equation(&p);
+                        if (p.pos == before)
+                            p.pos++;
+                        if (node)
+                            mv += max(0, measure(node, 2).h - 16);
+                    }
+                    token_free_matrices(toks, tok_n);
+                    free(toks);
+                    fb->h = mv - old_mv + 40;
+
+                    char pfx = 'f';
+                    if (s_fn_type[i] == FT_POLAR)
+                        pfx = 'r';
+                    else if (s_fn_type[i] == FT_PARAM)
+                        pfx = sb ? 'y' : 'x';
+                    bool focus = i == selected_fill_box && (sb == 1) == (s_sel_y && nsub == 2);
+                    display_fill_box(fb, 160 - row * 40 - mv, focus, i, pfx, false);
+                }
             }
         }
         else
@@ -1501,7 +1898,7 @@ int Grapher()
             {
                 // Les lignes vides ne sont pas tracees (elles donnaient y = 0).
                 if (arr_fill_box[i] != nullptr && arr_fill_box[i]->t_size > 0 && s_fn_type[i] != FT_CART)
-                    graph_curve(arr_fill_box[i], s_fn_type[i], x_min, x_max, y_min, y_max, palet[i % 14]);
+                    graph_curve(arr_fill_box, i, x_min, x_max, y_min, y_max, palet[i % 14]);
                 else if (arr_fill_box[i] != nullptr && arr_fill_box[i]->t_size > 0)
                 {
                     int tokenized_size = 0;
@@ -1528,6 +1925,33 @@ int Grapher()
 
             char snap_msg[80];
             snap_msg[0] = '\0';
+
+            // Curseur sur une courbe polaire / parametrique : croix au point
+            // de parametre s_t_cur et coordonnees dans le bandeau.
+            if (selected_fill_box >= 0 && s_fn_type[selected_fill_box] != FT_CART &&
+                fn_drawable(arr_fill_box, selected_fill_box))
+            {
+                trace_clamp();
+                double X, Y;
+                char st[40], sx[40], sy[40];
+                fmt_val(s_t_cur, st);
+                if (fn_point(arr_fill_box, selected_fill_box, s_t_cur, &X, &Y))
+                {
+                    double fx = (X - x_min) / (x_max - x_min) * SCREEN_WIDTH;
+                    double fy = SCREEN_HEIGHT - (Y - y_min) / (y_max - y_min) * SCREEN_HEIGHT;
+                    if (fabs(fx) < 4000 && fabs(fy) < 4000)
+                    {
+                        int px = (int)lround(fx), py = (int)lround(fy);
+                        uk_rect(px - 5, py, 11, 1, COLOR_BLACK);
+                        uk_rect(px, py - 5, 1, 11, COLOR_BLACK);
+                    }
+                    fmt_val(X, sx);
+                    fmt_val(Y, sy);
+                    snprintf(snap_msg, sizeof(snap_msg), "t=%s  x=%s  y=%s", st, sx, sy);
+                }
+                else
+                    snprintf(snap_msg, sizeof(snap_msg), "t=%s  non defini", st);
+            }
             if (snap_i >= 0)
             {
                 char sx[40], sy[40];
@@ -1586,12 +2010,13 @@ int Grapher()
                 fill_screen(BACKGROUND_COLOR);
                 break;
             }
-            if (!show_graph && selected_fill_box >= 0 && arr_fill_box[selected_fill_box]->t_size > 0)
+            if (!show_graph && selected_fill_box >= 0 && fn_field(arr_fill_box, selected_fill_box, s_sel_y)->t_size > 0)
             {
-                update_fill_box(arr_fill_box[selected_fill_box], last_pressed, snd);
+                update_fill_box(fn_field(arr_fill_box, selected_fill_box, s_sel_y), last_pressed, snd);
             }
             else
             {
+                /* fonctions gardees pour la prochaine ouverture */
                 return 0;
             }
             break;
@@ -1599,36 +2024,68 @@ int Grapher()
             if (show_graph)
             {
                 selected_fill_box = std::max(-1, selected_fill_box - 1);
+                s_sel_y = false;
+                fill_screen(BACKGROUND_COLOR); // efface la croix d'une courbe en t
             }
             else
             {
-                selected_fill_box = std::max(-1, selected_fill_box - 1);
+                // Une parametrique a deux lignes : y(t) puis x(t).
+                if (selected_fill_box >= 0 && s_fn_type[selected_fill_box] == FT_PARAM && s_sel_y)
+                    s_sel_y = false;
+                else
+                {
+                    selected_fill_box = std::max(-1, selected_fill_box - 1);
+                    s_sel_y = selected_fill_box >= 0 && s_fn_type[selected_fill_box] == FT_PARAM;
+                }
                 if (selected_fill_box < first_display)
                 {
                     first_display = selected_fill_box;
                 }
+                fill_screen(BACKGROUND_COLOR);
             }
             break;
         case DOWN:
             if (!show_graph)
             {
-                selected_fill_box = std::min(25, selected_fill_box + 1);
+                if (selected_fill_box >= 0 && s_fn_type[selected_fill_box] == FT_PARAM && !s_sel_y)
+                    s_sel_y = true;
+                else if (selected_fill_box < 25)
+                {
+                    selected_fill_box++;
+                    s_sel_y = false;
+                }
                 if (arr_fill_box[selected_fill_box] == nullptr)
                 {
                     arr_fill_box[selected_fill_box] = create_fill_box(0, 20, 40, 320, 3);
                 }
-                if (first_display + 4 < selected_fill_box)
+                while (first_display < selected_fill_box &&
+                       row_of(arr_fill_box, first_display, selected_fill_box, s_sel_y) > 4)
                 {
                     first_display++;
                 }
+                fill_screen(BACKGROUND_COLOR);
             }
             else
             {
                 selected_fill_box = min(25, selected_fill_box + 1);
+                s_sel_y = false;
+                fill_screen(BACKGROUND_COLOR);
             }
             break;
         case RIGHT:
-            if (show_graph && selected_fill_box != -1)
+            if (show_graph && selected_fill_box >= 0 && s_fn_type[selected_fill_box] != FT_CART)
+            {
+                trace_move(+1);
+                double X, Y;
+                if (fn_point(arr_fill_box, selected_fill_box, s_t_cur, &X, &Y))
+                {
+                    X_pos = X;
+                    Y_pos = Y;
+                    follow = true;
+                }
+                fill_screen(BACKGROUND_COLOR);
+            }
+            else if (show_graph && selected_fill_box != -1)
             {
 
                 fill_rect(Y_cursor, X_cursor - 5, 1, 10, BACKGROUND_COLOR);
@@ -1646,7 +2103,7 @@ int Grapher()
             }
             else if (!show_graph && selected_fill_box != -1)
             {
-                fill_box_right(arr_fill_box[selected_fill_box]);
+                fill_box_right(fn_field(arr_fill_box, selected_fill_box, s_sel_y));
             }
             else if (show_graph)
             {
@@ -1654,7 +2111,10 @@ int Grapher()
                 int r = values_table(arr_fill_box, palet, Formula, Graph, Table);
                 fill_screen(BACKGROUND_COLOR);
                 if (r == 2)
+                {
+                    /* fonctions gardees pour la prochaine ouverture */
                     return 0;
+                }
                 if (r == 1)
                     show_graph = false;
                 selected_fill_box = -1;
@@ -1667,7 +2127,19 @@ int Grapher()
             }
             break;
         case LEFT:
-            if (show_graph && selected_fill_box != -1)
+            if (show_graph && selected_fill_box >= 0 && s_fn_type[selected_fill_box] != FT_CART)
+            {
+                trace_move(-1);
+                double X, Y;
+                if (fn_point(arr_fill_box, selected_fill_box, s_t_cur, &X, &Y))
+                {
+                    X_pos = X;
+                    Y_pos = Y;
+                    follow = true;
+                }
+                fill_screen(BACKGROUND_COLOR);
+            }
+            else if (show_graph && selected_fill_box != -1)
             {
                 fill_rect(20, 0, 200, 340, BACKGROUND_COLOR);
                 double old_cursor = cursor_pos;
@@ -1680,7 +2152,7 @@ int Grapher()
             }
             else if (!show_graph && selected_fill_box != -1)
             {
-                fill_box_left(arr_fill_box[selected_fill_box]);
+                fill_box_left(fn_field(arr_fill_box, selected_fill_box, s_sel_y));
             }
             else
             {
@@ -1697,8 +2169,21 @@ int Grapher()
                 cart_only(arr_fill_box, cart_arr);
                 if (s_fn_type[selected_fill_box] != FT_CART)
                 {
-                    snprintf(cs.msg, sizeof(cs.msg), "Calculs : courbes y=f(x) seulement");
-                    cs.is_result = true;
+                    // Courbe en t : placer le curseur sur une valeur de t.
+                    double v = s_t_cur;
+                    if (uk_input("Aller au point", "t =", &v, -1))
+                    {
+                        s_t_cur = v;
+                        trace_clamp();
+                        double X, Y;
+                        if (fn_point(arr_fill_box, selected_fill_box, s_t_cur, &X, &Y))
+                        {
+                            X_pos = X;
+                            Y_pos = Y;
+                            follow = true;
+                        }
+                    }
+                    fill_screen(BACKGROUND_COLOR);
                 }
                 else if (cs.integ_stage == 1)
                     calc_finish_integral(&cs, cart_arr, selected_fill_box, cursor_pos);
@@ -1710,8 +2195,7 @@ int Grapher()
             if (show_graph)
             {
                 win_t w = {x_min, x_max, y_min, y_max, cursor_step};
-                cart_only(arr_fill_box, cart_arr);
-                if (window_tools(&w, cart_arr))
+                if (window_tools(&w, arr_fill_box))
                 {
                     x_min = w.x_min;
                     x_max = w.x_max;
@@ -1733,15 +2217,29 @@ int Grapher()
             else if (selected_fill_box >= 0)
             {
                 /* Ecran Fonctions : type de la courbe ou insertion d'une fonction. */
-                const char *opts[4] = {"Cartesienne  y=f(x)", "Polaire  r=f(t)",
-                                       "Parametrique  x(t)+i*y(t)", "Inserer une fonction..."};
-                int c = uk_menu("Type de courbe", opts, 4, s_fn_type[selected_fill_box]);
+                const char *opts[5] = {"Cartesienne  y=f(x)", "Polaire  r=f(t)",
+                                       "Parametrique  x(t), y(t)", "Intervalle de t...",
+                                       "Inserer une fonction..."};
+                int c = uk_menu("Type de courbe", opts, 5, s_fn_type[selected_fill_box]);
                 fill_screen(BACKGROUND_COLOR);
                 if (c >= 0 && c <= 2)
-                    s_fn_type[selected_fill_box] = c;
+                {
+                    set_fn_type(arr_fill_box, selected_fill_box, c);
+                    while (first_display < selected_fill_box &&
+                           row_of(arr_fill_box, first_display, selected_fill_box, false) > 4)
+                        first_display++;
+                }
                 else if (c == 3)
                 {
-                    update_fill_box(arr_fill_box[selected_fill_box], menu_tools(), snd);
+                    t_menu();
+                    fill_screen(BACKGROUND_COLOR);
+                }
+                else if (c == 4)
+                {
+                    fill_box *fb = fn_field(arr_fill_box, selected_fill_box, s_sel_y);
+                    update_fill_box(fb, menu_tools(), snd);
+                    if (s_fn_type[selected_fill_box] != FT_CART)
+                        retarget_var(fb, 'X', 'T');
                     fill_screen(BACKGROUND_COLOR);
                 }
             }
@@ -1768,7 +2266,11 @@ int Grapher()
             }
             else if (selected_fill_box >= 0 && !show_graph)
             {
-                update_fill_box(arr_fill_box[selected_fill_box], last_pressed, snd);
+                fill_box *fb = fn_field(arr_fill_box, selected_fill_box, s_sel_y);
+                update_fill_box(fb, last_pressed, snd);
+                // Courbe en t : la touche X tape la variable T.
+                if (s_fn_type[selected_fill_box] != FT_CART)
+                    retarget_var(fb, 'X', 'T');
             }
             break;
         }

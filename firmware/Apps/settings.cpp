@@ -282,7 +282,9 @@ static void st_draw_info(int row)
     {
     case ROW_BRIGHTNESS:
         l1 = "Retroeclairage de l'ecran.";
-        l2 = "Baisser la luminosite economise la batterie.";
+        /* Le retroeclairage est relie a l'alimentation sur le PCB : le
+         * reglage assombrit l'image mais ne reduit pas la consommation. */
+        l2 = "Assombrit l'image (sans economie de batterie).";
         break;
     case ROW_ANGLE:
         l1 = "Unite utilisee par sin, cos, tan et leurs inverses.";

@@ -10,6 +10,8 @@
 #include "hardware/spi.h"
 #include <cstdio>
 #include "headers/colors.h"
+#include "headers/widgets.h"
+#include "headers/ui_kit.h"
 
 #define TBL_TOP 22
 #define TBL_LABEL_W 38
@@ -19,37 +21,58 @@
 #define TBL_ROW_VAL_H 30
 #define TBL_MAX_SUITES 4
 
-/* Suites : chaque suite occupe DEUX lignes de l'onglet Formule.
- *   ligne 2k   : formule
- *                - sans U : suite explicite  u(n) = f(N)
- *                - avec U : suite recurrente u(n+1) = f(N, U)
- *                  U = u(n), N = n (indice courant)
- *   ligne 2k+1 : premier terme u(0) (utilise seulement si la formule a un U)
- * N s'obtient avec la touche X, U avec ALPHA (ou 2nd puis 0).
+/* Suites : chaque suite occupe TROIS lignes de l'onglet Formule.
+ *   ligne 3k   : formule
+ *                - sans U ni P : suite explicite        u(n)   = f(N)
+ *                - avec U      : recurrente d'ordre 1   u(n+1) = f(N, U)
+ *                                U = u(n)
+ *                - avec P      : recurrente d'ordre 2   u(n+2) = f(N, U, P)
+ *                                U = u(n+1), P = u(n)
+ *                  U est toujours le terme precedent, P celui d'avant ;
+ *                  N = n (indice courant).
+ *   ligne 3k+1 : premier terme u(n0) (suites recurrentes)
+ *   ligne 3k+2 : deuxieme terme u(n0+1), affichee seulement a l'ordre 2
+ * n0 (premier rang, 0 par defaut) se regle dans Outils sur la ligne de la
+ * formule ; une suite explicite n'est definie qu'a partir de n0.
+ * N s'obtient avec la touche X, U avec ALPHA (ou 2nd puis 0), P avec 2nd
+ * puis 1, ou depuis le menu Outils.
  * Outils : blocs prets a l'emploi (arith, geom, arigeo, arithn) inseres d'un
- * seul bloc ; leur nom et leurs parentheses ne peuvent pas etre effaces un a un. */
-#define SEQ_BOXES 100
-#define SEQ_COUNT (SEQ_BOXES / 2)
+ * seul bloc ; leur nom et leurs parentheses ne peuvent pas etre effaces un a un.
+ *
+ * Les formules et les premiers rangs survivent a la sortie de l'appli. */
+#define SEQ_LINES 3
+#define SEQ_BOXES 99
+#define SEQ_COUNT (SEQ_BOXES / SEQ_LINES)
 #define SEQ_MAX_SEQ TBL_MAX_SUITES
-#define SEQ_MAX_N 5000 /* indice max calcule pour une suite recurrente */
+#define SEQ_MAX_N 5000 /* nombre max de pas calcules pour une suite recurrente */
 #define SEQ_MAX_U 16
 #define SEQ_FIT_N 20
+#define SEQ_N0_MAX 99
 
 typedef struct
 {
-    bool recurrent;
+    int order; /* 0 explicite, 1 : u(n+1) = f(n, U), 2 : u(n+2) = f(n, U, P) */
     token *tok; /* formule en notation postfixee */
     int ntok;
     int uidx[SEQ_MAX_U]; /* positions des U dans tok */
     int nu;
-    double u0;
+    int pidx[SEQ_MAX_U]; /* positions des P dans tok */
+    int np;
+    int n0;    /* premier rang */
+    double u0; /* u(n0) */
+    double u1; /* u(n0+1), ordre 2 */
 } seq_def;
 
 typedef struct
 {
     int n;
-    double u; /* u(n) */
+    double u;    /* u(n) */
+    double prev; /* u(n-1) */
 } seq_iter;
+
+static fill_box **s_arr = nullptr;
+static int s_n0[SEQ_COUNT];
+static text_box *s_tab_formule = nullptr, *s_tab_graphe = nullptr, *s_tab_valeur = nullptr;
 
 static bool box_has_text(fill_box *b)
 {
@@ -58,13 +81,61 @@ static bool box_has_text(fill_box *b)
 
 static bool seq_active(fill_box **arr, int k)
 {
-    return k >= 0 && k < SEQ_COUNT && box_has_text(arr[2 * k]);
+    return k >= 0 && k < SEQ_COUNT && box_has_text(arr[SEQ_LINES * k]);
 }
 
-/* Construit la definition d'une suite a partir de ses deux lignes. */
-static bool seq_build(fill_box *f, fill_box *init, seq_def *s)
+/* Ordre d'une formule d'apres son texte : 2 avec P, 1 avec U ou un bloc
+ * (arith, geom...), 0 sinon. Les noms de fonctions sont en minuscules : une
+ * majuscule est toujours une lettre tapee. */
+static int text_order(const fill_box *f)
+{
+    if (f == nullptr)
+        return 0;
+    bool u = false;
+    for (int i = 0; i < f->t_size; i++)
+    {
+        if (f->text[i] == 'P')
+            return 2;
+        if (f->text[i] == 'U')
+            u = true;
+    }
+    if (!u && f->t_size > 0 &&
+        (strstr(f->text, "arith") || strstr(f->text, "geom") || strstr(f->text, "arigeo")))
+        u = true;
+    return u ? 1 : 0;
+}
+
+/* La ligne du deuxieme terme n'apparait que pour une suite d'ordre 2. */
+static bool line_visible(fill_box **arr, int i)
+{
+    if (i < 0 || i >= SEQ_BOXES)
+        return false;
+    if (i % SEQ_LINES != 2)
+        return true;
+    return text_order(arr[i - 2]) == 2;
+}
+
+/* Valeur d'une ligne de premier terme (0 si vide). */
+static double eval_line(fill_box *b)
+{
+    if (!box_has_text(b))
+        return 0;
+    int in_n = 0;
+    token *ir = parse_string_to_token(b->text, b->t_size, &in_n);
+    token *io = shunting_yard(ir, in_n);
+    int iy = count_yarded(ir, in_n);
+    double v = evaluate_npi(io, iy, 0, 'N');
+    token_free_matrices(ir, in_n);
+    free(ir);
+    free(io);
+    return v;
+}
+
+/* Construit la definition de la suite k a partir de ses lignes. */
+static bool seq_build(fill_box **arr, int k, seq_def *s)
 {
     memset(s, 0, sizeof(*s));
+    fill_box *f = arr[SEQ_LINES * k];
     if (!box_has_text(f))
         return false;
 
@@ -75,27 +146,27 @@ static bool seq_build(fill_box *f, fill_box *init, seq_def *s)
     token_free_matrices(raw, tn);
     free(raw);
 
+    bool block = false;
     for (int i = 0; i < s->ntok; i++)
-        if (s->tok[i].type == 'X' && (int)s->tok[i].value + (int)'a' == 'U' && s->nu < SEQ_MAX_U)
-            s->uidx[s->nu++] = i;
-    s->recurrent = s->nu > 0;
-    /* Les blocs arith/geom/arigeo/arithn contiennent un U implicite. */
-    for (int i = 0; i < s->ntok; i++)
-        if (is_block_type(s->tok[i].type))
-            s->recurrent = true;
-
-    s->u0 = 0;
-    if (s->recurrent && box_has_text(init))
     {
-        int in_n = 0;
-        token *ir = parse_string_to_token(init->text, init->t_size, &in_n);
-        token *io = shunting_yard(ir, in_n);
-        int iy = count_yarded(ir, in_n);
-        s->u0 = evaluate_npi(io, iy, 0, 'N');
-        token_free_matrices(ir, in_n);
-        free(ir);
-        free(io);
+        if (s->tok[i].type == 'X')
+        {
+            int letter = (int)s->tok[i].value + (int)'a';
+            if (letter == 'U' && s->nu < SEQ_MAX_U)
+                s->uidx[s->nu++] = i;
+            else if (letter == 'P' && s->np < SEQ_MAX_U)
+                s->pidx[s->np++] = i;
+        }
+        /* Les blocs arith/geom/arigeo/arithn contiennent un U implicite. */
+        if (is_block_type(s->tok[i].type))
+            block = true;
     }
+    s->order = s->np > 0 ? 2 : ((s->nu > 0 || block) ? 1 : 0);
+    s->n0 = s_n0[k];
+    if (s->order >= 1)
+        s->u0 = eval_line(arr[SEQ_LINES * k + 1]);
+    if (s->order == 2)
+        s->u1 = eval_line(arr[SEQ_LINES * k + 2]);
     return true;
 }
 
@@ -111,44 +182,90 @@ static double seq_explicit(seq_def *s, double n)
     return evaluate_npi(s->tok, s->ntok, n, 'N');
 }
 
-/* Suite recurrente : on part de u(0) et on avance terme par terme.
- * u(n+1) = f(N = n, U = u(n)). Les U du postfixe sont remplaces par la valeur
- * courante (jetons 'n' reecrits a chaque pas). */
+/* Suite recurrente : on part de u(n0) (et u(n0+1) a l'ordre 2) et on avance
+ * terme par terme. Les U et P du postfixe sont remplaces par les valeurs
+ * courantes (jetons 'n' reecrits a chaque pas). */
 static void seq_iter_init(seq_def *s, seq_iter *it)
 {
-    it->n = 0;
+    it->n = s->n0;
     it->u = s->u0;
+    it->prev = NAN;
 }
 
 static void seq_iter_next(seq_def *s, seq_iter *it)
 {
-    for (int k = 0; k < s->nu; k++)
+    double next;
+    if (s->order == 2 && it->n == s->n0)
+        next = s->u1; /* deuxieme terme donne */
+    else
     {
-        s->tok[s->uidx[k]].type = 'n';
-        s->tok[s->uidx[k]].value = it->u;
+        /* Ordre 1 : u(n+1) = f(n, u(n)).
+         * Ordre 2 : u(n+1) = f(n-1, U = u(n), P = u(n-1)), c'est-a-dire
+         * u(m+2) = f(m, u(m+1), u(m)) avec m = n-1. */
+        double N = s->order == 2 ? it->n - 1 : it->n;
+        for (int k = 0; k < s->nu; k++)
+        {
+            s->tok[s->uidx[k]].type = 'n';
+            s->tok[s->uidx[k]].value = it->u;
+        }
+        for (int k = 0; k < s->np; k++)
+        {
+            s->tok[s->pidx[k]].type = 'n';
+            s->tok[s->pidx[k]].value = it->prev;
+        }
+        g_seq_u = it->u; /* lus par les blocs */
+        g_seq_n = N;
+        next = evaluate_npi(s->tok, s->ntok, N, 'N');
     }
-    g_seq_u = it->u; /* lus par les blocs */
-    g_seq_n = it->n;
-    it->u = evaluate_npi(s->tok, s->ntok, (double)it->n, 'N');
+    it->prev = it->u;
+    it->u = next;
     it->n++;
+}
+
+/* Valeurs de la suite pour n = start .. start+count-1. have[c] = false hors
+ * du domaine (avant n0, ou trop loin pour une recurrente). */
+static void seq_values(seq_def *s, int start, int count, double *vals, bool *have)
+{
+    for (int c = 0; c < count; c++)
+    {
+        vals[c] = NAN;
+        have[c] = false;
+    }
+    int last = start + count - 1;
+    if (s->order == 0)
+    {
+        for (int c = 0; c < count; c++)
+            if (start + c >= s->n0)
+            {
+                vals[c] = seq_explicit(s, start + c);
+                have[c] = true;
+            }
+        return;
+    }
+    if (last < s->n0 || start > s->n0 + SEQ_MAX_N)
+        return;
+    int lim = std::min(last, s->n0 + SEQ_MAX_N);
+    seq_iter it;
+    seq_iter_init(s, &it);
+    while (true)
+    {
+        if (it.n >= start)
+        {
+            vals[it.n - start] = it.u;
+            have[it.n - start] = true;
+        }
+        if (it.n >= lim)
+            break;
+        seq_iter_next(s, &it);
+    }
 }
 
 /* Valeur de la suite en n (ok = false si non definie / trop loin). */
 static double seq_value(seq_def *s, int n, bool *ok)
 {
-    *ok = true;
-    if (!s->recurrent)
-        return seq_explicit(s, n);
-    if (n < 0 || n > SEQ_MAX_N)
-    {
-        *ok = false;
-        return NAN;
-    }
-    seq_iter it;
-    seq_iter_init(s, &it);
-    while (it.n < n)
-        seq_iter_next(s, &it);
-    return it.u;
+    double v;
+    seq_values(s, n, 1, &v, ok);
+    return *ok ? v : NAN;
 }
 
 /* Texte court d'un nombre (au plus maxch caracteres, buf >= 32 octets). */
@@ -223,38 +340,7 @@ static void display_values_table(seq_def *defs, int *ids, int nd,
 
         double vals[TBL_COLS];
         bool have[TBL_COLS];
-        for (int c = 0; c < TBL_COLS; c++)
-        {
-            have[c] = true;
-            vals[c] = NAN;
-        }
-        if (defs[s].recurrent)
-        {
-            /* Une seule passe de 0 a la derniere colonne affichee. */
-            int last = start_n + TBL_COLS - 1;
-            if (last > SEQ_MAX_N)
-            {
-                for (int c = 0; c < TBL_COLS; c++)
-                    have[c] = false;
-            }
-            else
-            {
-                seq_iter it;
-                seq_iter_init(&defs[s], &it);
-                for (int n = 0; n <= last; n++)
-                {
-                    if (n >= start_n)
-                        vals[n - start_n] = it.u;
-                    if (n < last)
-                        seq_iter_next(&defs[s], &it);
-                }
-            }
-        }
-        else
-        {
-            for (int c = 0; c < TBL_COLS; c++)
-                vals[c] = seq_explicit(&defs[s], start_n + c);
-        }
+        seq_values(&defs[s], start_n, TBL_COLS, vals, have);
 
         for (int c = 0; c < TBL_COLS; c++)
         {
@@ -300,23 +386,26 @@ static void seq_plot(seq_def *s,
         lo = -1e6;
     if (hi > 1e6)
         hi = 1e6;
-    int n_lo = (int)lo, n_hi = (int)hi;
+    int n_lo = std::max((int)lo, s->n0), n_hi = (int)hi;
+    if (n_hi < n_lo)
+        return;
     int step = (n_hi - n_lo + 1) / SCREEN_WIDTH;
     if (step < 1)
         step = 1;
 
-    if (s->recurrent)
+    if (s->order > 0)
     {
-        if (n_hi > SEQ_MAX_N)
-            n_hi = SEQ_MAX_N;
+        if (n_hi > s->n0 + SEQ_MAX_N)
+            n_hi = s->n0 + SEQ_MAX_N;
         seq_iter it;
         seq_iter_init(s, &it);
-        for (int n = 0; n <= n_hi; n++)
+        while (true)
         {
-            if (n >= n_lo && (n % step) == 0)
-                seq_point(n, it.u, x_min, x_max, y_min, y_max, color);
-            if (n < n_hi)
-                seq_iter_next(s, &it);
+            if (it.n >= n_lo && (it.n % step) == 0)
+                seq_point(it.n, it.u, x_min, x_max, y_min, y_max, color);
+            if (it.n >= n_hi)
+                break;
+            seq_iter_next(s, &it);
         }
     }
     else
@@ -331,23 +420,18 @@ static void seq_fit(seq_def *defs, int nd,
                     double *x_min, double *x_max, double *y_min, double *y_max)
 {
     double lo = INFINITY, hi = -INFINITY;
+    int n_first = SEQ_N0_MAX, n_last = 0;
     for (int s = 0; s < nd; s++)
     {
-        seq_iter it;
-        if (defs[s].recurrent)
-            seq_iter_init(&defs[s], &it);
-        for (int n = 0; n <= SEQ_FIT_N; n++)
+        double vals[SEQ_FIT_N + 1];
+        bool have[SEQ_FIT_N + 1];
+        seq_values(&defs[s], defs[s].n0, SEQ_FIT_N + 1, vals, have);
+        n_first = std::min(n_first, defs[s].n0);
+        n_last = std::max(n_last, defs[s].n0 + SEQ_FIT_N);
+        for (int c = 0; c <= SEQ_FIT_N; c++)
         {
-            double v;
-            if (defs[s].recurrent)
-            {
-                v = it.u;
-                if (n < SEQ_FIT_N)
-                    seq_iter_next(&defs[s], &it);
-            }
-            else
-                v = seq_explicit(&defs[s], n);
-            if (isnan(v) || isinf(v))
+            double v = vals[c];
+            if (!have[c] || isnan(v) || isinf(v))
                 continue;
             if (v < lo)
                 lo = v;
@@ -365,8 +449,8 @@ static void seq_fit(seq_def *defs, int nd,
     double pad = (hi - lo) * 0.15;
     *y_min = lo - pad;
     *y_max = hi + pad;
-    *x_min = -1;
-    *x_max = SEQ_FIT_N + 1;
+    *x_min = n_first - 1;
+    *x_max = n_last + 1;
 }
 
 /* Curseur : croix sur le terme n et bandeau d'information en bas. */
@@ -406,35 +490,80 @@ static void seq_cursor(seq_def *s, char letter, int n,
     free_text_box(b);
 }
 
-static void seq_cleanup(fill_box **arr, text_box *t1, text_box *t2, text_box *t3)
+/* ------------------------------ Onglet Formule ---------------------------- */
+
+/* Etiquette de la ligne i : "u(n+2)=", "u(1)="... */
+static void seq_set_label(fill_box **arr, int i)
 {
-    for (int i = 0; i < SEQ_BOXES; i++)
+    int k = i / SEQ_LINES, r = i % SEQ_LINES;
+    char letter = 'u' + k % 6;
+    if (r == 0)
     {
-        if (arr[i] != nullptr)
-        {
-            free(arr[i]->text);
-            free(arr[i]);
-        }
+        static const char *const fmt[3] = {"%c(n)=", "%c(n+1)=", "%c(n+2)="};
+        snprintf(g_seq_label, sizeof(g_seq_label), fmt[text_order(arr[i])], letter);
     }
-    free(arr);
-    free_text_box(t1);
-    free_text_box(t2);
-    free_text_box(t3);
+    else
+        snprintf(g_seq_label, sizeof(g_seq_label), "%c(%d)=", letter, s_n0[k] + r - 1);
+}
+
+/* Nombre de lignes visibles de a (compris) a b (exclu). */
+static int visible_rows(fill_box **arr, int a, int b)
+{
+    int n = 0;
+    for (int i = std::max(a, 0); i < b; i++)
+        if (line_visible(arr, i))
+            n++;
+    return n;
+}
+
+/* Outils sur la ligne d'une formule : blocs, lettres U et P, premier rang. */
+static void seq_tools(fill_box **arr, int line, bool snd)
+{
+    int k = line / SEQ_LINES;
+    char rank[32];
+    snprintf(rank, sizeof(rank), "Premier rang n0 = %d...", s_n0[k]);
+    const char *labels[8] = {"Arithmetique U+r", "Geometrique q*U", "Arith-geom a*U+b",
+                             "U + a*n + b", "U : terme precedent",
+                             "P : terme d'avant (ordre 2)", rank, "Autres outils..."};
+    static const int blocks[4] = {SEQ_ARITH, SEQ_GEOM, SEQ_ARIGEO, SEQ_ARITHN};
+    int c = uk_menu("Suites", labels, 8, 0);
+    fill_box *f = arr[line];
+    if (c >= 0 && c <= 3)
+        update_fill_box(f, blocks[c], snd);
+    else if (c == 4)
+        update_fill_box(f, ZERO, true); /* U */
+    else if (c == 5)
+        update_fill_box(f, ONE, true); /* P */
+    else if (c == 6)
+    {
+        double v = s_n0[k];
+        if (uk_input("Premier rang", "n0 (entier de 0 a 99) =", &v, -1) &&
+            v >= 0 && v <= SEQ_N0_MAX && v == floor(v))
+            s_n0[k] = (int)v;
+    }
+    else if (c == 7)
+        update_fill_box(f, menu_tools(), snd);
 }
 
 int Sequencer()
 {
     bool snd = false;
 
-    text_box *TabFormule = create_text_box(0, 220, 20, 107, 1, false);
-    text_box *TabGraphe = create_text_box(107, 220, 20, 107, 1, false);
-    text_box *TabValeur = create_text_box(214, 220, 20, 106, 1, false);
-    TabFormule->text = "Formule";
-    TabFormule->t_size = 7;
-    TabGraphe->text = "Graphe";
-    TabGraphe->t_size = 6;
-    TabValeur->text = "Valeur";
-    TabValeur->t_size = 6;
+    if (s_tab_formule == nullptr)
+    {
+        s_tab_formule = create_text_box(0, 220, 20, 107, 1, false);
+        s_tab_graphe = create_text_box(107, 220, 20, 107, 1, false);
+        s_tab_valeur = create_text_box(214, 220, 20, 106, 1, false);
+        s_tab_formule->text = "Formule";
+        s_tab_formule->t_size = 7;
+        s_tab_graphe->text = "Graphe";
+        s_tab_graphe->t_size = 6;
+        s_tab_valeur->text = "Valeur";
+        s_tab_valeur->t_size = 6;
+    }
+    text_box *TabFormule = s_tab_formule;
+    text_box *TabGraphe = s_tab_graphe;
+    text_box *TabValeur = s_tab_valeur;
 
     const uint16_t palet[] = {
         COLOR_RED, COLOR_LIME, COLOR_BLUE, COLOR_YELLOW,
@@ -442,11 +571,17 @@ int Sequencer()
         COLOR_MAROON, COLOR_OLIVE, COLOR_GREEN, COLOR_PURPLE,
         COLOR_TEAL, COLOR_NAVY};
 
-    fill_box **arr_fill_box = (fill_box **)malloc(sizeof(fill_box *) * SEQ_BOXES);
-    for (int i = 0; i < SEQ_BOXES; i++)
-        arr_fill_box[i] = nullptr;
-    arr_fill_box[0] = create_fill_box(0, 20, 40, 320, 3);
-    arr_fill_box[1] = create_fill_box(0, 20, 40, 320, 3);
+    /* Les formules sont gardees d'une ouverture a l'autre. */
+    if (s_arr == nullptr)
+    {
+        fill_box **a = (fill_box **)calloc(SEQ_BOXES, sizeof(fill_box *));
+        if (a == nullptr)
+            return 0;
+        for (int i = 0; i < SEQ_LINES; i++)
+            a[i] = create_fill_box(0, 20, 40, 320, 3);
+        s_arr = a;
+    }
+    fill_box **arr_fill_box = s_arr;
 
     int selected_fill_box = 0;
     int first_display = 0;
@@ -480,50 +615,61 @@ int Sequencer()
                 update_fill_box(arr_fill_box[selected_fill_box], last_pressed, snd);
             }
             else
-            {
-                seq_cleanup(arr_fill_box, TabFormule, TabGraphe, TabValeur);
-                return 0;
-            }
+                return 0; /* formules gardees pour la prochaine ouverture */
             break;
 
         case UP:
             if (tab == 0)
             {
-                selected_fill_box = std::max(-1, selected_fill_box - 1);
+                int pv = selected_fill_box - 1;
+                while (pv >= 0 && !line_visible(arr_fill_box, pv))
+                    pv--;
+                selected_fill_box = std::max(-1, pv);
                 if (selected_fill_box < first_display)
                     first_display = selected_fill_box;
             }
             else if (tab == 1)
             {
                 /* En mode graphe on selectionne une suite (pas une ligne). */
-                int k = selected_fill_box < 0 ? -1 : selected_fill_box / 2;
+                int k = selected_fill_box < 0 ? -1 : selected_fill_box / SEQ_LINES;
                 int j = k - 1;
                 while (j >= 0 && !seq_active(arr_fill_box, j))
                     j--;
-                selected_fill_box = j >= 0 ? 2 * j : -1;
-                cursor_n = 0;
+                selected_fill_box = j >= 0 ? SEQ_LINES * j : -1;
+                cursor_n = j >= 0 ? s_n0[j] : 0;
             }
             break;
 
         case DOWN:
             if (tab == 0)
             {
-                selected_fill_box = std::min(SEQ_BOXES - 1, selected_fill_box + 1);
-                if (arr_fill_box[selected_fill_box] == nullptr)
-                    arr_fill_box[selected_fill_box] = create_fill_box(0, 20, 40, 320, 3);
-                if (first_display + 4 < selected_fill_box)
+                int nx = selected_fill_box + 1;
+                while (nx < SEQ_BOXES && !line_visible(arr_fill_box, nx))
+                    nx++;
+                if (nx < SEQ_BOXES)
+                {
+                    selected_fill_box = nx;
+                    if (arr_fill_box[selected_fill_box] == nullptr)
+                        arr_fill_box[selected_fill_box] = create_fill_box(0, 20, 40, 320, 3);
+                }
+                while (first_display < selected_fill_box &&
+                       visible_rows(arr_fill_box, first_display, selected_fill_box) > 4)
+                {
                     first_display++;
+                    while (first_display < selected_fill_box && !line_visible(arr_fill_box, first_display))
+                        first_display++;
+                }
             }
             else if (tab == 1)
             {
-                int k = selected_fill_box < 0 ? -1 : selected_fill_box / 2;
+                int k = selected_fill_box < 0 ? -1 : selected_fill_box / SEQ_LINES;
                 int j = k + 1;
                 while (j < SEQ_COUNT && !seq_active(arr_fill_box, j))
                     j++;
                 if (j < SEQ_COUNT)
                 {
-                    selected_fill_box = 2 * j;
-                    cursor_n = 0;
+                    selected_fill_box = SEQ_LINES * j;
+                    cursor_n = s_n0[j];
                 }
             }
             break;
@@ -577,7 +723,7 @@ int Sequencer()
             {
                 if (selected_fill_box != -1)
                 {
-                    if (cursor_n > 0)
+                    if (cursor_n > s_n0[selected_fill_box / SEQ_LINES])
                         cursor_n--;
                     if (cursor_n < x_min)
                     {
@@ -626,10 +772,14 @@ int Sequencer()
         case TOOLS:
             if (tab == 0 && selected_fill_box >= 0)
             {
-                /* Ligne de formule : blocs de recurrence (puis outils
-                 * classiques). Ligne du premier terme : outils seuls. */
-                int ev = (selected_fill_box % 2 == 0) ? menu_seq_blocks() : menu_tools();
-                update_fill_box(arr_fill_box[selected_fill_box], ev, snd);
+                /* Ligne de formule : blocs de recurrence, lettres et premier
+                 * rang (puis outils classiques). Lignes des premiers termes :
+                 * outils seuls. */
+                if (selected_fill_box % SEQ_LINES == 0)
+                    seq_tools(arr_fill_box, selected_fill_box, snd);
+                else
+                    update_fill_box(arr_fill_box[selected_fill_box], menu_tools(), snd);
+                fill_screen(BACKGROUND_COLOR); /* efface le menu ferme */
             }
             break;
 
@@ -658,21 +808,22 @@ int Sequencer()
             break;
         }
 
-        /* Chaque suite a sa ligne "premier terme" juste apres sa formule. */
+        /* Chaque suite a ses lignes de premiers termes juste apres sa formule. */
         if (tab == 0 && selected_fill_box >= 0)
-            for (int i = 0; i < 2; i++)
-            {
-                int base = selected_fill_box & ~1;
+        {
+            int base = selected_fill_box - selected_fill_box % SEQ_LINES;
+            for (int i = 0; i < SEQ_LINES; i++)
                 if (arr_fill_box[base + i] == nullptr)
                     arr_fill_box[base + i] = create_fill_box(0, 20, 40, 320, 3);
-            }
+        }
 
         int mv = 0;
         if (tab == 0)
         {
-            for (int i = std::max(first_display, 0); i < first_display + 6 && i < SEQ_BOXES; i++)
+            int row = 0;
+            for (int i = std::max(first_display, 0); i < SEQ_BOXES && row < 6; i++)
             {
-                if (arr_fill_box[i] == nullptr)
+                if (arr_fill_box[i] == nullptr || !line_visible(arr_fill_box, i))
                     continue;
                 int old_mv = mv;
                 int tok_n = 0;
@@ -693,7 +844,9 @@ int Sequencer()
                 free(toks);
                 arr_fill_box[i]->h = mv - old_mv + 40;
 
-                display_fill_box(arr_fill_box[i], 160 - (i - std::max(first_display, 0)) * 40 - mv, i == selected_fill_box, i, 'u', false);
+                seq_set_label(arr_fill_box, i);
+                display_fill_box(arr_fill_box[i], 160 - row * 40 - mv, i == selected_fill_box, i, 'u', false);
+                row++;
             }
         }
         else
@@ -706,7 +859,7 @@ int Sequencer()
             {
                 if (!seq_active(arr_fill_box, k))
                     continue;
-                if (seq_build(arr_fill_box[2 * k], arr_fill_box[2 * k + 1], &defs[nd]))
+                if (seq_build(arr_fill_box, k, &defs[nd]))
                     ids[nd++] = k;
             }
 
@@ -715,7 +868,7 @@ int Sequencer()
                 if (need_fit)
                 {
                     seq_fit(defs, nd, &x_min, &x_max, &y_min, &y_max);
-                    cursor_n = 0;
+                    cursor_n = selected_fill_box >= 0 ? s_n0[selected_fill_box / SEQ_LINES] : 0;
                     need_fit = false;
                 }
                 axis(x_min, x_max, y_min, y_max);
@@ -724,7 +877,7 @@ int Sequencer()
 
                 if (selected_fill_box >= 0)
                     for (int s = 0; s < nd; s++)
-                        if (ids[s] == selected_fill_box / 2)
+                        if (ids[s] == selected_fill_box / SEQ_LINES)
                             seq_cursor(&defs[s], 'u' + (ids[s] % 6), cursor_n, x_min, x_max, y_min, y_max);
             }
             else

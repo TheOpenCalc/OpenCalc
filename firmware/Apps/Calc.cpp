@@ -98,6 +98,15 @@ static bool result_ok(complex z)
     return !isnan(z.re) && !isnan(z.im);
 }
 
+/* Resultat non defini (1/0, ln(0), racine d'une matrice...) : un message
+ * au lieu de "nan". */
+static void show_undefined(fill_box *res, char *approx, int cap)
+{
+    res->text[0] = '\0';
+    res->t_size = 0;
+    snprintf(approx, cap, "%cNon défini", APPROX_MSG);
+}
+
 /* Ecrit un resultat (texte de l'editeur) sur la ligne de resultat. */
 static void set_result_text(fill_box *res, const char *txt)
 {
@@ -117,7 +126,7 @@ static void set_result_text(fill_box *res, const char *txt)
 static bool calc_cas(const char *text, int len, bool force, fill_box *res, char *approx, int approx_cap,
                      complex *value, bool *value_ok)
 {
-    static char out[512];
+    static char out[1000]; /* comme une case de l'historique (999 caracteres) */
     *value_ok = false;
     approx[0] = '\0';
     cas_result r = cas_eval(text, len, out, sizeof(out));
@@ -175,22 +184,34 @@ static void matrix_view(matrix *m)
     {
         char title[24];
         sprintf(title, "Matrice %dx%d", m->rows, m->cols);
-        draw_char(18, 4, title, 0x0000, BACKGROUND_COLOR, 2);
+        /* x grandit vers le haut : titre en haut, ligne 1 de la matrice
+         * juste dessous (avant : titre en bas et matrice a l'envers). */
+        fill_rect(SCREEN_HEIGHT - header_h, 0, header_h, SCREEN_WIDTH, BACKGROUND_COLOR);
+        draw_char(SCREEN_HEIGHT - 6, 40, title, 0x0000, BACKGROUND_COLOR, 2);
         for (int r = 0; r < view_rows; r++)
         {
             for (int c = 0; c < view_cols; c++)
             {
                 int ar = scroll_r + r;
                 int ac = scroll_c + c;
-                int x0 = header_h + r * cell_h;
+                int x0 = SCREEN_HEIGHT - header_h - (r + 1) * cell_h;
                 int y0 = c * cell_w;
                 uint16_t bg = ((ar % 2 == 0) == (ac % 2 == 0)) ? FRONTGROUND_COLOR : FRONTGROUND_COLOR_BIS;
                 fill_rect(x0, y0, cell_h, cell_w, bg);
                 if (ar < m->rows && ac < m->cols)
                 {
-                    char nb[24];
-                    int len = complex_to_string(mat_get(m, ar, ac), nb);
+                    /* Un element complexe fait jusqu'a ~50 caracteres
+                     * ("-3.44003917527736*10^19+1.65291460889264*10^21i") :
+                     * l'ancien tampon de 24 debordait sur la pile. */
+                    char nb[64];
+                    complex el = mat_get(m, ar, ac);
+                    int len = complex_to_string(el, nb);
+                    /* Trop long pour la case : forme courte d'un reel. */
+                    if (len * 7 > cell_w && el.im == 0 && isfinite(el.re))
+                        len = snprintf(nb, sizeof(nb), "%.3g", el.re);
                     int ty = y0 + (cell_w - len * 7) / 2;
+                    if (ty < y0)
+                        ty = y0;
                     draw_char(x0 + (cell_h - 8) / 2, ty, nb, 0x0000, bg, 1);
                 }
                 fill_rect(x0, y0, 1, cell_w, 0x0000);
@@ -199,12 +220,12 @@ static void matrix_view(matrix *m)
                 fill_rect(x0, y0 + cell_w - 1, cell_h, 1, 0x0000);
             }
         }
+        /* Pas de blink_cursor() ici : la vue n'a pas de curseur de texte, il
+         * clignoterait par-dessus la grille a sa derniere position. */
+        flush_display();
         int last = scan_keypad();
         while (last == -1)
-        {
-            blink_cursor();
             last = scan_keypad();
-        }
         if (last == OK || last == BACK || last == ENTER)
             return;
         if (last == UP && scroll_r > 0)
@@ -218,21 +239,114 @@ static void matrix_view(matrix *m)
     }
 }
 
+/* Historique alloue a la demande.
+ *
+ * Une case n'a besoin de ses 1000 octets que pendant qu'on y ecrit : la
+ * saisie en cours et le resultat en train d'etre produit. Les autres sont
+ * creees quand on y arrive (hist_open), puis reduites a la longueur de leur
+ * texte une fois le calcul termine (hist_close). 50 cases pleines occupent
+ * ainsi quelques Ko au lieu de 51 Ko, ce qui laisse la place au calcul formel. */
+#define HIST_TEXT_CAP 1000
+
+/* Rend la case a vide et prete a recevoir HIST_TEXT_CAP octets. Faux si la
+ * memoire manque (la case garde alors son ancien contenu). */
+static bool hist_open(fill_box **history, int a)
+{
+    if (history[a] == nullptr)
+    {
+        fill_box *b = create_fill_box(0, 0, 40, 320, 2);
+        if (b == nullptr)
+            return false;
+        b->color = a % 2 == 0 ? FRONTGROUND_COLOR : FRONTGROUND_COLOR_BIS;
+        history[a] = b;
+        return true; /* texte deja a zero et de pleine taille */
+    }
+    char *t = (char *)realloc(history[a]->text, HIST_TEXT_CAP);
+    if (t == nullptr)
+        return false;
+    memset(t, 0, HIST_TEXT_CAP);
+    history[a]->text = t;
+    history[a]->t_size = 0;
+    history[a]->curso_pos = 0;
+    return true;
+}
+
+/* Case terminee : ne garde que le texte et son '\0'. Plus personne n'y ecrit
+ * avant le prochain hist_open. */
+static void hist_close(fill_box *b)
+{
+    if (b == nullptr)
+        return;
+    if (b->t_size < 0)
+        b->t_size = 0;
+    if (b->t_size > HIST_TEXT_CAP - 1)
+        b->t_size = HIST_TEXT_CAP - 1;
+    b->text[b->t_size] = '\0';
+    char *t = (char *)realloc(b->text, (size_t)b->t_size + 1);
+    if (t != nullptr)
+        b->text = t;
+}
+
+/* Recopie une ligne de l'historique (saisie ou resultat) a la position du
+ * curseur de la saisie en cours. Rien pour une ligne vide ("Non defini") ni
+ * pour plusieurs solutions ("X=1 ; X=2"), qui ne forment pas une saisie. */
+static void hist_recall(const fill_box *src, fill_box *dst)
+{
+    if (src == nullptr || dst == nullptr || src->t_size <= 0)
+        return;
+    if (memchr(src->text, CAS_SEPARATOR, (size_t)src->t_size) != nullptr)
+        return;
+    int n = src->t_size;
+    if (dst->curso_pos < 0 || dst->curso_pos > dst->t_size)
+        dst->curso_pos = dst->t_size;
+    if (dst->t_size + n > HIST_TEXT_CAP - 1)
+        return;
+    memmove(dst->text + dst->curso_pos + n, dst->text + dst->curso_pos,
+            (size_t)(dst->t_size - dst->curso_pos));
+    memcpy(dst->text + dst->curso_pos, src->text, (size_t)n);
+    dst->t_size += n;
+    dst->curso_pos += n;
+    dst->text[dst->t_size] = '\0';
+}
+
+/* L'historique survit a la sortie de l'appli (BACK ou HOME) : il est cree
+ * au premier lancement et garde ensuite, comme sur les autres calculatrices.
+ * Chaque case terminee est deja reduite a la longueur de son texte. */
+static fill_box **s_history = nullptr;
+static fill_box *s_blank = nullptr;
+/* Compteurs croissants : la case utilisee est compteur % HISTORY_SIZE.
+ * Chaque calcul prend deux cases (saisie paire, resultat impair) ;
+ * HISTORY_SIZE est pair, donc la parite est conservee au retour a 0. */
+static int s_last_history = 0;
+static bool s_have_ans = false; /* un calcul a deja abouti */
+
 int Calc()
 {
     bool snd = false;
-    fill_box **history = (fill_box **)malloc(sizeof(fill_box *) * (HISTORY_SIZE + 1));
-
-    for (int i = 0; i <= HISTORY_SIZE; i++)
+    if (s_history == nullptr)
     {
-        history[i] = create_fill_box(0, 0, 40, 320, 2);
-        history[i]->color = i % 2 == 0 ? FRONTGROUND_COLOR : FRONTGROUND_COLOR_BIS;
+        fill_box **h = (fill_box **)calloc(HISTORY_SIZE + 1, sizeof(fill_box *));
+        if (h == nullptr)
+            return 0;
+        if (!hist_open(h, 0)) /* seule la premiere saisie existe au depart */
+        {
+            free(h);
+            return 0;
+        }
+        s_history = h;
+        s_last_history = 0;
+        s_have_ans = false;
+        memset(s_approx, 0, sizeof(s_approx));
     }
-
-    int cur_last_history = 0;
-    bool have_ans = false; /* un calcul a deja abouti dans cette session */
-    int cur_selected = 0;
-    memset(s_approx, 0, sizeof(s_approx));
+    if (s_blank == nullptr)
+        s_blank = create_fill_box(0, 0, 40, 320, 2);
+    fill_box **history = s_history;
+    fill_box *blank = s_blank;
+    /* References : le reste de la fonction lit et ecrit l'etat garde. */
+    int &cur_last_history = s_last_history;
+    bool &have_ans = s_have_ans;
+    int cur_selected = cur_last_history;
+    history[cur_last_history % HISTORY_SIZE]->curso_pos = history[cur_last_history % HISTORY_SIZE]->t_size;
     fill_screen(BACKGROUND_COLOR); // Bleu
 
     while (true)
@@ -242,11 +356,16 @@ int Calc()
 
         for (int i = cur_selected; i >= cur_selected - 5; i--)
         {
-            int a = i % HISTORY_SIZE;
-            if (a < 0)
+            if (i < 0 || i <= cur_last_history - HISTORY_SIZE)
             {
-                a += HISTORY_SIZE;
+                /* Avant le plus ancien calcul garde : case vide. */
+                int par = ((i % 2) + 2) % 2;
+                blank->color = par == 0 ? FRONTGROUND_COLOR : FRONTGROUND_COLOR_BIS;
+                blank->h = 40;
+                display_fill_box(blank, 160 - (i - cur_selected + 4) * 40 + mv, false, -1, ' ', par == 1);
+                continue;
             }
+            int a = i % HISTORY_SIZE;
             if (history[a] != nullptr)
             {
                 int old_mv = mv;
@@ -268,7 +387,7 @@ int Calc()
                 token_free_matrices(toks, tok_n);
                 free(toks);
                 history[a]->h = mv - old_mv + 40;
-                display_fill_box(history[a], 160 - (i - cur_selected + 4) * 40 + old_mv, (a - cur_selected) % HISTORY_SIZE == 0, -1, ' ',a%2==1);
+                display_fill_box(history[a], 160 - (i - cur_selected + 4) * 40 + old_mv, i == cur_selected, -1, ' ',a%2==1);
                 if (s_approx[a][0])
                     draw_approx(160 - (i - cur_selected + 4) * 40 + old_mv, history[a]->h, s_approx[a]);
                 if (i == cur_selected)
@@ -290,12 +409,19 @@ int Calc()
                  * comme avec la touche X. */
                 if (ch == 'x' || ch == 'X')
                 {
-                    update_fill_box(history[cur_last_history], X, snd);
+                    update_fill_box(history[cur_last_history % HISTORY_SIZE], X, snd);
                     break;
                 }
-                insert_ans_if_empty(history[cur_last_history], have_ans, -1, ch);
-                if (!matrix_cell_edit(history[cur_last_history], ch, true))
-                    fill_box_insert_char(history[cur_last_history], (char)ch);
+                /* '<' et '>' du clavier : signes d'inequation (le texte
+                 * interne ne les ecrit pas en ASCII, voir Cas.h). */
+                if (ch == '<' || ch == '>')
+                {
+                    update_fill_box(history[cur_last_history % HISTORY_SIZE], ch == '<' ? KEY_LT : KEY_GT, snd);
+                    break;
+                }
+                insert_ans_if_empty(history[cur_last_history % HISTORY_SIZE], have_ans, -1, ch);
+                if (!matrix_cell_edit(history[cur_last_history % HISTORY_SIZE], ch, true))
+                    fill_box_insert_char(history[cur_last_history % HISTORY_SIZE], (char)ch);
                 break;
             }
             last_pressed = scan_keypad();
@@ -309,28 +435,43 @@ int Calc()
             toggle(&snd);
             break;
         case UP:
-            if (!matrix_cell_edit(history[cur_last_history], UP, false))
-                cur_selected = (cur_selected - 1 + HISTORY_SIZE) % HISTORY_SIZE;
+            if (!matrix_cell_edit(history[cur_last_history % HISTORY_SIZE], UP, false) &&
+                cur_selected > 0 && cur_selected > cur_last_history - (HISTORY_SIZE - 1))
+                cur_selected--;
             break;
         case DOWN:
-            if (!matrix_cell_edit(history[cur_last_history], DOWN, false))
-                cur_selected = min(cur_last_history, (cur_selected + 1) % HISTORY_SIZE);
+            if (!matrix_cell_edit(history[cur_last_history % HISTORY_SIZE], DOWN, false))
+                cur_selected = min(cur_last_history, cur_selected + 1);
             break;
         case OK:
         case ENTER:
         {
-            int l = cur_last_history;
-            cur_last_history = (cur_last_history + 1) % HISTORY_SIZE;
-            if (cur_last_history < 0)
+            /* Ligne de l'historique selectionnee : OK la recopie dans la
+             * saisie (au curseur), sans rien calculer. */
+            if (cur_selected != cur_last_history)
             {
-                cur_last_history += HISTORY_SIZE + 1;
+                hist_recall(history[cur_selected % HISTORY_SIZE], history[cur_last_history % HISTORY_SIZE]);
+                cur_selected = cur_last_history;
+                break;
             }
-            if (history[cur_last_history] == nullptr)
-            {
-                history[cur_last_history] = create_fill_box(0, 0, 20, 320, 2);
-            }
+            /* Saisie vide : rien a calculer (avant : une ligne "0"). */
+            if (history[cur_last_history % HISTORY_SIZE]->t_size <= 0)
+                break;
+            int l = cur_last_history % HISTORY_SIZE;
+            /* Cases du resultat et de la prochaine saisie : creees si c'est
+             * leur premier usage, videes si elles contiennent un ancien
+             * calcul (apres un tour complet). Sans memoire pour elles, la
+             * saisie reste en place et rien n'est calcule. */
+            if (!hist_open(history, (cur_last_history + 1) % HISTORY_SIZE) ||
+                !hist_open(history, (cur_last_history + 2) % HISTORY_SIZE))
+                break;
+            cur_last_history++;
+            s_approx[cur_last_history % HISTORY_SIZE][0] = '\0';
+            s_approx[(cur_last_history + 1) % HISTORY_SIZE][0] = '\0';
+            int r = cur_last_history % HISTORY_SIZE; /* case du resultat */
+            history[r]->hscroll = 0;
+            history[(cur_last_history + 1) % HISTORY_SIZE]->hscroll = 0;
             int tokenized_size;
-            s_approx[cur_last_history][0] = '\0';
 
             token *t = parse_string_to_token(history[l]->text, history[l]->t_size, &tokenized_size);
 
@@ -358,8 +499,8 @@ int Calc()
             bool cas_value_ok = false;
             bool done_cas = false;
             if (force_cas || (!has_matrix && !has_calculus && exact_input_allowed(src, src_len)))
-                done_cas = calc_cas(src, src_len, force_cas, history[cur_last_history], s_approx[cur_last_history],
-                                    sizeof(s_approx[cur_last_history]), &cas_value, &cas_value_ok);
+                done_cas = calc_cas(src, src_len, force_cas, history[r], s_approx[r],
+                                    sizeof(s_approx[r]), &cas_value, &cas_value_ok);
             if (done_cas)
             {
                 if (cas_value_ok && result_ok(cas_value))
@@ -376,8 +517,8 @@ int Calc()
                     char buf[96];
                     int len = mat_to_string(cr.m, buf, 96);
                     for (int i = 0; i < len; i++)
-                        history[cur_last_history]->text[i] = buf[i];
-                    history[cur_last_history]->t_size = len;
+                        history[r]->text[i] = buf[i];
+                    history[r]->t_size = len;
                     set_ans_matrix(cr.m);
                     have_ans = true;
                     matrix_view(cr.m);
@@ -389,7 +530,10 @@ int Calc()
                         set_ans(cr.scalar);
                         have_ans = true;
                     }
-                    history[cur_last_history]->t_size = complex_to_string(cr.scalar, history[cur_last_history]->text);
+                    if (result_ok(cr.scalar))
+                        history[r]->t_size = complex_to_string(cr.scalar, history[r]->text);
+                    else
+                        show_undefined(history[r], s_approx[r], sizeof(s_approx[r]));
                 }
                 calc_result_free(&cr);
             }
@@ -402,7 +546,7 @@ int Calc()
                     set_ans(temp);
                     have_ans = true;
                 }
-                fill_box *res = history[cur_last_history];
+                fill_box *res = history[r];
                 /* Ecriture exacte (1/3, r(3)/2, 3p/4...) quand la saisie ne
                  * contient pas de nombre decimal et que le resultat est reel.
                  * Pas pour derivee/integrale : leur resultat est approche. */
@@ -415,65 +559,74 @@ int Calc()
                     int len = (int)strlen(exact);
                     memcpy(res->text, exact, len + 1);
                     res->t_size = len;
-                    complex_to_string(temp, s_approx[cur_last_history]);
+                    complex_to_string(temp, s_approx[r]);
                 }
+                else if (!result_ok(temp))
+                    show_undefined(res, s_approx[r], sizeof(s_approx[r]));
                 else
                     res->t_size = complex_to_string(temp, res->text);
             }
             cur_last_history++;
             cur_selected = cur_last_history;
-            if (cur_last_history <= HISTORY_SIZE)
-                s_approx[cur_last_history][0] = '\0';
             token_free_matrices(t, tokenized_size);
             free(t);
             free(out);
+            hist_close(history[l]);
+            hist_close(history[r]);
         }
-            history[cur_last_history]->curso_pos = history[cur_last_history]->t_size;
+            history[cur_last_history % HISTORY_SIZE]->curso_pos = history[cur_last_history % HISTORY_SIZE]->t_size;
             break;
         case LEFT:
+            /* Resultat trop large selectionne dans l'historique : defilement. */
+            if (cur_selected != cur_last_history && history[cur_selected % HISTORY_SIZE] &&
+                history[cur_selected % HISTORY_SIZE]->hscroll > 0)
+            {
+                history[cur_selected % HISTORY_SIZE]->hscroll -= 48;
+                break;
+            }
             cur_selected = cur_last_history;
-            if (!matrix_cell_edit(history[cur_selected], LEFT, false))
-                fill_box_left(history[cur_selected]);
+            if (!matrix_cell_edit(history[cur_selected % HISTORY_SIZE], LEFT, false))
+                fill_box_left(history[cur_selected % HISTORY_SIZE]);
             break;
         case RIGHT:
+            if (cur_selected != cur_last_history && history[cur_selected % HISTORY_SIZE] &&
+                history[cur_selected % HISTORY_SIZE]->hscroll < history[cur_selected % HISTORY_SIZE]->hscroll_max)
+            {
+                history[cur_selected % HISTORY_SIZE]->hscroll += 48;
+                break;
+            }
             cur_selected = cur_last_history;
-            if (!matrix_cell_edit(history[cur_selected], RIGHT, false))
-                fill_box_right(history[cur_selected]);
+            if (!matrix_cell_edit(history[cur_selected % HISTORY_SIZE], RIGHT, false))
+                fill_box_right(history[cur_selected % HISTORY_SIZE]);
             break;
         case X:
             /* X : variable de somme/derivee..., ou variable du calcul formel. */
-            update_fill_box(history[cur_last_history], X, snd);
+            update_fill_box(history[cur_last_history % HISTORY_SIZE], X, snd);
             break;
         case BACK:
-            if (history[cur_last_history]->t_size > 0)
+            if (history[cur_last_history % HISTORY_SIZE]->t_size > 0)
             {
-                if (!matrix_cell_edit(history[cur_last_history], BACK, false))
-                    update_fill_box(history[cur_last_history], last_pressed, snd);
+                if (!matrix_cell_edit(history[cur_last_history % HISTORY_SIZE], BACK, false))
+                    update_fill_box(history[cur_last_history % HISTORY_SIZE], last_pressed, snd);
             }
             else
-            {
-                return 0;
-            }
+                return 0; /* l'historique est garde pour la prochaine fois */
             break;
         case TOOLS:
         {
             
-            update_fill_box(history[cur_last_history], menu_tools(true), snd);
+            update_fill_box(history[cur_last_history % HISTORY_SIZE], menu_tools(true, true), snd);
         }
         break;
         default:
             if (last_pressed == -1)
                 break;
-            insert_ans_if_empty(history[cur_last_history], have_ans, last_pressed, 0);
-            if (!matrix_cell_edit(history[cur_last_history], last_pressed, false))
-                update_fill_box(history[cur_last_history], last_pressed, snd);
+            insert_ans_if_empty(history[cur_last_history % HISTORY_SIZE], have_ans, last_pressed, 0);
+            if (!matrix_cell_edit(history[cur_last_history % HISTORY_SIZE], last_pressed, false))
+                update_fill_box(history[cur_last_history % HISTORY_SIZE], last_pressed, snd);
             break;
         }
 
-        if (cur_selected < 0)
-        {
-            cur_selected += 50;
-        }
     }
     return 0;
 }

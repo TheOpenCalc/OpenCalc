@@ -24,6 +24,9 @@ struct Category
     int count;
 };
 
+/* Facteurs exacts (definitions legales : 1 lb = 0,45359237 kg, 1 ft =
+ * 0,3048 m, 1 gal US = 231 in3, eV = 1,602176634e-19 J...) : le resultat
+ * est affiche sur 15 chiffres, un facteur arrondi se verrait. */
 static const UnitEntry lng[] = {
     {"metre", "m", 1.0, 0.0},
     {"kilometre", "km", 1000.0, 0.0},
@@ -42,8 +45,8 @@ static const UnitEntry mss[] = {
     {"gramme", "g", 1.0e-3, 0.0},
     {"milligramme", "mg", 1.0e-6, 0.0},
     {"tonne", "t", 1000.0, 0.0},
-    {"livre", "lb", 0.4535924, 0.0},
-    {"once", "oz", 0.0283495, 0.0},
+    {"livre", "lb", 0.45359237, 0.0},
+    {"once", "oz", 0.028349523125, 0.0},
     {"carat", "ct", 2.0e-4, 0.0},
 };
 
@@ -60,8 +63,8 @@ static const UnitEntry srf[] = {
     {"mm carre", "mm2", 1.0e-6, 0.0},
     {"hectare", "ha", 1.0e4, 0.0},
     {"are", "a", 100.0, 0.0},
-    {"pied carre", "ft2", 9.2903e-2, 0.0},
-    {"acre", "ac", 4046.856, 0.0},
+    {"pied carre", "ft2", 0.09290304, 0.0},
+    {"acre", "ac", 4046.8564224, 0.0},
 };
 
 static const UnitEntry vlm[] = {
@@ -70,16 +73,16 @@ static const UnitEntry vlm[] = {
     {"centilitre", "cL", 1.0e-2, 0.0},
     {"m cube", "m3", 1000.0, 0.0},
     {"cm cube", "cm3", 1.0e-3, 0.0},
-    {"gallon US", "gal", 3.785412, 0.0},
-    {"fl oz US", "floz", 0.0295735, 0.0},
-    {"pinte US", "pt", 0.4731765, 0.0},
+    {"gallon US", "gal", 3.785411784, 0.0},
+    {"fl oz US", "floz", 0.0295735295625, 0.0},
+    {"pinte US", "pt", 0.473176473, 0.0},
 };
 
 static const UnitEntry spd[] = {
     {"m par s", "m/s", 1.0, 0.0},
     {"km par h", "km/h", 1.0 / 3.6, 0.0},
     {"mile par h", "mph", 0.44704, 0.0},
-    {"noeud", "kn", 0.514444, 0.0},
+    {"noeud", "kn", 1852.0 / 3600.0, 0.0},
     {"pied par s", "ft/s", 0.3048, 0.0},
 };
 
@@ -96,9 +99,9 @@ static const UnitEntry tme[] = {
 
 static const UnitEntry agl[] = {
     {"radian", "rad", 1.0, 0.0},
-    {"degre", "deg", 3.14159265358979 / 180.0, 0.0},
-    {"grade", "gon", 3.14159265358979 / 200.0, 0.0},
-    {"tour", "tr", 6.28318530717959, 0.0},
+    {"degre", "deg", 3.14159265358979323846 / 180.0, 0.0},
+    {"grade", "gon", 3.14159265358979323846 / 200.0, 0.0},
+    {"tour", "tr", 6.28318530717958647692, 0.0},
 };
 
 static const UnitEntry nrg[] = {
@@ -107,8 +110,8 @@ static const UnitEntry nrg[] = {
     {"calorie", "cal", 4.184, 0.0},
     {"kilocalorie", "kcal", 4184.0, 0.0},
     {"kWh", "kWh", 3.6e6, 0.0},
-    {"BTU", "BTU", 1055.056, 0.0},
-    {"eV", "eV", 1.60218e-19, 0.0},
+    {"BTU", "BTU", 1055.05585262, 0.0},
+    {"eV", "eV", 1.602176634e-19, 0.0},
 };
 
 static const UnitEntry prs[] = {
@@ -118,8 +121,8 @@ static const UnitEntry prs[] = {
     {"bar", "bar", 1.0e5, 0.0},
     {"millibar", "mbar", 100.0, 0.0},
     {"atm", "atm", 101325.0, 0.0},
-    {"mmHg", "mmHg", 133.322, 0.0},
-    {"psi", "psi", 6894.757, 0.0},
+    {"mmHg", "mmHg", 133.322387415, 0.0},
+    {"psi", "psi", 6894.757293168, 0.0},
 };
 
 #define NB_CATS 10
@@ -259,6 +262,7 @@ int Converter()
                 int npi_n = count_yarded(toks, tok_n);
                 double inv = evaluate_npi(npi, npi_n);
                 double res = do_conv(inv, fu, tu);
+                token_free_matrices(toks, tok_n);
                 free(toks);
                 free(npi);
 
@@ -305,7 +309,10 @@ int Converter()
         while (key == -1)
         {
 
-            if (!cat_scr && cursor == 0)
+            /* Le curseur de texte n'existe que dans le champ de valeur
+             * (cursor == 2). Ailleurs, blink_cursor() redessinerait le
+             * dernier curseur connu a un endroit quelconque de l'ecran. */
+            if (!cat_scr && cursor == 2)
                 blink_cursor();
             key = scan_keypad();
         }

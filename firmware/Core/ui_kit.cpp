@@ -98,7 +98,7 @@ void uk_text(int X, int Y, const char *s, uint16_t fg, int size)
 
 int uk_text_w(const char *s, int size)
 {
-    return s ? utf8_glyph_count(s, (int)strlen(s)) * 5 * size : 0;
+    return s ? text_width(s, (int)strlen(s), size) : 0;
 }
 
 void uk_text_center(int X, int Y, int W, const char *s, uint16_t fg, int size)
@@ -141,6 +141,120 @@ void uk_footer(const char *hint)
     int y = SCREEN_HEIGHT - UK_FOOTER_H;
     uk_rect(0, y, SCREEN_WIDTH, UK_FOOTER_H, FRONTGROUND_COLOR_BIS);
     uk_text(4, y + 3, hint, 0x4208, 1);
+}
+
+/* ----------------------- Taille d'une matrice ----------------------------- */
+
+static int matrix_key_digit(int key)
+{
+    switch (key)
+    {
+    case ONE: return 1;
+    case TWO: return 2;
+    case THREE: return 3;
+    case FOUR: return 4;
+    case FIVE: return 5;
+    case SIX: return 6;
+    case SEVEN: return 7;
+    case EIGHT: return 8;
+    case NINE: return 9;
+    default: return 0;
+    }
+}
+
+bool uk_matrix_size(int *rows, int *cols)
+{
+    const int N = UK_MATRIX_MAX_DIM;
+    const int PITCH = 20, CELL = 17;
+    const int GX = 14, GY = UK_HEADER_H + 12; /* coin haut gauche de la grille */
+    const int PX = GX + N * PITCH + 8;        /* panneau de droite */
+    const int PW = SCREEN_WIDTH - PX - 6;
+    const uint16_t ON = 0x5d9f, ON_EDGE = 0x18d3, OFF = FRONTGROUND_COLOR, OFF_EDGE = COLOR_GRAY;
+
+    int r = *rows, c = *cols;
+    if (r < 1 || r > N)
+        r = 2;
+    if (c < 1 || c > N)
+        c = 2;
+    int next_digit = 0; /* 0 : le prochain chiffre fixe les lignes, 1 : les colonnes */
+
+    while (true)
+    {
+        fill_screen(BACKGROUND_COLOR);
+        uk_header("Taille de la matrice");
+
+        for (int i = 0; i < N; i++)
+            for (int j = 0; j < N; j++)
+            {
+                bool on = i < r && j < c;
+                int X = GX + j * PITCH, Y = GY + i * PITCH;
+                uk_rect(X, Y, CELL, CELL, on ? ON : OFF);
+                uk_frame(X, Y, CELL, CELL, on ? ON_EDGE : OFF_EDGE);
+            }
+        /* Cadre epais autour de la zone choisie : la forme se lit d'un coup d'oeil. */
+        uk_frame(GX - 2, GY - 2, c * PITCH + 1, r * PITCH + 1, COLOR_BLACK);
+        uk_frame(GX - 3, GY - 3, c * PITCH + 3, r * PITCH + 3, COLOR_BLACK);
+
+        char buf[24];
+        snprintf(buf, sizeof(buf), "%d x %d", r, c);
+        uk_text_center(PX, GY + 18, PW, buf, COLOR_BLACK, 3);
+        uk_text_center(PX, GY + 52, PW, "lignes x col.", 0x4208, 1);
+        snprintf(buf, sizeof(buf), "%d case%s", r * c, r * c > 1 ? "s" : "");
+        uk_text_center(PX, GY + 68, PW, buf, 0x4208, 1);
+
+        /* Rappel des touches, a cote de la grille. */
+        uk_text(PX, GY + 100, "Fleches :", COLOR_BLACK, 1);
+        uk_text(PX, GY + 112, " agrandir/reduire", 0x4208, 1);
+        uk_text(PX, GY + 130, "Chiffres 1-9 :", COLOR_BLACK, 1);
+        uk_text(PX, GY + 142, next_digit == 0 ? " lignes, puis col." : " colonnes", 0x4208, 1);
+
+        uk_footer("OK: creer la matrice    BACK: annuler");
+        flush_display();
+
+        int key = uk_wait_key();
+        int d = (key <= -'1' && key >= -'9') ? (-key - '0') : (key >= 0 ? matrix_key_digit(key) : 0);
+        if (d >= 1 && d <= N)
+        {
+            if (next_digit == 0)
+                r = d;
+            else
+                c = d;
+            next_digit = 1 - next_digit;
+            continue;
+        }
+        switch (key)
+        {
+        case RIGHT:
+            if (c < N)
+                c++;
+            next_digit = 0;
+            break;
+        case LEFT:
+            if (c > 1)
+                c--;
+            next_digit = 0;
+            break;
+        case DOWN:
+            if (r < N)
+                r++;
+            next_digit = 0;
+            break;
+        case UP:
+            if (r > 1)
+                r--;
+            next_digit = 0;
+            break;
+        case OK:
+        case ENTER:
+            *rows = r;
+            *cols = c;
+            return true;
+        case BACK:
+            return false;
+        default:
+            break;
+        }
+    }
 }
 
 /* ------------------------------ Nombres ---------------------------------- */
@@ -195,9 +309,14 @@ int uk_fmt(double v, char *buf, int maxch)
         if ((int)strlen(tmp) <= maxch)
             break;
     }
-    strncpy(buf, tmp, maxch);
-    buf[maxch] = '\0';
-    return (int)strlen(buf);
+    /* Copie bornee sans remplissage : strncpy ecrivait toujours maxch
+     * octets, meme pour "0". */
+    int len = (int)strlen(tmp);
+    if (len > maxch)
+        len = maxch;
+    memcpy(buf, tmp, len);
+    buf[len] = '\0';
+    return len;
 }
 
 bool uk_eval(const char *text, int len, double *out)
@@ -480,6 +599,30 @@ void uk_draw_icon(int id, int X, int Y)
         uk_line(X + 28, Y + 50, X + 34, Y + 55, COLOR_BLACK);
         uk_line(X + 34, Y + 55, X + 45, Y + 55, COLOR_BLACK);
         uk_line(X + 45, Y + 55, X + 51, Y + 50, COLOR_BLACK);
+        break;
+    }
+    case UK_ICON_INFERENCE:
+    {
+        /* Cloche avec les deux queues colorees, et un intervalle en dessous. */
+        uk_rect(X, Y, S, S, 0xe73c);
+        int prev_y = -1;
+        for (int i = 0; i < 70; i++)
+        {
+            double t = (i - 35) / 11.0;
+            int h = (int)(44 * exp(-t * t / 2));
+            int px = X + 5 + i;
+            if (i <= 13 || i >= 57)
+                uk_rect(px, Y + 54 - h, 1, h, 0xfd20);
+            int py = Y + 54 - h;
+            if (prev_y >= 0)
+                uk_line(px - 1, prev_y, px, py, 0x001f);
+            prev_y = py;
+        }
+        uk_rect(X + 4, Y + 54, 72, 2, COLOR_BLACK);
+        uk_rect(X + 18, Y + 65, 44, 4, 0x3d7f);
+        uk_rect(X + 16, Y + 61, 2, 12, COLOR_NAVY);
+        uk_rect(X + 62, Y + 61, 2, 12, COLOR_NAVY);
+        uk_rect(X + 38, Y + 62, 4, 10, 0xfd20);
         break;
     }
     }

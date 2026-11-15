@@ -185,8 +185,19 @@ void draw_char(uint16_t x, uint16_t y, char *c, uint16_t color, uint16_t bg, uin
 /* Nombre de caracteres affiches par draw_char pour les nbytes premiers octets
  * de s (texte UTF-8 : un caractere accentue compte pour un). */
 int utf8_glyph_count(const char *s, int nbytes);
+/* Avance horizontale d'un caractere de draw_char pour une taille donnee :
+ * la police 5x7 recoit une colonne d'espacement (6 px en taille 1) pour que
+ * les lettres ne se touchent pas ; la police 10x16 (taille 2) l'inclut deja ;
+ * la police 7x9 (FONT_7X9) avance de 8 px. */
+int text_advance(int size);
+/* Code de taille dedie a la police 7x9 (glyphe 7x9 + 1 px d'espacement,
+ * avance 8 px). Valeur hors des tailles 1, 2, 3... utilisees ailleurs :
+ * draw_char(x, y, "abc", couleur, fond, FONT_7X9). */
+const int FONT_7X9 = 0x79;
+/* Largeur en pixels d'un texte UTF-8 (nbytes premiers octets) affiche par draw_char. */
+int text_width(const char *s, int nbytes, int size);
 
-void draw_image(int x, int y, int h, int w, uint16_t *img, uint16_t bck);
+void draw_image(int x, int y, int h, int w, const uint16_t *img, uint16_t bck);
 
 void display_battery(uint16_t x, uint16_t y, int level);
 

@@ -141,6 +141,11 @@ HOME,CONST,
     FUNC_DERIVE,
     FUNC_PRIMITIVE,
     FUNC_SOLVE,
+    /* Signes d'inequation (menu Outils > Inequations) : < > <= >= */
+    KEY_LT,
+    KEY_GT,
+    KEY_LE,
+    KEY_GE,
 };
 typedef enum
 {
@@ -185,6 +190,11 @@ void display_text(int x, int y, char *t, int SIZE, int t_size);
 
 void display_equation(char *in, int input_size, int x, int y, int SIZE, int cursor_pos, bool left, int scroll, int clip_lo, int clip_hi);
 
+// Defilement horizontal maximal (pixels) du dernier resultat aligne a droite
+// dessine par display_equation() (0 s'il tient dans sa case).
+int display_left_scroll_max();
+// Vrai si la derniere formule analysee depassait la reserve de noeuds.
+bool display_pool_overflow();
 // Position of the text cursor after the last display_equation() call.
 // Returns false when the cursor does not fall on a rendered node.
 bool display_get_cursor(int *y);

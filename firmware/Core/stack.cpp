@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+bool g_stack_underflow = false;
+
 void init(Stack *stack, int size)
 {
     stack->arr = (char *)malloc(sizeof(char) * size);
@@ -92,6 +94,7 @@ double pop(Stack_d *stack)
 {
     if (isEmpty(stack))
     {
+        g_stack_underflow = true;
         return -1;
     }
     double popped = stack->arr[stack->top];
@@ -103,6 +106,7 @@ double peek(Stack_d *stack)
 {
     if (isEmpty(stack))
     {
+        g_stack_underflow = true;
         return -1;
     }
     return stack->arr[stack->top];
@@ -150,6 +154,7 @@ complex pop(Stack_c *stack)
 {
     if (isEmpty(stack))
     {
+        g_stack_underflow = true;
         complex z = {0, 0};
         return z;
     }
@@ -162,6 +167,7 @@ complex peek(Stack_c *stack)
 {
     if (isEmpty(stack))
     {
+        g_stack_underflow = true;
         complex z = {0, 0};
         return z;
     }

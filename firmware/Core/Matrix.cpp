@@ -1,3 +1,4 @@
+#include <cfloat>
 #include <cmath>
 #include <stdio.h>
 #include <stdlib.h>
@@ -161,11 +162,33 @@ matrix *mat_identity(int n)
     return r;
 }
 
-/* Modulus used for partial pivoting: |z|^2 is enough for comparisons and
-   avoids a hypot call per candidate. */
+/* Taille d'un pivot : max(|re|, |im|). Pas de carre, qui s'annulait pour
+   10^(-200) (pivot pris pour nul) et debordait pour 10^(200). */
 static double zmod2(complex z)
 {
-    return z.re * z.re + z.im * z.im;
+    return std::fmax(std::fabs(z.re), std::fabs(z.im));
+}
+
+/* Echelle de chaque ligne (plus grand |a_ij|, mesure comme zmod2). Un
+ * pivot plus petit que quelques ulp de l'echelle de sa ligne n'est que du
+ * bruit d'elimination : [[1,2,3],[4,5,6],[7,8,9]] laisse un pivot de 1e-15
+ * au lieu de 0. La tolerance suit la ligne, donc diag(1e-20,1) reste
+ * inversible. */
+static double *row_scales(const complex *m, int n, int w)
+{
+    double *s = (double *)malloc(sizeof(double) * n);
+    for (int i = 0; i < n; i++)
+    {
+        s[i] = 0.0;
+        for (int j = 0; j < n; j++)
+            s[i] = std::fmax(s[i], zmod2(m[i * w + j]));
+    }
+    return s;
+}
+
+static bool pivot_is_zero(double size, double scale, int n)
+{
+    return size == 0.0 || size <= 16.0 * n * DBL_EPSILON * scale;
 }
 
 complex mat_det(const matrix *a, bool *ok)
@@ -186,6 +209,7 @@ complex mat_det(const matrix *a, bool *ok)
             m[i * n + j] = a->data[i * a->cols + j];
 
     complex det = {1.0, 0.0};
+    double *sc = row_scales(m, n, n);
     for (int col = 0; col < n; col++)
     {
         int piv = col;
@@ -199,11 +223,13 @@ complex mat_det(const matrix *a, bool *ok)
                 piv = r;
             }
         }
-        if (mx == 0.0)
+        if (pivot_is_zero(mx, sc[piv], n))
         {
+            /* Colonne nulle : matrice singuliere, det = 0 (pas une erreur). */
             free(m);
-            *ok = false;
-            return nanz;
+            free(sc);
+            complex zero = {0.0, 0.0};
+            return zero;
         }
         if (piv != col)
         {
@@ -215,6 +241,9 @@ complex mat_det(const matrix *a, bool *ok)
             }
             det.re = -det.re;
             det.im = -det.im;
+            double t = sc[col];
+            sc[col] = sc[piv];
+            sc[piv] = t;
         }
         complex pv = m[col * n + col];
         det = cmul(det, pv);
@@ -228,6 +257,7 @@ complex mat_det(const matrix *a, bool *ok)
         }
     }
     free(m);
+    free(sc);
     return det;
 }
 
@@ -252,6 +282,7 @@ matrix *mat_invert(const matrix *a, bool *ok)
             aug[i * w + j] = z;
         }
     }
+    double *sc = row_scales(aug, n, w);
     for (int col = 0; col < n; col++)
     {
         int piv = col;
@@ -265,9 +296,10 @@ matrix *mat_invert(const matrix *a, bool *ok)
                 piv = r;
             }
         }
-        if (mx == 0.0)
+        if (pivot_is_zero(mx, sc[piv], n))
         {
             free(aug);
+            free(sc);
             *ok = false;
             return NULL;
         }
@@ -279,6 +311,9 @@ matrix *mat_invert(const matrix *a, bool *ok)
                 aug[col * w + j] = aug[piv * w + j];
                 aug[piv * w + j] = tmp;
             }
+            double t = sc[col];
+            sc[col] = sc[piv];
+            sc[piv] = t;
         }
         complex pv = aug[col * w + col];
         for (int j = col; j < w; j++)
@@ -294,6 +329,7 @@ matrix *mat_invert(const matrix *a, bool *ok)
                 aug[r * w + j] = csub(aug[r * w + j], cmul(f, aug[col * w + j]));
         }
     }
+    free(sc);
     matrix *res = mat_create(n, n);
     if (!res)
     {

@@ -13,6 +13,8 @@ struct fill_box_s
     int h, w;
     int curso_pos;
     uint16_t color;
+    int hscroll;     /* resultat plus large que la case : decalage (pixels) */
+    int hscroll_max; /* decalage maximal au dernier affichage (0 : tient) */
 };
 
 struct text_box_s
@@ -51,6 +53,7 @@ typedef struct pontentiometer_s pontentiometer;
 void fill_box_left(fill_box *in);
 void fill_box_right(fill_box *in);
 fill_box *create_fill_box(int x, int y, int h, int w, int border);
+void free_fill_box(fill_box *in);
 
 void display_text_box(text_box *in, int shift_y, int shift_text, bool is_selected);
 text_box *create_text_box(int x, int y, int h, int w, int border, bool transparent);
@@ -71,9 +74,11 @@ void decrement_potentiometer(pontentiometer *p);
 
 void blink_cursor();
 
-/* Menu Outils. with_analysis ajoute la rubrique Analyse (somme, produit,
- * derivee, integrale), evaluee seulement par la Calculatrice. */
-int menu_tools(bool with_analysis = false);
+/* Menu Outils. with_analysis ajoute les rubriques Analyse (somme, produit,
+ * derivee, integrale) et Calcul formel, evaluees seulement par la
+ * Calculatrice ; with_relations la rubrique Inequations (< > <= >=), lue par
+ * la Calculatrice et le Solveur. */
+int menu_tools(bool with_analysis = false, bool with_relations = false);
 int menu_analysis();
 /* Vrai si le curseur est dans les arguments d'un appel somme / produit /
  * derivee / integrale (la touche X y insere la variable). */
@@ -98,4 +103,8 @@ int menu_functions();
 
 // Blocs prets a l'emploi pour les suites recurrentes (onglet Formule).
 int menu_seq_blocks();
+
+// Etiquette dessinee devant une ligne de l'appli Suites (prefixe 'u' de
+// display_fill_box) : "u(n+1)=", "u(0)="... Ecrite par Apps/sequences.cpp.
+extern char g_seq_label[16];
 #endif

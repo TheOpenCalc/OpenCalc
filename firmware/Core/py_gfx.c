@@ -477,7 +477,8 @@ void pyg_text(double x, double y, const char *s, int color, int size)
 
 int pyg_text_w(const char *s, int size)
 {
-    return s ? (int)strlen(s) * 5 * size : 0;
+    /* Meme avance que draw_char (voir text_advance dans display.cpp). */
+    return s ? (int)strlen(s) * (size == 2 ? 10 : 6 * size) : 0;
 }
 
 void pyg_fmt(double v, char *buf, int cap)

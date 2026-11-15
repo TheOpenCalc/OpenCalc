@@ -9,4 +9,8 @@ int Statistics(void);
  * probabilites, avec representation graphique. */
 int Probabilities(void);
 
+/* App Inference (Apps/inference_app.cpp) : tests statistiques et intervalles
+ * de confiance (proportions, moyennes). */
+int Inference(void);
+
 #endif

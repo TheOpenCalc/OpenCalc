@@ -13,7 +13,9 @@
 #include "widgets.h"
 #include "colors.h"
 
-#define MAX_NODES 128
+/* 384 noeuds (15 Ko) : un polynome d'une cinquantaine de termes. Au-dela,
+ * la formule est ecrite en texte simple (voir display_equation). */
+#define MAX_NODES 384
 
 uint16_t g_cursor_bg = 0xf7de;
 
@@ -31,10 +33,27 @@ static int g_src_len = 0;
 static ASTNode node_pool[MAX_NODES];
 static int pool_top = 0;
 
+/* Vrai quand la formule a demande plus de MAX_NODES noeuds : l'arbre n'est
+ * alors plus fiable (le dernier noeud etait partage, d'ou des cycles, une
+ * recursion sans fin et un plantage), il ne faut ni le mesurer ni le dessiner. */
+static bool g_pool_full = false;
+static ASTNode g_spare_node;
+
 static ASTNode *alloc_node()
 {
     if (pool_top >= MAX_NODES)
-        return &node_pool[MAX_NODES - 1];
+    {
+        g_pool_full = true;
+        ASTNode *n = &g_spare_node;
+        n->type = N_PLACEHOLDER;
+        n->left = nullptr;
+        n->right = nullptr;
+        n->number = 0;
+        n->op = 0;
+        n->src_pos = -1;
+        n->src_close = -1;
+        return n;
+    }
     ASTNode *n = &node_pool[pool_top++];
     n->left = nullptr;
     n->right = nullptr;
@@ -44,7 +63,13 @@ static ASTNode *alloc_node()
     n->src_close = -1;
     return n;
 }
-static void reset_pool() { pool_top = 0; }
+static void reset_pool()
+{
+    pool_top = 0;
+    g_pool_full = false;
+}
+
+bool display_pool_overflow() { return g_pool_full; }
 
 static ASTNode *make_placeholder()
 {
@@ -515,16 +540,18 @@ ASTNode *parse_equation(Parser *p)
 {
     ASTNode *left = parse_expr(p);
     token *t = p_peek(p);
-    if (t && t->type == '=')
+    /* '=' ou un signe d'inequation ; plusieurs a la suite : "-2<X<2". */
+    while (t && (t->type == '=' || is_rel_type(t->type)))
     {
         token *ot = p_consume(p);
         ASTNode *nd = alloc_node();
         nd->type = N_BINOP;
-        nd->op = '=';
+        nd->op = ot->type;
         nd->src_pos = ot->src_pos;
         nd->left = left;
         nd->right = parse_expr(p);
         left = nd;
+        t = p_peek(p);
     }
     /* Plusieurs solutions du calcul formel : "X=1 ; X=2". */
     t = p_peek(p);
@@ -544,6 +571,8 @@ ASTNode *parse_equation(Parser *p)
 
 static inline int CW(int S) { return 6 * S; }
 static inline int CH(int S) { return 8 * S; }
+// Chevauchement vertical (px) entre le haut de la base et le bas de l'exposant.
+static const int POW_OVERLAP = 2;
 
 // Number of source characters of the matrix literal starting at `start`
 // (from the opening '[' to the matching closing ']').
@@ -705,6 +734,57 @@ void matrix_blink_restore(const matrix_blink_state *s)
     g_blink = *s;
 }
 
+// Curly brace drawn as a smooth curve over a box `w` pixels wide and `gh`
+// tall starting at (top, left). Each half is a quarter-ellipse hook at the
+// tip, a straight stem, then a quarter-ellipse into the middle point.
+// `open` draws '{' (tips towards the content on the right), else '}'.
+static void draw_matrix_brace(int top, int gh, int left, int w, int thick, bool open)
+{
+    float a = (w - thick) / 2.0f;     // horizontal reach of hooks and point
+    float last = gh - 1;
+    float rt = 1.3f * a;              // vertical radius of the tip hooks
+    float rm = 1.6f * a;              // vertical radius of the middle point
+    float lim = (last / 2.0f) / 2.0f; // keep each half's curves apart
+    if (rt > lim) rt = lim;
+    if (rm > lim) rm = lim;
+    if (rt < 1.0f) rt = 1.0f;
+    if (rm < 1.0f) rm = 1.0f;
+    auto col = [&](int v) {
+        float e = v < last - v ? v : last - v;   // distance to nearest tip
+        float m = fabsf(v - last / 2.0f);        // distance to the middle
+        float d = 0.0f;
+        if (e < rt)
+        {
+            float q = 1.0f - e / rt;
+            d = a * (1.0f - sqrtf(1.0f - q * q));
+        }
+        else if (m < rm)
+        {
+            float q = 1.0f - m / rm;
+            d = -a * (1.0f - sqrtf(1.0f - q * q));
+        }
+        int c = (int)lroundf(a + d);             // stroke column inside the box
+        return open ? c : (w - thick) - c;
+    };
+    for (int v = 0; v < gh; v++)
+    {
+        // Stretch each row halfway towards its neighbours so the stroke
+        // stays connected where the curve is nearly horizontal.
+        int c = col(v), lo = c, hi = c;
+        for (int n = v - 1; n <= v + 1; n += 2)
+        {
+            if (n < 0 || n >= gh)
+                continue;
+            int cn = col(n);
+            if (cn < c && c - (c - cn) / 2 < lo)
+                lo = c - (c - cn) / 2;
+            if (cn > c && c + (cn - c) / 2 > hi)
+                hi = c + (cn - c) / 2;
+        }
+        fill_rect(top + v, left + lo, 1, hi - lo + thick, 0x0000);
+    }
+}
+
 static int render_matrix_grid(matrix_lit *L, int x, int y, int SIZE, int cursor_pos)
 {
     int gs = SIZE;
@@ -716,27 +796,10 @@ static int render_matrix_grid(matrix_lit *L, int x, int y, int SIZE, int cursor_
     int top = x - gh / 2;
     int left = y;
     int right = left + gw;
-    int mid_v = top + gh / 2;
-    int bxb = mid_v;
+    int bxb = top + gh / 2;
     int thick = gs >= 2 ? 2 : 1;
-    int bar_h = gh / 7;
-    if (bar_h < thick) bar_h = thick;
-    int point_h = bar_h;
-    int stem_h = (gh - 2 * bar_h - point_h) / 2;
-    int bar_w = bw / 2;
-    int point_w = bar_w / 2;
-    int lx = left + bw / 2;
-    int rx = right - bw / 2;
-    fill_rect(top, lx, bar_h, bar_w, 0x0000);
-    fill_rect(top + bar_h, lx, stem_h, thick, 0x0000);
-    fill_rect(top + bar_h + stem_h, lx - point_w, point_h, point_w + thick, 0x0000);
-    fill_rect(top + bar_h + stem_h + point_h, lx, stem_h, thick, 0x0000);
-    fill_rect(top + gh - bar_h, lx, bar_h, bar_w, 0x0000);
-    fill_rect(top, rx - bar_w + thick, bar_h, bar_w, 0x0000);
-    fill_rect(top + bar_h, rx, stem_h, thick, 0x0000);
-    fill_rect(top + bar_h + stem_h, rx, point_h, point_w + thick, 0x0000);
-    fill_rect(top + bar_h + stem_h + point_h, rx, stem_h, thick, 0x0000);
-    fill_rect(top + gh - bar_h, rx - bar_w + thick, bar_h, bar_w, 0x0000);
+    draw_matrix_brace(top, gh, left, bw, thick, true);
+    draw_matrix_brace(top, gh, right - bw, bw, thick, false);
 
     int cur_cell = -1, intra = 0;
     if (cursor_pos >= 0 && cursor_pos > L->start && cursor_pos < L->start + L->span)
@@ -1096,7 +1159,23 @@ static bool number_source_span(const ASTNode *nd, int *start, int *len)
 
 static bool bigop_measure(ASTNode *nd, int SIZE, Dims *out);
 
+static Dims measure_number(ASTNode *nd, int SIZE);
+static Dims measure_matrix(ASTNode *nd, int SIZE);
+static int g_measure_depth = 0;
+static Dims measure_impl(ASTNode *nd, int SIZE);
+
 Dims measure(ASTNode *nd, int SIZE)
+{
+    /* Garde-fou : un arbre degenere ne doit jamais faire deborder la pile. */
+    if (g_measure_depth > 200 || g_pool_full)
+        return {CW(SIZE), CH(SIZE), CH(SIZE) / 2};
+    g_measure_depth++;
+    Dims d = measure_impl(nd, SIZE);
+    g_measure_depth--;
+    return d;
+}
+
+static Dims measure_impl(ASTNode *nd, int SIZE)
 {
     if (!nd)
         return {CW(SIZE), CH(SIZE), CH(SIZE) / 2};
@@ -1109,14 +1188,7 @@ Dims measure(ASTNode *nd, int SIZE)
     case N_CONST:
         return {nd->op == 'z' ? 3 * CW(SIZE) : CW(SIZE), CH(SIZE), CH(SIZE) / 2};
     case N_NUMBER:
-    {
-        int lit_start, lit_len;
-        if (number_source_span(nd, &lit_start, &lit_len))
-            return {lit_len * CW(SIZE), CH(SIZE), CH(SIZE) / 2};
-        char buf[256];
-        int nc = fmt_number(nd->number, buf);
-        return {nc * CW(SIZE), CH(SIZE), CH(SIZE) / 2};
-    }
+        return measure_number(nd, SIZE);
     case N_PARENTHESIS:
     {
         if (nd->op == ')')
@@ -1142,7 +1214,11 @@ Dims measure(ASTNode *nd, int SIZE)
             int eS = SIZE > 1 ? SIZE - 1 : 1;
             Dims b = measure(nd->left, SIZE);
             Dims e = measure(nd->right, eS);
-            return {b.w + e.w, b.h + e.h / 2, b.baseline + e.h / 2};
+            // Base en bas, exposant pose sur le haut de la base (voir render_node).
+            int h = b.h - POW_OVERLAP + e.h;
+            if (h < b.h)
+                h = b.h;
+            return {b.w + e.w, h, b.baseline};
         }
         else
         {
@@ -1217,25 +1293,40 @@ Dims measure(ASTNode *nd, int SIZE)
         return {CW(SIZE) + c.w, c.h, c.baseline};
     }
     case N_MATRIX:
-    {
-        int span = matrix_span(g_src, g_src_len, nd->src_pos);
-        if (span > 0)
-        {
-            matrix_lit L;
-            if (matrix_parse_literal(g_src, g_src_len, nd->src_pos, &L))
-            {
-                int w, h;
-                matrix_grid_dims(&L, SIZE, &w, &h);
-                return {w, h, h / 2};
-            }
-            return {span * CW(SIZE), CH(SIZE), CH(SIZE) / 2};
-        }
-        char buf[128];
-        int nc = mat_to_string(nd->mat, buf, 128);
-        return {nc * CW(SIZE), CH(SIZE), CH(SIZE) / 2};
-    }
+        return measure_matrix(nd, SIZE);
     }
     return {CW(SIZE), CH(SIZE), CH(SIZE) / 2};
+}
+
+/* Hors de measure_impl (recursive) : leurs gros tampons (matrix_lit fait
+ * plus d'1 Ko) ne s'empilent plus a chaque niveau de la formule. */
+__attribute__((noinline)) static Dims measure_number(ASTNode *nd, int SIZE)
+{
+    int lit_start, lit_len;
+    if (number_source_span(nd, &lit_start, &lit_len))
+        return {lit_len * CW(SIZE), CH(SIZE), CH(SIZE) / 2};
+    char buf[256];
+    int nc = fmt_number(nd->number, buf);
+    return {nc * CW(SIZE), CH(SIZE), CH(SIZE) / 2};
+}
+
+__attribute__((noinline)) static Dims measure_matrix(ASTNode *nd, int SIZE)
+{
+    int span = matrix_span(g_src, g_src_len, nd->src_pos);
+    if (span > 0)
+    {
+        matrix_lit L;
+        if (matrix_parse_literal(g_src, g_src_len, nd->src_pos, &L))
+        {
+            int w, h;
+            matrix_grid_dims(&L, SIZE, &w, &h);
+            return {w, h, h / 2};
+        }
+        return {span * CW(SIZE), CH(SIZE), CH(SIZE) / 2};
+    }
+    char buf[128];
+    int nc = mat_to_string(nd->mat, buf, 128);
+    return {nc * CW(SIZE), CH(SIZE), CH(SIZE) / 2};
 }
 
 extern int x_cursor;
@@ -1780,7 +1871,21 @@ static int render_bigop(ASTNode *nd, int x, int y, int SIZE, int cursor_pos, con
     return y + L->total.w;
 }
 
+static int render_node_impl(ASTNode *nd, int x, int y, int SIZE, int cursor_pos);
+static int render_matrix_node(ASTNode *nd, int x, int y, int SIZE, int cursor_pos, int w);
+static int g_render_depth = 0;
+
 static int render_node(ASTNode *nd, int x, int y, int SIZE, int cursor_pos)
+{
+    if (g_render_depth > 200 || g_pool_full)
+        return y;
+    g_render_depth++;
+    int r = render_node_impl(nd, x, y, SIZE, cursor_pos);
+    g_render_depth--;
+    return r;
+}
+
+static int render_node_impl(ASTNode *nd, int x, int y, int SIZE, int cursor_pos)
 {
     if (!nd)
         return y;
@@ -1884,6 +1989,8 @@ static int render_node(ASTNode *nd, int x, int y, int SIZE, int cursor_pos)
                 set_cursor(x, y + (cursor_pos - nd->src_pos) * CW(SIZE) - 6);
             return draw_str(x, y, "Ans", SIZE);
         }
+        if (nd->op == 'p') // 'p' is the internal token for pi
+            return draw_str(x, y, "π", SIZE);
         buf[0] = nd->op;
         render_char(x, y, buf[0], SIZE);
         return y + CW(SIZE);
@@ -1908,11 +2015,15 @@ static int render_node(ASTNode *nd, int x, int y, int SIZE, int cursor_pos)
         {
             int eS = SIZE > 1 ? SIZE - 1 : 1;
             Dims b = measure(nd->left, SIZE);
-            Dims e = measure(nd->right, eS);
+            // x = haut de la premiere ligne de la base, bas de la boite = x - CH(SIZE).
+            // L'exposant demarre au sommet de la base (moins un petit
+            // chevauchement), donc il suit la hauteur reelle de la base :
+            // (1/2)^3, (2^3)^4, 2^(1/2)...
+            int ex = x - CH(SIZE) + b.h - POW_OVERLAP + CH(eS);
             if (nd->src_pos >= 0 && cursor_pos == nd->src_pos + 1)
-                set_cursor(x + 10, y + b.w - 6); // debut de l'exposant
-            render_node(nd->left, x + e.h / 2, y, SIZE, cursor_pos);
-            render_node(nd->right, x + 10, y + b.w, eS, cursor_pos);
+                set_cursor(ex, y + b.w - 6); // debut de l'exposant
+            render_node(nd->left, x, y, SIZE, cursor_pos);
+            render_node(nd->right, ex, y + b.w, eS, cursor_pos);
             return y + d.w;
         }
         else
@@ -1926,8 +2037,16 @@ static int render_node(ASTNode *nd, int x, int y, int SIZE, int cursor_pos)
             if (!implicit)
             {
                 update_cursor(nd, x + (baseline - CH(SIZE) / 2), cy, cursor_pos, SIZE);
-                buf[0] = nd->op;
-                render_char(x + (baseline - CH(SIZE) / 2), cy, buf[0], SIZE);
+                if (is_rel_type(nd->op))
+                {
+                    const char *g = rel_glyph(nd->op);
+                    render_glyph(x + (baseline - CH(SIZE) / 2), cy, g, (int)strlen(g), SIZE);
+                }
+                else
+                {
+                    buf[0] = nd->op;
+                    render_char(x + (baseline - CH(SIZE) / 2), cy, buf[0], SIZE);
+                }
                 cy += CW(SIZE);
             }
             return render_node(nd->right, x + (baseline - r.baseline), cy, SIZE, cursor_pos);
@@ -2125,31 +2244,34 @@ static int render_node(ASTNode *nd, int x, int y, int SIZE, int cursor_pos)
         return render_node(nd->left, x, y + CW(SIZE), SIZE, cursor_pos);
     }
     case N_MATRIX:
-    {
-        int span = matrix_span(g_src, g_src_len, nd->src_pos);
-        if (span > 0)
-        {
-            matrix_lit L;
-            if (matrix_parse_literal(g_src, g_src_len, nd->src_pos, &L))
-                return render_matrix_grid(&L, x, y, SIZE, cursor_pos);
-            int yy = y;
-            for (int k = 0; k < span; k++)
-            {
-                char ch = g_src[nd->src_pos + k];
-                if (cursor_pos - 1 == nd->src_pos + k)
-                    set_cursor(x, yy + CW(SIZE) - 6);
-                render_char(x, yy, ch, SIZE);
-                yy += CW(SIZE);
-            }
-            return y + d.w;
-        }
-        update_cursor(nd, x, y, cursor_pos, SIZE);
-        char buf[128];
-        mat_to_string(nd->mat, buf, 128);
-        return draw_str(x, y, buf, SIZE);
-    }
+        return render_matrix_node(nd, x, y, SIZE, cursor_pos, d.w);
     }
     return y + d.w;
+}
+
+__attribute__((noinline)) static int render_matrix_node(ASTNode *nd, int x, int y, int SIZE, int cursor_pos, int w)
+{
+    int span = matrix_span(g_src, g_src_len, nd->src_pos);
+    if (span > 0)
+    {
+        matrix_lit L;
+        if (matrix_parse_literal(g_src, g_src_len, nd->src_pos, &L))
+            return render_matrix_grid(&L, x, y, SIZE, cursor_pos);
+        int yy = y;
+        for (int k = 0; k < span; k++)
+        {
+            char ch = g_src[nd->src_pos + k];
+            if (cursor_pos - 1 == nd->src_pos + k)
+                set_cursor(x, yy + CW(SIZE) - 6);
+            render_char(x, yy, ch, SIZE);
+            yy += CW(SIZE);
+        }
+        return y + w;
+    }
+    update_cursor(nd, x, y, cursor_pos, SIZE);
+    char buf[128];
+    mat_to_string(nd->mat, buf, 128);
+    return draw_str(x, y, buf, SIZE);
 }
 
 #ifdef OPENCALC_WASM
@@ -2162,10 +2284,90 @@ static void _dbg_ast(const ASTNode *nd, int d)
 static void _dbg_ast(const ASTNode *, int) {}
 #endif
 
+/* Une grille de matrice est centree sur la ligne de texte : elle descend de
+ * h/2 sous le point d'ancrage, alors qu'une ligne ordinaire ne descend que
+ * de CH(SIZE). Les applis agrandissent la case vers le haut (h - 16) : sans
+ * correction, une matrice de 3 lignes ou plus depassait par le bas (coupee
+ * en bas de l'ecran pendant la saisie, par-dessus la ligne suivante dans
+ * l'historique). Renvoie de combien remonter toute la ligne. */
+static int node_drop(ASTNode *nd, int SIZE, int depth)
+{
+    if (!nd || depth > 48)
+        return 0;
+    int d = 0;
+    if (nd->type == N_MATRIX)
+    {
+        d = measure(nd, SIZE).h / 2 - CH(SIZE);
+        if (d < 0)
+            d = 0;
+    }
+    int l = node_drop(nd->left, SIZE, depth + 1);
+    int r = node_drop(nd->right, SIZE, depth + 1);
+    if (l > d)
+        d = l;
+    if (r > d)
+        d = r;
+    return d;
+}
+
+/* Texte lisible d'une saisie interne, pour l'affichage de secours d'une
+ * formule trop grande pour l'arbre (s( -> sin(, r( -> racine, p -> pi...).
+ * map[i] : position dans out du caractere source i (pour le curseur). */
+static int readable_text(const char *in, int n, char *out, int cap, int *map)
+{
+    int o = 0;
+    for (int i = 0; i < n; i++)
+    {
+        if (map)
+            map[i] = o;
+        char c = in[i];
+        bool fn = i + 1 < n && in[i + 1] == '(' && !(i > 0 && in[i - 1] >= 'a' && in[i - 1] <= 'z');
+        const char *rep = nullptr;
+        char one[2] = {c, 0};
+        if (fn && c == 'r') rep = "\xe2\x88\x9a";
+        else if (fn && c == 's') rep = "sin";
+        else if (fn && c == 'c') rep = "cos";
+        else if (fn && c == 't') rep = "tan";
+        else if (fn && c == 'l') rep = "ln";
+        else if (fn && c == 'o') rep = "log";
+        else if (fn && c == 'u') rep = "acos";
+        else if (fn && c == 'v') rep = "asin";
+        else if (fn && c == 'w') rep = "atan";
+        else if (c == 'p' && !(i > 0 && in[i - 1] >= 'a' && in[i - 1] <= 'z') &&
+                 !(i + 1 < n && in[i + 1] >= 'a' && in[i + 1] <= 'z'))
+            rep = "\xcf\x80";
+        else if (c == CAS_SEPARATOR) rep = " ; ";
+        else if (is_rel_type(c)) rep = rel_glyph(c);
+        else if ((unsigned char)c < 32) rep = "?";
+        else rep = one;
+        for (const char *q = rep; *q && o < cap - 1; q++)
+            out[o++] = *q;
+    }
+    if (map)
+        map[n] = o;
+    out[o] = 0;
+    return o;
+}
+
+/* Nombre de caracteres affiches (une sequence UTF-8 compte pour un). */
+static int glyph_count(const char *s, int n)
+{
+    int g = 0;
+    for (int i = 0; i < n; i += utf8_seq_len((unsigned char)s[i]))
+        g++;
+    return g;
+}
+
+/* Defilement horizontal maximal du dernier resultat (aligne a droite) dessine
+ * par display_equation ; 0 quand il tient dans sa case. */
+static int g_left_scroll_max = 0;
+int display_left_scroll_max() { return g_left_scroll_max; }
+
 void display_equation(char *in, int input_size, int x, int y, int SIZE, int cursor_pos, bool left, int scroll, int clip_lo, int clip_hi)
 {
     int prev_lo = g_clip_lo;
     int prev_hi = g_clip_hi;
+    g_left_scroll_max = 0;
     x += 10;
     reset_pool();
     g_src = in;
@@ -2191,6 +2393,87 @@ void display_equation(char *in, int input_size, int x, int y, int SIZE, int curs
     Parser p = {toks, tok_n, 0};
     int cy = y + 5 - scroll;
 
+    /* Formule trop grande pour l'arbre (MAX_NODES) : on l'ecrit en texte
+     * simple au lieu de dessiner un arbre faux (resultat affiche "1") ou de
+     * planter (recursion sans fin). */
+    {
+        Parser q = {toks, tok_n, 0};
+        while (q.pos < q.n && !g_pool_full)
+        {
+            int before = q.pos;
+            parse_equation(&q);
+            if (q.pos == before)
+                q.pos++;
+        }
+        bool overflow = g_pool_full;
+        reset_pool();
+        if (overflow)
+        {
+            static char txt[3000];
+            static int map[1001];
+            int n = input_size > 1000 ? 1000 : input_size;
+            int len = readable_text(in, n, txt, sizeof(txt), map);
+            int w = glyph_count(txt, len) * CW(SIZE);
+            int start = cy;
+            if (left)
+            {
+                int avail = clip_hi - clip_lo - 10;
+                if (w <= avail)
+                    start = clip_hi + 1 - w - 5;
+                else
+                {
+                    g_left_scroll_max = w - avail;
+                    int sc = scroll < 0 ? 0 : (scroll > g_left_scroll_max ? g_left_scroll_max : scroll);
+                    start = clip_lo + 5 - sc;
+                }
+            }
+            draw_str(x + 14, start, txt, SIZE);
+            if (cursor_pos >= 0 && !left)
+            {
+                int cp = cursor_pos > n ? n : cursor_pos;
+                set_cursor(x + 14, start + glyph_count(txt, map[cp]) * CW(SIZE) - 6);
+            }
+            token_free_matrices(toks, tok_n);
+            free(toks);
+            g_clip_lo = prev_lo;
+            g_clip_hi = prev_hi;
+            return;
+        }
+    }
+
+    /* Premiere passe (seulement si la saisie contient une matrice) : remonte
+     * la ligne pour que la grille tienne dans sa case. */
+    bool has_grid = false;
+    for (int i = 0; i + 1 < input_size; i++)
+        if (in[i] == '[' && in[i + 1] == '[')
+        {
+            has_grid = true;
+            break;
+        }
+    if (has_grid)
+    {
+        int saved_top = pool_top;
+        int lift = 0;
+        Parser q = {toks, tok_n, 0};
+        while (q.pos < q.n)
+        {
+            int before = q.pos;
+            ASTNode *nd = parse_equation(&q);
+            if (pool_top >= MAX_NODES)
+            {
+                lift = 0; /* formule trop longue : pas de mesure fiable */
+                break;
+            }
+            int d = node_drop(nd, SIZE, 0);
+            if (d > lift)
+                lift = d;
+            if (q.pos == before)
+                q.pos++;
+        }
+        pool_top = saved_top;
+        x += lift;
+    }
+
     while (p.pos < p.n)
     {
         int before = p.pos;
@@ -2205,8 +2488,20 @@ void display_equation(char *in, int input_size, int x, int y, int SIZE, int curs
         }else{
             ASTNode *node = parse_equation(&p);
             Dims d = measure(node,SIZE);
+            /* Resultat plus large que la case : on montre son debut (avant,
+             * il etait coupe a gauche sans aucun signe) ; LEFT/RIGHT le font
+             * defiler quand la ligne est selectionnee. */
+            int avail = clip_hi - clip_lo - 10;
+            int start = clip_hi + 1 - d.w - 5;
+            if (d.w > avail)
+            {
+                if (d.w - avail > g_left_scroll_max)
+                    g_left_scroll_max = d.w - avail;
+                int sc = scroll < 0 ? 0 : (scroll > d.w - avail ? d.w - avail : scroll);
+                start = clip_lo + 5 - sc;
+            }
             if (node)
-                cy = render_node(node, x + 14, 320-d.w-5-scroll, SIZE, cursor_pos);
+                cy = render_node(node, x + 14, start, SIZE, cursor_pos);
             if (p.pos == before)
                 p.pos++;
         }
@@ -2265,9 +2560,9 @@ void blink_cursor()
     else
     {
         // Efface exactement la barre dessinee par draw_char('|', taille 2) :
-        // lignes x-12..x+1, colonnes y+4..y+5 (rien en dehors, donc aucun
+        // lignes x-14..x+1, colonnes y+4..y+5 (rien en dehors, donc aucun
         // caractere voisin n'est rogne quand le curseur est eteint).
-        int rx = x_cursor - 12;
+        int rx = x_cursor - 14;
         if (rx < 0)
             rx = 0;
         fill_rect(rx, y_cursor + 4, x_cursor + 2 - rx, 2, g_cursor_bg);

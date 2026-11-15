@@ -26,6 +26,19 @@ static volatile bool g_core1_paused = false;
 #define CORE1_FLUSH_BUF_PIXELS 1024
 static uint8_t core1_flush_buf[CORE1_FLUSH_BUF_PIXELS * 2];
 
+/* Piles.
+ *
+ * Le SDK place la pile de core0 dans SCRATCH_Y (4 Ko, tout en haut de la RAM)
+ * et celle de core1 dans SCRATCH_X, juste en dessous : au-dela de 4 Ko, core0
+ * ecrivait dans la pile de core1, puis dans le haut du tas.
+ *
+ * Ici core1 recoit sa propre pile (meme taille qu'avant, 2 Ko) hors de cette
+ * zone, et le tas s'arrete OC_STACK_RESERVE octets avant la fin de la RAM.
+ * core0 dispose ainsi de SCRATCH_Y + SCRATCH_X + OC_STACK_RESERVE = 16 Ko
+ * d'un seul tenant, que rien d'autre n'utilise. */
+#define OC_STACK_RESERVE (8 * 1024)
+static uint32_t core1_stack_mem[2048 / sizeof(uint32_t)];
+
 #define CORE1_DEBOUNCE_SAMPLES 3
 #define CORE1_REPEAT_MS 120
 #define CORE1_SCAN_PERIOD_MS 2
@@ -241,7 +254,26 @@ void core1_init(void)
     int seed = 1;
     queue_add_blocking(&opencalc_free_q, &seed);
 
-    multicore_launch_core1(core1_main);
+    multicore_launch_core1_with_stack(core1_main, core1_stack_mem, sizeof(core1_stack_mem));
+}
+
+/* Tas de core0 : remplace le _sbrk (faible) du SDK pour qu'il s'arrete
+ * OC_STACK_RESERVE octets avant la fin de la RAM. */
+extern "C" void *_sbrk(int incr)
+{
+    extern char end;          /* fin de .bss, fournie par l'edition de liens */
+    extern char __StackLimit; /* fin de la RAM principale */
+    static char *heap_end;
+
+    if (heap_end == 0)
+        heap_end = &end;
+
+    char *limit = &__StackLimit - OC_STACK_RESERVE;
+    char *prev = heap_end;
+    if (heap_end + incr > limit)
+        return (void *)-1;
+    heap_end += incr;
+    return prev;
 }
 
 #endif /* OPENCALC_WASM */

@@ -12,6 +12,12 @@ extern "C"
     void pika_clear_output(void);
     void pika_deinit(void);
 
+    /* Sortie au fil de l'eau : hook(s, n, newline) recoit chaque ligne
+     * terminee (newline = 1) pendant pika_run, puis le reste a la fin
+     * (newline = 0). Texte deja nettoye (sans codes ANSI ni '\r'). NULL pour
+     * revenir au seul tampon de pika_get_output(). */
+    void pika_set_output_hook(void (*hook)(const char *s, int n, int newline));
+
     /* Module "draw" (Core/py_draw.c). pika_draw_used() : le script a dessine
      * depuis le dernier pika_draw_reset(), l'app doit montrer l'ecran. */
     int pika_draw_used(void);

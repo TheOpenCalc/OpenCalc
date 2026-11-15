@@ -26,6 +26,9 @@
 #define EXAM_ICON_Y1 (EXAM_ICON_Y0 + EXAM_ICON_W - 1)
 
 #define COMBO_HOLD_MS 3000
+/* Sans evenement OK pendant ce delai, la touche est consideree comme relachee
+ * (une touche maintenue est reemise toutes les 120 ms). */
+#define COMBO_RELEASE_MS 300
 
 typedef struct
 {

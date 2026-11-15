@@ -165,11 +165,14 @@ bool exam_mode_combo_confirmed(void)
     flush_display();
 
     uint32_t hold_start = 0;
+    uint32_t last_ok = 0; /* dernier evenement OK recu */
     bool holding = false;
 
     while (true)
     {
+        /* Rend -1 apres une courte attente quand aucune touche n'arrive. */
         int key = scan_keypad();
+        uint32_t now = to_ms_since_boot(get_absolute_time());
 
         if (key == BACK)
         {
@@ -178,22 +181,40 @@ bool exam_mode_combo_confirmed(void)
             return false;
         }
 
+        bool was_holding = holding;
         if (key == OK)
         {
             if (!holding)
             {
-                hold_start = to_ms_since_boot(get_absolute_time());
+                hold_start = now;
                 holding = true;
             }
+            last_ok = now;
         }
-        else
+        else if (key != -1)
         {
+            holding = false; /* une autre touche annule */
+        }
+        else if (holding && now - last_ok > COMBO_RELEASE_MS)
+        {
+            /* Plus de repetition de OK : la touche a ete relachee. Sans ce
+             * test, deux appuis courts espaces de 3 s activaient le mode. */
             holding = false;
+        }
+
+        if (was_holding && !holding)
+        {
+            /* Efface la barre : il faut reprendre le maintien depuis zero. */
+            fill_rect(110, 30, 15, 260, COLOR_RED);
+            flush_display();
         }
 
         if (holding)
         {
-            uint32_t elapsed = to_ms_since_boot(get_absolute_time()) - hold_start;
+            /* Duree mesuree entre le premier et le dernier evenement OK : la
+             * touche etait encore enfoncee a cet instant. (Avec "now", les
+             * 300 ms d'attente du relachement comptaient dans le maintien.) */
+            uint32_t elapsed = last_ok - hold_start;
 
             fill_rect(110, 30, 15, 260, COLOR_RED);
             int bar_width = (int)((elapsed * 200) / COMBO_HOLD_MS);

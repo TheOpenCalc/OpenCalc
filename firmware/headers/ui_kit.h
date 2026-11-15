@@ -55,6 +55,13 @@ int uk_menu(const char *title, const char **labels, int n, int sel);
  * false si l'utilisateur annule. */
 bool uk_input(const char *title, const char *prompt, double *val, int first_key);
 
+/* Choix de la taille d'une matrice sur une grille (Outils > Matrices >
+ * Matrice n x m). Les fleches agrandissent ou reduisent la zone coloree, deux
+ * chiffres donnent directement lignes puis colonnes. *rows et *cols : taille
+ * proposee a l'ouverture et taille choisie. Renvoie false si BACK. */
+#define UK_MATRIX_MAX_DIM 9
+bool uk_matrix_size(int *rows, int *cols);
+
 /* Message bloquant (OK/BACK pour fermer). */
 void uk_message(const char *title, const char *line1, const char *line2);
 
@@ -63,7 +70,8 @@ enum
 {
     UK_ICON_STATS = 0,
     UK_ICON_PROBA,
-    UK_ICON_TAMAGOTCHI
+    UK_ICON_TAMAGOTCHI,
+    UK_ICON_INFERENCE
 };
 void uk_draw_icon(int id, int X, int Y);
 

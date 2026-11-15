@@ -1,3 +1,4 @@
+#include <cfloat>
 #include <cstdbool>
 #include <cstring>
 #include <stdlib.h>
@@ -131,36 +132,47 @@ double fact_r(double in)
 
 double fact(double in)
 {
-    if (in - (int)in > 0.05 || in < 0)
+    // !(in >= 0) refuse aussi NaN : fact(NaN) passait les tests ci-dessous
+    // et rendait 1 (171!! = 1, pgcd(12.5,5)! = 1).
+    if (!(in >= 0))
         return NAN;
-    else
-        return (double)fact_r((int)in);
+    double k = std::round(in);
+    if (std::fabs(in - k) > 1e-9 * std::fmax(1.0, k))
+        return NAN;
+    return fact_r(k);
 }
 
 double comb(double n, double k)
 {
-    if (n < 0 || k < 0 || n != std::floor(n) || k != std::floor(k) || k > n)
+    if (!(n >= 0) || n != std::floor(n) || k != std::floor(k))
         return NAN;
+    // Hors de 0..n : 0, comme le calcul formel (somme(binom(3,X),0,5) = 8).
+    if (k < 0 || k > n)
+        return 0;
     if (k > n - k)
         k = n - k;
     double out = 1;
-    for (int i = 1; i <= (int)k; i++)
+    // Arret des que le produit deborde : binom(10^9, 5*10^8) tournait
+    // 500 millions de fois apres avoir atteint inf.
+    for (double i = 1; i <= k && std::isfinite(out); i++)
         out = out * (n - k + i) / i;
     if (!std::isfinite(out))
         return NAN;
-    return std::floor(out + 0.5);
+    return std::round(out);
 }
 
 double perm(double n, double k)
 {
-    if (n < 0 || k < 0 || n != std::floor(n) || k != std::floor(k) || k > n)
+    if (!(n >= 0) || n != std::floor(n) || k != std::floor(k))
         return NAN;
+    if (k < 0 || k > n)
+        return 0;
     double out = 1;
-    for (int i = 0; i < (int)k; i++)
+    for (double i = 0; i < k && std::isfinite(out); i++)
         out *= (n - i);
     if (!std::isfinite(out))
         return NAN;
-    return std::floor(out + 0.5);
+    return std::round(out);
 }
 
 static bool integer_operands(double a, double b)
@@ -196,20 +208,29 @@ static double arith_lcm(double a, double b)
     return std::fabs(a / g * b);
 }
 
-// Euclidean quotient (floor division).
-static double arith_quot(double a, double b)
-{
-    if (!std::isfinite(a) || !std::isfinite(b) || b == 0)
-        return NAN;
-    return std::floor(a / b);
-}
-
-// Euclidean remainder (always has the sign of the divisor).
+// Division euclidienne : a = b*q + r avec 0 <= r < |b|, quel que soit le
+// signe de b (17 = (-5)(-3) + 2, donc reste(17,-5) = 2, quot(17,-5) = -3).
 static double arith_rem(double a, double b)
 {
     if (!std::isfinite(a) || !std::isfinite(b) || b == 0)
         return NAN;
-    return a - b * std::floor(a / b);
+    double m = std::fabs(b);
+    // fmod est exact ; a - m*floor(a/m) arrondissait au-dela de 2^53
+    // (reste(10^17+1, 10) = 0).
+    double r = std::fmod(a, m);
+    if (r < 0)
+        r += m;
+    // Decimaux : 0.3 = 3*0.1 a l'arrondi pres, le reste est 0 et non ~0.1.
+    if (!integer_operands(a, b) && m - r <= 4.0 * DBL_EPSILON * std::fabs(a))
+        r = 0;
+    return r;
+}
+
+static double arith_quot(double a, double b)
+{
+    if (!std::isfinite(a) || !std::isfinite(b) || b == 0)
+        return NAN;
+    return std::round((a - arith_rem(a, b)) / b);
 }
 
 // Racine n-ieme de x : x^(1/n). x < 0 seulement si n est un entier impair.
@@ -219,7 +240,7 @@ static double arith_root(double x, double n)
         return NAN;
     if (x >= 0)
         return std::pow(x, 1.0 / n);
-    double r = std::floor(n + 0.5);
+    double r = std::round(n);
     if (std::fabs(n - r) > 1e-9 || std::fmod(r, 2.0) == 0)
         return NAN;
     return -std::pow(-x, 1.0 / n);
@@ -230,8 +251,8 @@ static double arith_randint(double a, double b)
 {
     if (!std::isfinite(a) || !std::isfinite(b))
         return NAN;
-    a = std::floor(a + 0.5);
-    b = std::floor(b + 0.5);
+    a = std::round(a);
+    b = std::round(b);
     if (a > b)
     {
         double t = a;
@@ -369,14 +390,40 @@ int count_yarded(token *in, int n)
     return out;
 }
 
+/* Bruit d'une soustraction de nombres presque egaux : 0.1+0.2-0.3 donne
+ * 5.5e-17, sqrt(2)^2-2 donne 4.4e-16. Un resultat de quelques ulp des
+ * operandes vaut 0. Les vrais petits nombres (1.6e-19) ne sont pas touches. */
+static double snap_sum(double r, double a, double b)
+{
+    if (!std::isfinite(r))
+        return r;
+    double m = std::fmax(std::fabs(a), std::fabs(b));
+    if (std::fabs(r) > 4.0 * DBL_EPSILON * m || r == 0.0)
+        return r;
+    /* Un resultat court en decimal (0.5, 0.25, 3) n'est pas du bruit :
+     * 10^15+0.5-10^15 vaut bien 0.5 (avant : 0). Le bruit d'arrondi, lui,
+     * est une puissance de 2 sans ecriture courte (5.551115123125783e-17). */
+    char buf[32];
+    snprintf(buf, sizeof(buf), "%.6g", r);
+    if (strtod(buf, nullptr) == r)
+        return r;
+    return 0.0;
+}
+
+static complex snap_csum(complex r, complex a, complex b)
+{
+    return complex{snap_sum(r.re, a.re, b.re), snap_sum(r.im, a.im, b.im)};
+}
+
 bool higher_priority(char a, char b)
 {
     if (a == '~')
         return b != '^';
-    if (a == '^' || a == '!')
-    {
+    if (a == '!')
         return true;
-    }
+    // ^ est associatif a droite : 2^3^2 = 2^(3^2), comme le calcul formel.
+    if (a == '^')
+        return b != '^';
     if (b == '^')
     {
         return false;
@@ -435,6 +482,20 @@ token *shunting_yard(token *input, int n)
             output[output_size].mat = input[i].mat;
             output_size++;
         }
+        else if (input[i].type == '!')
+        {
+            // Factorielle postfixe : s'applique a l'operande qui precede.
+            // Apres une puissance "2^(3)!", la boite d'exposant est fermee
+            // et l'ecran montre (2^3)! : on sort d'abord les ^ en attente.
+            while (!isEmpty(&Operator_stack) && peek(&Operator_stack) == '^')
+            {
+                output[output_size].type = '^';
+                output_size++;
+                pop(&Operator_stack);
+            }
+            output[output_size].type = '!';
+            output_size++;
+        }
         else if (is_in(input[i].type, function))
         {
             push(&Operator_stack, input[i].type);
@@ -488,14 +549,38 @@ token *shunting_yard(token *input, int n)
         pop(&Operator_stack);
         output_size++;
     }
+    free(&Operator_stack);
     return output;
 }
 
+
+/* sin et cos d'un argument reel. Pres d'un multiple de pi/2, le resultat
+ * n'est que l'erreur d'arrondi de x (sin(pi) = 1.2e-16) : on rend 0, pour
+ * que 5/sin(pi) et tan(pi/2) soient des erreurs. Le seuil suit |x|, donc
+ * sin(1e-11) reste 1e-11 (l'ancien seuil fixe de 1e-10 le mettait a 0). */
+static double trig_zero(double v, double x)
+{
+    double tol = 4 * 2.220446049250313e-16 * std::fabs(x);
+    // Au-dela de |x| ~ 1e9 le seuil effacerait des valeurs justes
+    // (sin(10^15) = 0,858) : on rend alors le resultat tel quel.
+    if (tol > 1e-6)
+        return v;
+    return std::fabs(v) <= tol ? 0.0 : v;
+}
+static double rsin(double x) { return trig_zero(std::sin(x), x); }
+static double rcos(double x) { return trig_zero(std::cos(x), x); }
+static double rtan(double x)
+{
+    double c = rcos(x);
+    return c == 0 ? NAN : rsin(x) / c;
+}
 
 bool almost_equal(double a, double b) {
     double eps = 1e-10;
     return std::fabs(a - b) < eps;
 }
+
+static double real_pow(double b, double a);
 
 double evaluate_npi(token *in, int n, double x, int letter)
 {
@@ -503,6 +588,7 @@ double evaluate_npi(token *in, int n, double x, int letter)
     double a;
     double b;
     init(&nb_stack, n);
+    g_stack_underflow = false;
 
     for (int i = 0; i < n; i++)
     {
@@ -530,13 +616,13 @@ double evaluate_npi(token *in, int n, double x, int letter)
             switch (in[i].type)
             {
             case '+':
-                push(&nb_stack, a + b);
+                push(&nb_stack, snap_sum(a + b, a, b));
                 break;
             case '*':
                 push(&nb_stack, a * b);
                 break;
             case '-':
-                push(&nb_stack, b - a);
+                push(&nb_stack, snap_sum(b - a, a, b));
                 break;
             case '/':
                 if (a == 0)
@@ -547,7 +633,7 @@ double evaluate_npi(token *in, int n, double x, int letter)
                 push(&nb_stack, b / a);
                 break;
             case '^':
-                push(&nb_stack, pow(b, a));
+                push(&nb_stack, real_pow(b, a));
                 break;
             default:
                 break;
@@ -597,21 +683,13 @@ double evaluate_npi(token *in, int n, double x, int letter)
                 a = std::log10(a);
                 break;
             case 'c':
-                a = cos(angle_in(a));
-                if(almost_equal(a,0))
-                    a=0;
-                if(almost_equal(a,1))
-                    a=1;
+                a = rcos(angle_in(a));
                 break;
             case 's':
-                a = sin(angle_in(a));
-                if(almost_equal(a,0))
-                    a=0;
-                if(almost_equal(a,1))
-                    a=1;
+                a = rsin(angle_in(a));
                 break;
             case 't':
-                a = tan(angle_in(a));
+                a = rtan(angle_in(a));
                 break;
             case 'u':
                 a = angle_out(acos(a));
@@ -641,7 +719,7 @@ double evaluate_npi(token *in, int n, double x, int letter)
                 a = acosh(a);
                 break;
             case 'd':
-                a = std::atan2(0.0, a);
+                a = angle_out(std::atan2(0.0, a));
                 break;
             case 'm':
                 a = std::fabs(a);
@@ -668,7 +746,7 @@ double evaluate_npi(token *in, int n, double x, int letter)
                 a = std::isnan(a) ? a : (a > 0 ? 1.0 : (a < 0 ? -1.0 : 0.0));
                 break;
             case 'O':
-                a = std::floor(a + 0.5);
+                a = std::round(a);
                 break;
             case '!':
                 a = fact(a);
@@ -679,9 +757,12 @@ double evaluate_npi(token *in, int n, double x, int letter)
             push(&nb_stack, a);
         }
     }
+    /* Saisie incomplete ("2+", "sin()", ")") : il doit rester exactement
+     * un nombre sur la pile, sans operande manquant en chemin. */
+    bool incomplete = g_stack_underflow || nb_stack.top != 0;
     a = peek(&nb_stack);
     free(&nb_stack);
-    return a;
+    return incomplete ? NAN : a;
 }
 double evaluate_npi(token *in, int n)
 {
@@ -689,6 +770,7 @@ double evaluate_npi(token *in, int n)
     double a;
     double b;
     init(&nb_stack, n);
+    g_stack_underflow = false;
     int nb_frac = 0;
     for (int i = 0; i < n; i++)
     {
@@ -705,19 +787,19 @@ double evaluate_npi(token *in, int n)
             switch (in[i].type)
             {
             case '+':
-                push(&nb_stack, a + b);
+                push(&nb_stack, snap_sum(a + b, a, b));
                 break;
             case '*':
                 push(&nb_stack, a * b);
                 break;
             case '-':
-                push(&nb_stack, b - a);
+                push(&nb_stack, snap_sum(b - a, a, b));
                 break;
             case '/':
                 push(&nb_stack, b / a);
                 break;
             case '^':
-                push(&nb_stack, pow(b, a));
+                push(&nb_stack, real_pow(b, a));
                 break;
             default:
                 break;
@@ -767,21 +849,13 @@ double evaluate_npi(token *in, int n)
                 a = std::log10(a);
                 break;
             case 'c':
-                a = cos(angle_in(a));
-                if(almost_equal(a,0))
-                    a=0;
-                if(almost_equal(a,1))
-                    a=1;
+                a = rcos(angle_in(a));
                 break;
             case 's':
-                a = sin(angle_in(a));
-                if(almost_equal(a,0))
-                    a=0;
-                if(almost_equal(a,1))
-                    a=1;
+                a = rsin(angle_in(a));
                 break;
             case 't':
-                a = tan(angle_in(a));
+                a = rtan(angle_in(a));
                 break;
             case 'u':
                 a = angle_out(acos(a));
@@ -811,7 +885,7 @@ double evaluate_npi(token *in, int n)
                 a = acosh(a);
                 break;
             case 'd':
-                a = std::atan2(0.0, a);
+                a = angle_out(std::atan2(0.0, a));
                 break;
             case 'm':
                 a = std::fabs(a);
@@ -838,7 +912,7 @@ double evaluate_npi(token *in, int n)
                 a = std::isnan(a) ? a : (a > 0 ? 1.0 : (a < 0 ? -1.0 : 0.0));
                 break;
             case 'O':
-                a = std::floor(a + 0.5);
+                a = std::round(a);
                 break;
             case '!':
                 a = fact(a);
@@ -849,9 +923,12 @@ double evaluate_npi(token *in, int n)
             push(&nb_stack, a);
         }
     }
+    /* Saisie incomplete ("2+", "sin()", ")") : il doit rester exactement
+     * un nombre sur la pile, sans operande manquant en chemin. */
+    bool incomplete = g_stack_underflow || nb_stack.top != 0;
     a = peek(&nb_stack);
     free(&nb_stack);
-    return a;
+    return incomplete ? NAN : a;
 }
 
 ////////////// Complex numbers //////////////
@@ -882,18 +959,32 @@ complex cmul(complex a, complex b)
 
 complex cdiv(complex a, complex b)
 {
-    double d = b.re * b.re + b.im * b.im;
-    if (d == 0)
+    if (b.re == 0 && b.im == 0)
     {
         complex nan = {NAN, NAN};
         return nan;
     }
-    complex r = {(a.re * b.re + a.im * b.im) / d, (a.im * b.re - a.re * b.im) / d};
+    if (b.im == 0)
+    {
+        complex r = {a.re / b.re, a.im / b.re};
+        return r;
+    }
+    // Smith : evite |b|^2, qui deborde des 1e154 ou s'annule des 1e-162.
+    if (std::fabs(b.re) >= std::fabs(b.im))
+    {
+        double t = b.im / b.re, d = b.re + b.im * t;
+        complex r = {(a.re + a.im * t) / d, (a.im - a.re * t) / d};
+        return r;
+    }
+    double t = b.re / b.im, d = b.re * t + b.im;
+    complex r = {(a.re * t + a.im) / d, (a.im * t - a.re) / d};
     return r;
 }
 
 complex cexp(complex z)
 {
+    if (z.im == 0) // exp(710) = inf, et non inf*0 = nan en partie imaginaire
+        return complex{std::exp(z.re), 0.0};
     double e = std::exp(z.re);
     complex r = {e * std::cos(z.im), e * std::sin(z.im)};
     return r;
@@ -909,14 +1000,79 @@ complex clog(complex z)
     return r2;
 }
 
+/* Base negative, exposant p/q avec q impair : racine reelle, comme le
+ * calcul exact et racine(x,n). (-32)^(0.2) = -2 comme (-32)^(1/5), et non
+ * la racine principale complexe 1,618+1,176i. Rend false sinon. */
+static bool odd_root_pow(double base, double e, double *out)
+{
+    if (!(base < 0) || !std::isfinite(e) || e == std::floor(e))
+        return false;
+    for (int q = 3; q <= 999; q += 2)
+    {
+        double pq = e * q;
+        double p = std::round(pq);
+        if (std::fabs(pq - p) <= 1e-10 * std::fmax(1.0, std::fabs(pq)))
+        {
+            double m = std::pow(-base, e);
+            bool odd = std::fmod(std::fabs(p), 2.0) == 1.0;
+            *out = odd ? -m : m;
+            return true;
+        }
+    }
+    return false;
+}
+
+static double real_pow(double b, double a)
+{
+    double r;
+    if (odd_root_pow(b, a, &r))
+        return r;
+    return std::pow(b, a);
+}
+
 complex cpow(complex a, complex b)
 {
     if (a.re == 0 && a.im == 0)
     {
         if (b.re == 0 && b.im == 0)
             return C_ONE;
-        complex zero = {0, 0};
-        return zero;
+        if (b.re > 0)
+        {
+            complex zero = {0, 0};
+            return zero;
+        }
+        complex nan = {NAN, NAN}; // 0^(-1) : division par zero
+        return nan;
+    }
+    double rr;
+    if (a.im == 0 && b.im == 0 && odd_root_pow(a.re, b.re, &rr))
+        return complex{rr, 0.0};
+    // Base reelle, exposant entier : pow, quel que soit l'exposant
+    // ((-1.0)^(1000001) donnait -1+3.4e-10i par exp(b ln a)).
+    if (a.im == 0 && b.im == 0 && b.re == std::floor(b.re))
+    {
+        complex r = {std::pow(a.re, b.re), 0};
+        return r;
+    }
+    if (b.im == 0 && b.re == std::floor(b.re) && std::fabs(b.re) <= 1024)
+    {
+        // Exposant entier : produits successifs (2^(3) = 8 exactement,
+        // au lieu de 7.9999999999999982 par exp(3 ln 2)).
+        long n = (long)std::fabs(b.re);
+        complex r = C_ONE, p = a;
+        while (n)
+        {
+            if (n & 1)
+                r = cmul(r, p);
+            p = cmul(p, p);
+            n >>= 1;
+        }
+        return b.re < 0 ? cdiv(C_ONE, r) : r;
+    }
+    if (a.im == 0 && a.re > 0 && b.im == 0)
+    {
+        complex r = {std::pow(a.re, b.re), 0};
+        return r;
     }
     return cexp(cmul(b, clog(a)));
 }
@@ -930,20 +1086,46 @@ complex csqrt(complex z)
     }
     if (z.im == 0)
         z.im = 0.0; // sqrt(-1) = +i, not -i
-    double r = std::hypot(z.re, z.im);
-    double t = std::atan2(z.im, z.re) / 2.0;
-    complex r2 = {std::sqrt(r) * std::cos(t), std::sqrt(r) * std::sin(t)};
+    // Forme sans cos/sin : partie reelle exactement nulle pour un negatif.
+    // Mise a l'echelle pour que hypot et la somme ne debordent pas.
+    double s = std::fmax(std::fabs(z.re), std::fabs(z.im));
+    double x = z.re / s, y = z.im / s;
+    double h = std::hypot(x, y);
+    double rs = std::sqrt(s);
+    complex r2;
+    if (x >= 0)
+    {
+        double t = std::sqrt((h + x) / 2);
+        r2.re = t * rs;
+        r2.im = y / (2 * t) * rs;
+    }
+    else
+    {
+        double t = std::sqrt((h - x) / 2);
+        r2.re = std::fabs(y) / (2 * t) * rs;
+        r2.im = std::copysign(t, y) * rs;
+    }
     return r2;
 }
 
 complex csin(complex z)
 {
+    if (z.im == 0)
+    {
+        complex r = {rsin(z.re), 0};
+        return r;
+    }
     complex r = {std::sin(z.re) * std::cosh(z.im), std::cos(z.re) * std::sinh(z.im)};
     return r;
 }
 
 complex ccos(complex z)
 {
+    if (z.im == 0)
+    {
+        complex r = {rcos(z.re), 0};
+        return r;
+    }
     complex r = {std::cos(z.re) * std::cosh(z.im), -std::sin(z.re) * std::sinh(z.im)};
     return r;
 }
@@ -955,6 +1137,12 @@ complex ctan(complex z)
 
 complex casin(complex z)
 {
+    // asin(-z) = -asin(z) : i*z + sqrt(1-z^2) s'annule pour Re(z) << 0.
+    if (z.re < 0)
+    {
+        complex r = casin(complex{-z.re, -z.im});
+        return complex{-r.re, -r.im};
+    }
     // -i * ln(i*z + sqrt(1 - z^2))
     complex iz = cmul(C_I, z);
     complex z2 = cmul(z, z);
@@ -964,10 +1152,10 @@ complex casin(complex z)
 
 complex cacos(complex z)
 {
-    // -i * ln(z + i*sqrt(1 - z^2))
-    complex z2 = cmul(z, z);
-    complex s = csqrt(csub(C_ONE, z2));
-    return cmul(complex{-0.0, -1.0}, clog(cadd(z, cmul(C_I, s))));
+    // acos(z) = pi/2 - asin(z) : la formule directe z + i*sqrt(1-z^2)
+    // s'annule pour z reel grand (acos(10^8) donnait nan).
+    complex a = casin(z);
+    return complex{1.5707963267948966 - a.re, -a.im};
 }
 
 complex catan(complex z)
@@ -981,23 +1169,46 @@ complex catan(complex z)
 
 complex csinh(complex z)
 {
+    if (z.im == 0)
+        return complex{std::sinh(z.re), 0.0};
     complex r = {std::sinh(z.re) * std::cos(z.im), std::cosh(z.re) * std::sin(z.im)};
     return r;
 }
 
 complex ccosh(complex z)
 {
+    if (z.im == 0)
+        return complex{std::cosh(z.re), 0.0};
     complex r = {std::cosh(z.re) * std::cos(z.im), std::sinh(z.re) * std::sin(z.im)};
     return r;
 }
 
 complex ctanh(complex z)
 {
+    if (z.im == 0)
+        return complex{std::tanh(z.re), 0.0};
+    // Au-dela, sinh et cosh debordent (inf/inf = nan) ; tanh vaut +-1.
+    if (std::fabs(z.re) > 20)
+        return complex{std::copysign(1.0, z.re), 0.0};
     return cdiv(csinh(z), ccosh(z));
 }
 
 complex casinh(complex z)
 {
+    if (z.im == 0)
+    {
+        complex r = {std::asinh(z.re), 0};
+        return r;
+    }
+    // asinh(-z) = -asinh(z) : z + sqrt(z^2+1) s'annule pour Re(z) << 0.
+    if (z.re < 0)
+    {
+        complex m = {-z.re, -z.im};
+        complex r = casinh(m);
+        r.re = -r.re;
+        r.im = -r.im;
+        return r;
+    }
     // ln(z + sqrt(z^2 + 1))
     complex z2 = cmul(z, z);
     return clog(cadd(z, csqrt(cadd(z2, C_ONE))));
@@ -1037,6 +1248,8 @@ complex cconj(complex z)
 
 complex carg(complex z)
 {
+    if (z.im == 0)
+        z.im = 0.0; // arg(-1) = pi, pas -pi
     complex r = {std::atan2(z.im, z.re), 0};
     return r;
 }
@@ -1052,23 +1265,45 @@ complex clog10(complex z)
     return cdiv(clog(z), C_LN10);
 }
 
+static complex eval_c_core(token *in, int n, const complex *vals, const int *letters, int nvar, bool strict);
+
 complex evaluate_npi_c_var(token *in, int n, complex x, int letter)
+{
+    return eval_c_core(in, n, &x, &letter, letter >= 0 ? 1 : 0, false);
+}
+
+/* Variables nommees letters[v] (code de la lettre, 'X'...) valant vals[v] ;
+ * une lettre absente vaut 0 (le Solveur s'en sert pour extraire les
+ * coefficients d'un systeme lineaire). */
+complex evaluate_npi_c_vars(token *in, int n, const complex *vals, const int *letters, int nvar)
+{
+    return eval_c_core(in, n, vals, letters, nvar, false);
+}
+
+/* strict : une lettre sans valeur est une erreur (Calculatrice : "1.5E3" ou
+ * "A+1" ne doivent pas valoir 1.5 ou 1 en silence). */
+static complex eval_c_core(token *in, int n, const complex *vals, const int *letters, int nvar, bool strict)
 {
     stack_c nb_stack;
     complex a;
     complex b;
     init(&nb_stack, n);
+    g_stack_underflow = false;
     for (int i = 0; i < n; i++)
     {
         if (in[i].type == 'X')
         { // variable
-            if (letter >= 0 && (int)(in[i].value) + (int)'a' == letter)
-                push(&nb_stack, x);
-            else
-            {
-                complex t = {0, 0};
-                push(&nb_stack, t);
-            }
+            complex t = {0, 0};
+            if (strict)
+                t.re = t.im = NAN;
+            int ch = (int)(in[i].value) + (int)'a';
+            for (int v = 0; v < nvar; v++)
+                if (letters[v] == ch)
+                {
+                    t = vals[v];
+                    break;
+                }
+            push(&nb_stack, t);
         }
         else if (in[i].type == 'n')
         {
@@ -1084,13 +1319,13 @@ complex evaluate_npi_c_var(token *in, int n, complex x, int letter)
             switch (in[i].type)
             {
             case '+':
-                push(&nb_stack, cadd(a, b));
+                push(&nb_stack, snap_csum(cadd(a, b), a, b));
                 break;
             case '*':
                 push(&nb_stack, cmul(a, b));
                 break;
             case '-':
-                push(&nb_stack, csub(b, a));
+                push(&nb_stack, snap_csum(csub(b, a), b, a));
                 break;
             case '/':
                 push(&nb_stack, cdiv(b, a));
@@ -1127,11 +1362,14 @@ complex evaluate_npi_c_var(token *in, int n, complex x, int letter)
             b = peek(&nb_stack);
             pop(&nb_stack);
             complex r = {NAN, NAN};
-            if (in[i].type == 'q')
+            // Arguments reels seulement (binom(5+i,2) valait 10).
+            if (a.im != 0 || b.im != 0)
+                ;
+            else if (in[i].type == 'q')
                 r = (complex){comb(b.re, a.re), 0};
             else if (in[i].type == 'y')
                 r = (complex){perm(b.re, a.re), 0};
-            else if (a.im == 0 && b.im == 0)
+            else
                 r = (complex){arith_two(in[i].type, b.re, a.re), 0};
             push(&nb_stack, r);
         }
@@ -1190,7 +1428,7 @@ complex evaluate_npi_c_var(token *in, int n, complex x, int letter)
                 a = cconj(a);
                 break;
             case 'd':
-                a = carg(a);
+                a = angle_out_c(carg(a));
                 break;
             case 'm':
                 a = cmod(a);
@@ -1226,8 +1464,8 @@ complex evaluate_npi_c_var(token *in, int n, complex x, int letter)
                 }
                 break;
             case 'O':
-                a.re = std::floor(a.re + 0.5);
-                a.im = std::floor(a.im + 0.5);
+                a.re = std::round(a.re);
+                a.im = std::round(a.im);
                 break;
             case '!':
                 a = cfact(a);
@@ -1238,15 +1476,19 @@ complex evaluate_npi_c_var(token *in, int n, complex x, int letter)
             push(&nb_stack, a);
         }
     }
+    /* Saisie incomplete ("2+", "sin()", ")") : il doit rester exactement
+     * un nombre sur la pile, sans operande manquant en chemin. */
+    bool incomplete = g_stack_underflow || nb_stack.top != 0;
     a = peek(&nb_stack);
     free(&nb_stack);
+    if (incomplete)
+        a.re = a.im = NAN;
     return a;
 }
 
 complex evaluate_npi_c(token *in, int n)
 {
-    complex x = {0, 0};
-    return evaluate_npi_c_var(in, n, x, -1);
+    return eval_c_core(in, n, nullptr, nullptr, 0, true);
 }
 
 typedef struct
@@ -1664,7 +1906,7 @@ calc_result evaluate_calc(token *in, int n)
                 break;
             case 'd':
                 if (!a.is_matrix)
-                    r = mv_scalar(carg(a.scalar));
+                    r = mv_scalar(angle_out_c(carg(a.scalar)));
                 break;
             case 'm':
                 if (!a.is_matrix)
@@ -1715,8 +1957,8 @@ calc_result evaluate_calc(token *in, int n)
                 if (!a.is_matrix)
                 {
                     complex z = a.scalar;
-                    z.re = std::floor(z.re + 0.5);
-                    z.im = std::floor(z.im + 0.5);
+                    z.re = std::round(z.re);
+                    z.im = std::round(z.im);
                     r = mv_scalar(z);
                 }
                 break;
@@ -1799,13 +2041,13 @@ if (std::isinf(in.re) || std::isinf(in.im))
     strcpy(out, "inf");
     return 3;
 }
-    // Supprime le bruit de calcul (sin(pi) = 1.2e-16, 3+1e-17i...) sans
-    // effacer les vrais petits nombres : seuil absolu 1e-14, ou partie
-    // negligeable devant l'autre. (Avant : 1e-10 fixe, 1e-11 devenait 0.)
+    // Supprime une partie negligeable devant l'autre (e^(ip) = -1+1.2e-16i).
+    // Pas de seuil absolu : 1.6*10^(-19) s'affiche. Le bruit des
+    // soustractions est retire au calcul (snap_sum), sin(pi) par trig_zero.
     double ar = std::fabs(in.re), ai = std::fabs(in.im);
-    if (ar < 1e-14 || ar < 1e-10 * ai)
+    if (ar < 1e-10 * ai)
         in.re = 0;
-    if (ai < 1e-14 || ai < 1e-10 * ar)
+    if (ai < 1e-10 * ar)
         in.im = 0;
     in.re = round_for_display(in.re);
     in.im = round_for_display(in.im);
@@ -1867,7 +2109,8 @@ bool need_implicit_star(char next_type, char last_type)
     // like i/e/p, an opening parenthesis, or a variable) follows a complete
     // operand (number, closing paren, or a bare constant/variable): "2i", "3+2i",
     // "2(3+4i)", "iX", "2X", "Xi", "X(2)", "i(2)".
-    char *operand_end = (char *)"n)iXep]";
+    // 'z' = Ans : "ans(2)", "ans p", "ans r(4)" sont des produits.
+    char *operand_end = (char *)"n)iXep]!z";
     bool last_is_var = last_type >= 'A' && last_type <= 'Z' &&
                        !is_in(last_type, (char *)"FGHPLDRSO");
     // Prefix functions (sqrt 'r', ln 'l', cos 'c', ...) also start an operand:
@@ -1880,8 +2123,28 @@ bool need_implicit_star(char next_type, char last_type)
     return false;
 }
 
+/* Valeur exacte (correctement arrondie) des chiffres in[start..end[, ou la
+ * virgule vaut un point. Accumuler chiffre par chiffre donnait 0.3 =
+ * 0.30000000000000004. */
+static double digits_to_double(const char *in, int start, int end)
+{
+    char small[64];
+    int len = end - start;
+    char *buf = len < (int)sizeof(small) ? small : (char *)malloc(len + 1);
+    if (!buf)
+        return NAN;
+    for (int k = 0; k < len; k++)
+        buf[k] = in[start + k] == ',' ? '.' : in[start + k];
+    buf[len] = '\0';
+    double v = strtod(buf, NULL);
+    if (buf != small)
+        free(buf);
+    return v;
+}
+
 static bool parse_plain_number(char *in, int n, int *pos, double *out)
 {
+    int start = *pos;
     double v = 0;
     bool any = false;
     while (*pos < n && in[*pos] >= '0' && in[*pos] <= '9')
@@ -1902,7 +2165,7 @@ static bool parse_plain_number(char *in, int n, int *pos, double *out)
             (*pos)++;
         }
     }
-    *out = v;
+    *out = any ? digits_to_double(in, start, *pos) : v;
     return any;
 }
 
@@ -2236,6 +2499,7 @@ token *parse_string_to_token(char *in, int n, int *tokenized_size)
     char paren_kind[64];
     int depth = 0;
     bool pending = false;
+    int num_start = 0;
 
     for (int i = 0; i < n; i++)
     {
@@ -2430,13 +2694,14 @@ token *parse_string_to_token(char *in, int n, int *tokenized_size)
             // ecrasait silencieusement l'operande precedent.
             bool last_is_var = last_type >= 'A' && last_type <= 'Z' &&
                                !is_in(last_type, (char *)"FGHPLDRSO");
-            if (!pending && (is_in(last_type, (char *)"iepz)]X") || last_is_var))
+            if (!pending && (is_in(last_type, (char *)"iepz)]X!") || last_is_var))
             {
                 out[out_size].type = '*';
                 out[out_size].src_pos = -1;
                 last_type = '*';
                 out_size++;
             }
+            num_start = i;
             while (i < n && is_in(in[i], nb))
             {
                 cur.type = 'n';
@@ -2459,6 +2724,17 @@ token *parse_string_to_token(char *in, int n, int *tokenized_size)
             }
         }
 
+        if (is_rel_type(in[i]))
+        {
+            /* Signe d'inequation : se comporte comme '='. */
+            out[out_size].type = in[i];
+            out[out_size].value = 0;
+            out[out_size].src_pos = i;
+            out[out_size].mat = NULL;
+            last_type = '=';
+            out_size++;
+            continue;
+        }
         if (in[i] == CAS_SEPARATOR)
         {
             /* Separateur de solutions ("X=1 ; X=2") : jamais de produit implicite. */
@@ -2504,14 +2780,11 @@ token *parse_string_to_token(char *in, int n, int *tokenized_size)
             }
             else
             {
-                double multiplicator = 0.1;
+                int start = pending ? num_start : i;
                 i++;
                 while (i < n && is_in(in[i], nb))
-                {
-                    cur.value += (in[i] - '0') * multiplicator;
-                    multiplicator *= 0.1;
                     i++;
-                }
+                cur.value = digits_to_double(in, start, i);
                 out[out_size].value = cur.value;
                 out[out_size].type = 'n';
                 out[out_size].src_pos = i - 1;
@@ -2519,6 +2792,9 @@ token *parse_string_to_token(char *in, int n, int *tokenized_size)
                 last_type = 'n';
                 out_size++;
                 pending = false;
+                // Le caractere qui suit ("2.5!", "0.5exp(0)") doit etre lu.
+                if (i < n)
+                    goto retry;
             }
         }
         if (i < n && is_in(in[i], (char *)"("))

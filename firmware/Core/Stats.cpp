@@ -545,10 +545,64 @@ double law_interval(int law, const double *p, double a, double b)
     if (a > b)
         return 0;
     double r;
-    if (k_laws[law].discrete)
-        r = law_cdf(law, p, b) - law_cdf(law, p, ceil(a - 1e-9) - 1);
-    else
+    /* Queue droite : 1 - P(X < a) perd tous ses chiffres (P(Z >= 30) donnait
+     * 0 au lieu de 4.9e-198). On somme ou on utilise la fonction de survie. */
+    switch (law)
+    {
+    case LAW_NORMAL:
+    {
+        double za = (a - p[0]) / p[1], zb = (b - p[0]) / p[1];
+        r = za > 0 ? normal_cdf_std(-za) - normal_cdf_std(-zb) : normal_cdf_std(zb) - normal_cdf_std(za);
+        break;
+    }
+    case LAW_EXPONENTIAL:
+    {
+        double lo = a < 0 ? 0 : a;
+        if (b <= lo)
+            return 0;
+        /* e^(-l lo) - e^(-l b) */
+        r = exp(-p[0] * lo) * -expm1(-p[0] * (b - lo));
+        break;
+    }
+    case LAW_GEOMETRIC:
+    {
+        double lo = ceil(a - 1e-9), hi = floor(b + 1e-9);
+        if (lo < 1)
+            lo = 1;
+        if (hi < lo)
+            return 0;
+        /* P(lo <= X <= hi) = (1-p)^(lo-1) - (1-p)^hi */
+        double l1p = log1p(-p[0]);
+        r = exp((lo - 1) * l1p) * (isinf(hi) ? 1 : -expm1((hi - lo + 1) * l1p));
+        break;
+    }
+    case LAW_BINOMIAL:
+    case LAW_POISSON:
+    {
+        double lo = ceil(a - 1e-9), hi = floor(b + 1e-9);
+        if (lo < 0)
+            lo = 0;
+        double mean = law_mean(law, p);
+        if (lo <= mean)
+        {
+            r = law_cdf(law, p, hi) - (lo > 0 ? law_cdf(law, p, lo - 1) : 0);
+            break;
+        }
+        /* au-dessus de la moyenne : somme directe des termes, qui decroissent */
+        double top = law == LAW_BINOMIAL ? fmin(hi, round(p[0])) : fmin(hi, (double)POISSON_MAX_K);
+        r = 0;
+        for (double k = lo; k <= top; k++)
+        {
+            double t = law_pdf(law, p, k);
+            r += t;
+            if (t < 1e-17 * r || t == 0)
+                break;
+        }
+        break;
+    }
+    default:
         r = law_cdf(law, p, b) - law_cdf(law, p, a);
+    }
     return r < 0 ? 0 : (r > 1 ? 1 : r);
 }
 
@@ -647,4 +701,272 @@ double law_sd(int law, const double *p)
         return (p[1] - p[0]) / sqrt(12.0);
     }
     return NAN;
+}
+
+/* ------------------------------ Student ---------------------------------- */
+
+/* Fraction continue de la fonction beta incomplete (methode de Lentz). */
+static double beta_cf(double a, double b, double x)
+{
+    const double tiny = 1e-300;
+    double c = 1, d = 1 - (a + b) * x / (a + 1);
+    if (fabs(d) < tiny)
+        d = tiny;
+    d = 1 / d;
+    double f = d;
+    for (int m = 1; m <= 300; m++)
+    {
+        double m2 = 2.0 * m;
+        double num = m * (b - m) * x / ((a + m2 - 1) * (a + m2));
+        d = 1 + num * d;
+        c = 1 + num / c;
+        if (fabs(d) < tiny)
+            d = tiny;
+        if (fabs(c) < tiny)
+            c = tiny;
+        d = 1 / d;
+        f *= d * c;
+        num = -(a + m) * (a + b + m) * x / ((a + m2) * (a + m2 + 1));
+        d = 1 + num * d;
+        c = 1 + num / c;
+        if (fabs(d) < tiny)
+            d = tiny;
+        if (fabs(c) < tiny)
+            c = tiny;
+        d = 1 / d;
+        double delta = d * c;
+        f *= delta;
+        if (fabs(delta - 1) < 1e-15)
+            break;
+    }
+    return f;
+}
+
+/* Fonction beta incomplete regularisee I_x(a, b). */
+static double inc_beta(double a, double b, double x)
+{
+    if (x <= 0)
+        return 0;
+    if (x >= 1)
+        return 1;
+    double lbeta = lgamma(a + b) - lgamma(a) - lgamma(b) + a * log(x) + b * log(1 - x);
+    if (x < (a + 1) / (a + b + 2))
+        return exp(lbeta) * beta_cf(a, b, x) / a;
+    return 1 - exp(lbeta) * beta_cf(b, a, 1 - x) / b;
+}
+
+double student_pdf(double t, double df)
+{
+    if (!(df > 0) || !isfinite(t))
+        return isfinite(t) ? NAN : 0;
+    double l = lgamma((df + 1) / 2) - lgamma(df / 2) - 0.5 * log(df * M_PI);
+    return exp(l - (df + 1) / 2 * log(1 + t * t / df));
+}
+
+double student_cdf(double t, double df)
+{
+    if (!(df > 0) || isnan(t))
+        return NAN;
+    if (t == INFINITY)
+        return 1;
+    if (t == -INFINITY)
+        return 0;
+    double tail = 0.5 * inc_beta(df / 2, 0.5, df / (df + t * t)); /* P(T > |t|) */
+    return t > 0 ? 1 - tail : tail;
+}
+
+double student_inv(double q, double df)
+{
+    if (!(df > 0) || !(q > 0 && q < 1))
+        return NAN;
+    if (q == 0.5)
+        return 0;
+    /* Encadrement puis dichotomie : la fonction est strictement croissante. */
+    double lo = -1, hi = 1;
+    while (student_cdf(lo, df) > q && lo > -1e12)
+        lo *= 2;
+    while (student_cdf(hi, df) < q && hi < 1e12)
+        hi *= 2;
+    for (int i = 0; i < 200; i++)
+    {
+        double mid = 0.5 * (lo + hi);
+        if (student_cdf(mid, df) < q)
+            lo = mid;
+        else
+            hi = mid;
+        if (hi - lo <= 1e-13 * fmax(1.0, fabs(mid)))
+            break;
+    }
+    return 0.5 * (lo + hi);
+}
+
+/* --------------- Tests statistiques et intervalles de confiance ---------- */
+
+static const inf_info k_inf[INF_COUNT] = {
+    {"1 proportion", 3, {"p0", "x (succes)", "n"}, {0.5, 52, 100}, true, false},
+    {"2 proportions", 4, {"x1", "n1", "x2", "n2"}, {45, 100, 30, 100}, false, false},
+    {"1 moyenne (sigma connu)", 4, {"mu0", "moyenne", "sigma", "n"}, {10, 10.4, 1.2, 50}, true, false},
+    {"1 moyenne (Student)", 4, {"mu0", "moyenne", "s", "n"}, {10, 10.4, 1.2, 20}, true, true},
+    {"2 moyennes (Student)", 6, {"moyenne 1", "s1", "n1", "moyenne 2", "s2", "n2"},
+     {12.1, 2.3, 30, 10.9, 1.9, 25}, false, true},
+};
+
+const inf_info *inf_get(int method)
+{
+    return (method >= 0 && method < INF_COUNT) ? &k_inf[method] : &k_inf[0];
+}
+
+static bool is_count(double n, double min)
+{
+    return isfinite(n) && n >= min && n == floor(n);
+}
+
+bool inf_params_ok(int method, const double *p)
+{
+    for (int i = 0; i < inf_get(method)->nparams; i++)
+        if (!isfinite(p[i]))
+            return false;
+    switch (method)
+    {
+    case INF_PROP1:
+        return p[0] > 0 && p[0] < 1 && is_count(p[2], 1) && is_count(p[1], 0) && p[1] <= p[2];
+    case INF_PROP2:
+        return is_count(p[1], 1) && is_count(p[3], 1) && is_count(p[0], 0) && is_count(p[2], 0) && p[0] <= p[1] &&
+               p[2] <= p[3];
+    case INF_MEAN_Z:
+        return p[2] > 0 && is_count(p[3], 1);
+    case INF_MEAN_T:
+        return p[2] > 0 && is_count(p[3], 2);
+    case INF_MEAN2_T:
+        return p[1] > 0 && p[4] > 0 && is_count(p[2], 2) && is_count(p[5], 2);
+    }
+    return false;
+}
+
+/* Degres de liberte de Welch-Satterthwaite. */
+static double welch_df(double v1, double n1, double v2, double n2)
+{
+    double a = v1 / n1, b = v2 / n2;
+    return (a + b) * (a + b) / (a * a / (n1 - 1) + b * b / (n2 - 1));
+}
+
+static double tail_pvalue(double stat, double df, int alt)
+{
+    double cdf = isnan(df) ? normal_cdf_std(stat) : student_cdf(stat, df);
+    double upper = isnan(df) ? normal_cdf_std(-stat) : student_cdf(-stat, df); /* P(Z >= stat) */
+    switch (alt)
+    {
+    case ALT_LT:
+        return cdf;
+    case ALT_GT:
+        return upper;
+    default:
+        return fmin(1.0, 2 * fmin(cdf, upper));
+    }
+}
+
+bool inf_test(int method, const double *p, int alt, inf_test_result *out)
+{
+    if (!inf_params_ok(method, p) || alt < 0 || alt >= ALT_COUNT)
+        return false;
+    double stat = NAN, df = NAN, est = NAN;
+    switch (method)
+    {
+    case INF_PROP1:
+        est = p[1] / p[2];
+        stat = (est - p[0]) / sqrt(p[0] * (1 - p[0]) / p[2]);
+        break;
+    case INF_PROP2:
+    {
+        double p1 = p[0] / p[1], p2 = p[2] / p[3];
+        double pool = (p[0] + p[2]) / (p[1] + p[3]);
+        double se = sqrt(pool * (1 - pool) * (1 / p[1] + 1 / p[3]));
+        est = p1 - p2;
+        if (se == 0)
+            return false; /* 0 ou 100 % de succes dans les deux echantillons */
+        stat = est / se;
+        break;
+    }
+    case INF_MEAN_Z:
+        est = p[1];
+        stat = (p[1] - p[0]) / (p[2] / sqrt(p[3]));
+        break;
+    case INF_MEAN_T:
+        est = p[1];
+        stat = (p[1] - p[0]) / (p[2] / sqrt(p[3]));
+        df = p[3] - 1;
+        break;
+    case INF_MEAN2_T:
+    {
+        double v1 = p[1] * p[1], v2 = p[4] * p[4];
+        est = p[0] - p[3];
+        stat = est / sqrt(v1 / p[2] + v2 / p[5]);
+        df = welch_df(v1, p[2], v2, p[5]);
+        break;
+    }
+    }
+    if (!isfinite(stat))
+        return false;
+    out->stat = stat;
+    out->df = df;
+    out->estimate = est;
+    out->pvalue = tail_pvalue(stat, df, alt);
+    return true;
+}
+
+bool inf_interval(int method, const double *p, double level, inf_ci_result *out)
+{
+    if (!(level > 0 && level < 1))
+        return false;
+    /* p0 / mu0 n'intervient pas : on le remplace par une valeur valide. */
+    double q[INF_MAX_PARAMS];
+    memcpy(q, p, sizeof(q));
+    if (inf_get(method)->first_is_h0)
+        q[0] = (method == INF_PROP1) ? 0.5 : 0;
+    if (!inf_params_ok(method, q))
+        return false;
+    double est = NAN, se = NAN, df = NAN;
+    switch (method)
+    {
+    case INF_PROP1:
+        est = q[1] / q[2];
+        se = sqrt(est * (1 - est) / q[2]);
+        break;
+    case INF_PROP2:
+    {
+        double p1 = q[0] / q[1], p2 = q[2] / q[3];
+        est = p1 - p2;
+        se = sqrt(p1 * (1 - p1) / q[1] + p2 * (1 - p2) / q[3]);
+        break;
+    }
+    case INF_MEAN_Z:
+        est = q[1];
+        se = q[2] / sqrt(q[3]);
+        break;
+    case INF_MEAN_T:
+        est = q[1];
+        se = q[2] / sqrt(q[3]);
+        df = q[3] - 1;
+        break;
+    case INF_MEAN2_T:
+    {
+        double v1 = q[1] * q[1], v2 = q[4] * q[4];
+        est = q[0] - q[3];
+        se = sqrt(v1 / q[2] + v2 / q[5]);
+        df = welch_df(v1, q[2], v2, q[5]);
+        break;
+    }
+    }
+    double a = (1 + level) / 2;
+    double crit = isnan(df) ? normal_inv_std(a) : student_inv(a, df);
+    if (!isfinite(crit) || !isfinite(se))
+        return false;
+    out->estimate = est;
+    out->se = se;
+    out->df = df;
+    out->crit = crit;
+    out->margin = crit * se;
+    out->lo = est - out->margin;
+    out->hi = est + out->margin;
+    return true;
 }

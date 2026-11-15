@@ -75,4 +75,9 @@ complex peek(Stack_c *stack);
 
 void free(Stack_c *stack);
 
+/* Mis a vrai quand pop() ou peek() est appele sur une pile de nombres vide
+ * (Stack_d ou Stack_c) : il manque un operande ("2+", "sin()"). L'evaluateur
+ * le remet a faux avant un calcul et renvoie NaN s'il est leve. */
+extern bool g_stack_underflow;
+
 #endif

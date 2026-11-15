@@ -81,6 +81,7 @@ double evaluate_npi(token *in, int n);
 complex evaluate_npi_c(token *in, int n);
 
 complex evaluate_npi_c_var(token *in, int n, complex x, int letter);
+complex evaluate_npi_c_vars(token *in, int n, const complex *vals, const int *letters, int nvar);
 
 typedef struct
 {

@@ -10,30 +10,219 @@
 
 #define PIKA_OUTPUT_SIZE 4096
 
+/* ---------- Garde-fous d'execution ----------
+ * Sans eux, un script pouvait figer la calculatrice : boucle infinie,
+ * input() (pika_platform_getchar non fournie = while(1)), assertion de
+ * PikaPython (abort) ou recursion sans fin (debordement de pile). */
+#include <setjmp.h>
+#include "PikaVM.h"
+
+/* Fournies par l'application (Apps/python.cpp). Versions par defaut ci-dessous
+ * pour les tests hote qui ne lient pas l'application. */
+__attribute__((weak)) int oc_py_poll_stop(void) { return 0; }
+__attribute__((weak)) int oc_py_input_line(const char *prompt, char *buf, int cap)
+{
+    (void)prompt;
+    (void)buf;
+    (void)cap;
+    return -1; /* pas d'interface : comportement d'origine */
+}
+
+/* Pile C autorisee pendant un script. Chaque appel Python imbrique consomme
+ * de l'ordre de 1 Ko : au-dela, RecursionError au lieu d'un plantage. */
+#if defined(__linux__) || defined(__EMSCRIPTEN__) || defined(_WIN32) || defined(__APPLE__)
+#define OC_PY_STACK_LIMIT (192 * 1024)
+#else
+#define OC_PY_STACK_LIMIT (12 * 1024)
+#endif
+
+static jmp_buf g_run_jmp;
+static volatile int g_run_active = 0;
+static volatile int g_run_stopped = 0; /* 1 = touche, 2 = recursion */
+static char *g_stack_base = NULL;
+static unsigned g_hook_count = 0;
+
+void pika_hook_instruct(void)
+{
+    if (!g_run_active || g_run_stopped)
+        return;
+    char probe;
+    long used = (long)(g_stack_base - &probe);
+    if (used < 0)
+        used = -used;
+    if (used > OC_PY_STACK_LIMIT)
+    {
+        g_run_stopped = 2;
+        pika_vm_exit();
+        return;
+    }
+    if ((++g_hook_count & 63u) == 0 && oc_py_poll_stop())
+    {
+        g_run_stopped = 1;
+        pika_vm_exit();
+    }
+}
+
+/* Assertion ou erreur fatale de PikaPython : retour a pika_run au lieu de
+ * abort() / while(1). */
+static void oc_py_bail(void)
+{
+    if (g_run_active)
+        longjmp(g_run_jmp, 1);
+}
+void pika_platform_abort_handler(void) { oc_py_bail(); }
+void pika_platform_panic_handle(void)
+{
+    oc_py_bail();
+    while (1)
+    {
+    }
+}
+
 static PikaObj *g_root = NULL;
 static char g_output[PIKA_OUTPUT_SIZE];
 static size_t g_out_len = 0;
 
+/* Sortie au fil de l'eau : l'application recoit chaque ligne terminee
+ * pendant l'execution (au lieu de tout voir a la fin). g_hook_pos : debut
+ * du texte pas encore transmis. */
+static void (*g_line_hook)(const char *s, int n, int newline) = NULL;
+static size_t g_hook_pos = 0;
+/* Le debut de la sortie a ete efface faute de place (sans hook). */
+static int g_out_trimmed = 0;
+
+static int is_vm_dump_line(const char *l, size_t n);
+
+void pika_set_output_hook(void (*hook)(const char *s, int n, int newline))
+{
+    g_line_hook = hook;
+}
+
+/* Copie un morceau de ligne sans les codes de couleur ANSI ni les '\r'. */
+static int strip_line(const char *src, size_t n, char *dst)
+{
+    int o = 0;
+    for (size_t k = 0; k < n; k++)
+    {
+        char c = src[k];
+        if (c == 27 && k + 1 < n && src[k + 1] == '[')
+        {
+            k += 2;
+            while (k < n && !((src[k] >= 'A' && src[k] <= 'Z') || (src[k] >= 'a' && src[k] <= 'z')))
+                k++;
+            continue;
+        }
+        if (c != '\r')
+            dst[o++] = c;
+    }
+    return o;
+}
+
+/* Transmet les lignes terminees (et, si force, le reste) au hook. */
+static void hook_flush(int force)
+{
+    static char line[PIKA_OUTPUT_SIZE];
+    if (g_line_hook == NULL)
+        return;
+    while (g_hook_pos < g_out_len)
+    {
+        size_t e = g_hook_pos;
+        while (e < g_out_len && g_output[e] != '\n')
+            e++;
+        int complete = e < g_out_len;
+        if (!complete && !force)
+            break;
+        if (!(complete && is_vm_dump_line(g_output + g_hook_pos, e - g_hook_pos)))
+        {
+            int n = strip_line(g_output + g_hook_pos, e - g_hook_pos, line);
+            g_line_hook(line, n, complete);
+        }
+        g_hook_pos = complete ? e + 1 : e;
+    }
+}
+
+/* Plus de place dans g_output : avec un hook, le texte deja transmis est
+ * oublie (et une ligne geante est transmise en morceaux) ; sans hook, on
+ * garde la fin de la sortie (avant : tout ce qui depassait 4 Ko etait
+ * perdu sans le dire). */
+static void make_room(void)
+{
+    if (g_line_hook != NULL)
+    {
+        memmove(g_output, g_output + g_hook_pos, g_out_len - g_hook_pos);
+        g_out_len -= g_hook_pos;
+        g_hook_pos = 0;
+        if (g_out_len >= PIKA_OUTPUT_SIZE - 1)
+            hook_flush(1);
+        if (g_hook_pos > 0)
+        {
+            memmove(g_output, g_output + g_hook_pos, g_out_len - g_hook_pos);
+            g_out_len -= g_hook_pos;
+            g_hook_pos = 0;
+        }
+        return;
+    }
+    size_t cut = PIKA_OUTPUT_SIZE / 4;
+    while (cut < g_out_len && g_output[cut - 1] != '\n')
+        cut++;
+    if (cut > g_out_len)
+        cut = g_out_len;
+    memmove(g_output, g_output + cut, g_out_len - cut);
+    g_out_len -= cut;
+    g_out_trimmed = 1;
+}
+
+static void out_write(const char *s, size_t n)
+{
+    while (n > 0)
+    {
+        if (g_out_len >= PIKA_OUTPUT_SIZE - 1)
+            make_room();
+        size_t room = PIKA_OUTPUT_SIZE - 1 - g_out_len;
+        size_t k = n < room ? n : room;
+        memcpy(g_output + g_out_len, s, k);
+        g_out_len += k;
+        s += k;
+        n -= k;
+        hook_flush(0);
+    }
+}
+
 void pika_platform_printf(char *fmt, ...)
 {
-    if (g_out_len >= PIKA_OUTPUT_SIZE - 1)
-        return;
+    char small[256];
     va_list args;
     va_start(args, fmt);
-    int n = vsnprintf(g_output + g_out_len, PIKA_OUTPUT_SIZE - g_out_len, fmt, args);
+    int n = vsnprintf(small, sizeof(small), fmt, args);
     va_end(args);
-    if (n > 0)
+    if (n <= 0)
+        return;
+    if (n < (int)sizeof(small))
     {
-        g_out_len += (size_t)n;
-        if (g_out_len > PIKA_OUTPUT_SIZE - 1)
-            g_out_len = PIKA_OUTPUT_SIZE - 1;
+        out_write(small, (size_t)n);
+        return;
     }
+    char *big = (char *)malloc((size_t)n + 1);
+    if (big == NULL)
+    {
+        out_write(small, sizeof(small) - 1);
+        return;
+    }
+    va_start(args, fmt);
+    vsnprintf(big, (size_t)n + 1, fmt, args);
+    va_end(args);
+    out_write(big, (size_t)n);
+    free(big);
 }
 
 void pika_init(void)
 {
     if (g_root != NULL)
         return;
+    /* La banniere de PikaPython et le prelude ne vont pas a l'ecran : le
+     * hook (pose par l'appli avant le premier pika_run) est coupe ici. */
+    void (*hook)(const char *, int, int) = g_line_hook;
+    g_line_hook = NULL;
     g_out_len = 0;
     g_root = pikaPythonInit();
     {
@@ -41,146 +230,15 @@ void pika_init(void)
         pika_extras_install(g_root);
     }
     g_out_len = 0;
+    g_hook_pos = 0;
+    g_line_hook = hook;
 }
 
-/* ---------- "from module import *" ----------
- * PikaPython ne connait pas cette forme (erreur de syntaxe), tres utilisee
- * dans les manuels ("from turtle import *", "from math import *"). Ces
- * modules sont deja charges a la racine : la ligne est reecrite avant
- * l'execution en "a = m.a; b = m.b; ...", sur une seule ligne pour ne pas
- * decaler les numeros de ligne des erreurs. ("import" est refuse par
- * PikaPython dans une ligne a plusieurs instructions.) */
-
-static const char *const k_math_names[] = {
-    "pi", "e", "ceil", "fabs", "floor", "fmod", "remainder", "trunc", "exp", "log", "log2",
-    "log10", "pow", "sqrt", "acos", "asin", "atan", "atan2", "cos", "sin", "tan", "degrees",
-    "radians", "cosh", "sinh", "tanh", NULL};
-static const char *const k_random_names[] = {
-    "random", "randint", "randrange", "seed", "uniform", "choice", "shuffle", NULL};
-static const char *const k_draw_names[] = {
-    "clear", "set_pixel", "fill_rect", "line", "circle", "fill_circle", "draw_string", "color",
-    "show", "wait_key", "WIDTH", "HEIGHT", "BLACK", "WHITE", "RED", "GREEN", "BLUE", "YELLOW",
-    "CYAN", "MAGENTA", "ORANGE", "GRAY", NULL};
-static const char *const k_turtle_extra[] = {"Turtle", "Screen", "Pen", NULL};
-
-typedef struct
-{
-    char *buf;
-    size_t len, cap;
-} sbuf;
-
-static int sb_add(sbuf *b, const char *s, size_t n)
-{
-    if (b->len + n + 1 > b->cap)
-    {
-        size_t cap = (b->cap ? b->cap * 2 : 256) + n;
-        char *nb = (char *)realloc(b->buf, cap);
-        if (nb == NULL)
-            return 0;
-        b->buf = nb;
-        b->cap = cap;
-    }
-    memcpy(b->buf + b->len, s, n);
-    b->len += n;
-    b->buf[b->len] = '\0';
-    return 1;
-}
-
-static int sb_str(sbuf *b, const char *s) { return sb_add(b, s, strlen(s)); }
-
-static int is_sp(char c) { return c == ' ' || c == '\t'; }
-
-static void add_bindings(sbuf *b, const char *mod, const char *const *names, int *first)
-{
-    for (int i = 0; names[i]; i++)
-    {
-        if (!*first)
-            sb_str(b, "; ");
-        *first = 0;
-        sb_str(b, names[i]);
-        sb_str(b, " = ");
-        sb_str(b, mod);
-        sb_str(b, ".");
-        sb_str(b, names[i]);
-    }
-}
-
-static void add_fn_bindings(sbuf *b, const char *mod, const char *(*name)(int), int *first)
-{
-    for (int i = 0; name(i); i++)
-    {
-        const char *one[2] = {name(i), NULL};
-        add_bindings(b, mod, one, first);
-    }
-}
-
-/* Ligne [p, end) de la forme "from MOD import *" : ecrit la traduction et
- * renvoie 1. */
-static int rewrite_line(sbuf *b, const char *p, const char *end)
-{
-    const char *q = p;
-    while (q < end && is_sp(*q))
-        q++;
-    const char *indent_end = q;
-    if (end - q < 5 || strncmp(q, "from", 4) != 0 || !is_sp(q[4]))
-        return 0;
-    q += 4;
-    while (q < end && is_sp(*q))
-        q++;
-    const char *mod = q;
-    while (q < end && !is_sp(*q))
-        q++;
-    size_t mlen = (size_t)(q - mod);
-    while (q < end && is_sp(*q))
-        q++;
-    if (end - q < 7 || strncmp(q, "import", 6) != 0)
-        return 0;
-    q += 6;
-    while (q < end && is_sp(*q))
-        q++;
-    if (q >= end || *q != '*')
-        return 0;
-    q++;
-    while (q < end && (is_sp(*q) || *q == '\r'))
-        q++;
-    if (q < end && *q != '#')
-        return 0;
-
-    char m[24];
-    if (mlen == 0 || mlen >= sizeof(m))
-        return 0;
-    memcpy(m, mod, mlen);
-    m[mlen] = '\0';
-    const char *const *names = NULL;
-    const char *(*fn)(int) = NULL;
-    if (!strcmp(m, "math"))
-        names = k_math_names;
-    else if (!strcmp(m, "random"))
-        names = k_random_names;
-    else if (!strcmp(m, "draw"))
-        names = k_draw_names;
-    else if (!strcmp(m, "turtle"))
-    {
-        names = k_turtle_extra;
-        fn = py_turtle_name;
-    }
-    else if (!strcmp(m, "matplotlib.pyplot"))
-        fn = py_plot_name;
-    else
-        return 0;
-
-    /* Alias cache du module (voir k_restore) : "random = random.random"
-     * ne doit pas empecher de lire random.randint ensuite. */
-    char alias[40];
-    snprintf(alias, sizeof(alias), "_oc_m_%s", m);
-    int first = 1;
-    sb_add(b, p, (size_t)(indent_end - p));
-    if (fn)
-        add_fn_bindings(b, alias, fn, &first);
-    if (names)
-        add_bindings(b, alias, names, &first);
-    return 1;
-}
+/* ---------- Reecriture du script ----------
+ * Formes de Python que PikaPython ne connait pas (comprehensions avec if,
+ * lambda, f-strings, "from m import *"...) : traduites avant l'execution
+ * par Core/py_rewrite.c. */
+extern char *py_rewrite(const char *src);
 
 /* Les variables d'un script restent definies pour le suivant : si un script
  * a remplace "turtle" ou "random" (par exemple via "from random import *"),
@@ -188,38 +246,62 @@ static int rewrite_line(sbuf *b, const char *p, const char *end)
  * par le prelude (Core/py_draw.c) et gardent les modules en vie. */
 static const char *k_restore =
     "math = _oc_m_math; random = _oc_m_random; turtle = _oc_m_turtle; "
-    "draw = _oc_m_draw; matplotlib = _oc_m_matplotlib\n";
+    "draw = _oc_m_draw; matplotlib = _oc_m_matplotlib; time = _oc_m_time\n";
 
-/* Renvoie le script reecrit (a liberer), ou NULL s'il n'y a rien a changer. */
-static char *rewrite_star_imports(const char *src)
+/* Sortie lisible par un eleve : sans les codes de couleur ANSI (affiches
+ * "?[31m" sur l'ecran) ni le listing interne de la machine virtuelle
+ * ("   REF b    (#92)", " -> OPT +  (#94)") que PikaPython ajoute aux
+ * erreurs. */
+static int is_vm_dump_line(const char *l, size_t n)
 {
-    if (strstr(src, "import") == NULL || strchr(src, '*') == NULL)
-        return NULL;
-    sbuf b = {NULL, 0, 0};
-    int changed = 0;
-    const char *p = src;
-    while (*p)
+    size_t i = 0;
+    if (n >= 4 && l[0] == ' ' && l[1] == '-' && l[2] == '>' && l[3] == ' ')
+        i = 4;
+    else if (n >= 3 && l[0] == ' ' && l[1] == ' ' && l[2] == ' ')
+        i = 3;
+    else
+        return 0;
+    if (i + 3 > n)
+        return 0;
+    for (size_t k = i; k < i + 3; k++)
+        if (l[k] < 'A' || l[k] > 'Z')
+            return 0;
+    for (size_t k = i + 3; k + 1 < n; k++)
+        if (l[k] == '(' && l[k + 1] == '#')
+            return 1;
+    return 0;
+}
+
+static void clean_output(void)
+{
+    size_t o = 0;
+    size_t i = 0;
+    while (i < g_out_len)
     {
-        const char *end = strchr(p, '\n');
-        if (end == NULL)
-            end = p + strlen(p);
-        if (rewrite_line(&b, p, end))
-            changed = 1;
-        else
-            sb_add(&b, p, (size_t)(end - p));
-        if (*end == '\n')
+        size_t e = i;
+        while (e < g_out_len && g_output[e] != '\n')
+            e++;
+        size_t next = e < g_out_len ? e + 1 : e;
+        if (!is_vm_dump_line(g_output + i, e - i))
         {
-            sb_add(&b, "\n", 1);
-            end++;
+            for (size_t k = i; k < next; k++)
+            {
+                char c = g_output[k];
+                if (c == 27 && k + 1 < next && g_output[k + 1] == '[')
+                {
+                    k += 2;
+                    while (k < next && !((g_output[k] >= 'A' && g_output[k] <= 'Z') ||
+                                         (g_output[k] >= 'a' && g_output[k] <= 'z')))
+                        k++;
+                    continue;
+                }
+                g_output[o++] = c;
+            }
         }
-        p = end;
+        i = next;
     }
-    if (!changed || b.buf == NULL)
-    {
-        free(b.buf);
-        return NULL;
-    }
-    return b.buf;
+    g_out_len = o;
+    g_output[g_out_len] = '\0';
 }
 
 int pika_run(const char *script)
@@ -228,14 +310,50 @@ int pika_run(const char *script)
         pika_init();
     if (g_root == NULL)
         return -1;
-    obj_run(g_root, (char *)k_restore);
-    g_out_len = 0;
-    char *rewritten = rewrite_star_imports(script);
-    obj_run(g_root, rewritten ? rewritten : (char *)script);
+    char stack_mark;
+    char *volatile rewritten = NULL;
+    g_stack_base = &stack_mark;
+    g_run_stopped = 0;
+    g_hook_count = 0;
+    pika_vmSignal_setCtrlClear();
+    if (setjmp(g_run_jmp) == 0)
+    {
+        g_run_active = 1;
+        obj_run(g_root, (char *)k_restore);
+        g_out_len = 0;
+        g_hook_pos = 0;
+        g_out_trimmed = 0;
+        rewritten = py_rewrite(script);
+        obj_run(g_root, rewritten ? rewritten : (char *)script);
+        g_run_active = 0;
+        py_plot_autoshow();
+    }
+    else
+    {
+        /* Assertion de PikaPython pendant le script : on revient ici au lieu
+         * de figer la machine. L'interpreteur est garde tel quel (le recreer
+         * bloque : son etat global n'est pas reinitialisable). */
+        g_run_active = 0;
+        pika_platform_printf("\nErreur interne : script arrete.\n");
+    }
     free(rewritten);
-    py_plot_autoshow();
+    pika_vmSignal_setCtrlClear();
+    if (g_run_stopped == 1)
+        pika_platform_printf("\nKeyboardInterrupt (BACK)\n");
+    else if (g_run_stopped == 2)
+        pika_platform_printf("\nRecursionError: trop d'appels imbriques\n");
+    hook_flush(1);
+    clean_output();
     while (g_out_len > 0 && (g_output[g_out_len - 1] == '\n' || g_output[g_out_len - 1] == '\r'))
         g_out_len--;
+    /* Sortie trop longue : on garde la fin et on le signale en tete. */
+    static const char k_cut[] = "[...]\n";
+    if (g_out_trimmed && g_out_len + sizeof(k_cut) - 1 < PIKA_OUTPUT_SIZE)
+    {
+        memmove(g_output + sizeof(k_cut) - 1, g_output, g_out_len);
+        memcpy(g_output, k_cut, sizeof(k_cut) - 1);
+        g_out_len += sizeof(k_cut) - 1;
+    }
     g_output[g_out_len] = '\0';
     return 0;
 }
@@ -249,6 +367,8 @@ const char *pika_get_output(void)
 void pika_clear_output(void)
 {
     g_out_len = 0;
+    g_hook_pos = 0;
+    g_out_trimmed = 0;
     g_output[0] = '\0';
 }
 

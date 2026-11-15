@@ -199,13 +199,41 @@ static complex sum_prod(expr_fn *f, double a, double b, bool product)
 
 #define RID_NTAB 10
 
+static complex ridders_from(expr_fn *f, double a, double h, double *err_out);
+
+/* Le pas initial est essaye de plus en plus petit : un grand pas franchit
+ * un pole (tan(X) en 1.5) ou rate une fonction rapide (sin(100X)). On
+ * refuse ensuite un point anguleux (abs(X) en 0), ou les pentes a gauche
+ * et a droite different. */
 static complex deriv_ridders(expr_fn *f, double a)
 {
-    const double CON = 1.4, CON2 = CON * CON, SAFE = 2.0;
-    double h = 0.1 * fmax(1.0, fabs(a));
+    double scale = fmax(1.0, fabs(a));
+    double h0 = 0.1 * scale;
     /* Pres de 0, un grand pas sortirait du domaine de ln(X), sqrt(X)... */
-    if (a != 0.0 && h > 0.5 * fabs(a))
-        h = fmax(0.5 * fabs(a), 1e-3);
+    if (a != 0.0 && h0 > 0.5 * fabs(a))
+        h0 = 0.5 * fabs(a);
+    complex ans = C_NAN;
+    for (int k = 0; k < 5 && !c_finite(ans); k++, h0 *= 0.1)
+    {
+        double err;
+        complex v = ridders_from(f, a, h0, &err);
+        if (c_finite(v) && err <= 1e-6 * fmax(1.0, c_abs(v)))
+            ans = v;
+    }
+    if (!c_finite(ans))
+        return C_NAN;
+    double h = 1e-7 * (a != 0.0 ? fmin(scale, fabs(a)) : 1.0);
+    complex f0 = fn_eval_r(f, a), fp = fn_eval_r(f, a + h), fm = fn_eval_r(f, a - h);
+    complex right = csub(fp, f0), left = csub(f0, fm);
+    double gap = c_abs(csub(right, left)) / h;
+    if (!(gap <= 1e-2 * fmax(1.0, c_abs(ans))))
+        return C_NAN;
+    return ans;
+}
+
+static complex ridders_from(expr_fn *f, double a, double h, double *err_out)
+{
+    const double CON = 1.4, CON2 = CON * CON, SAFE = 2.0;
     complex *tab = (complex *)malloc(sizeof(complex) * RID_NTAB * RID_NTAB);
     if (!tab)
         return C_NAN;
@@ -239,8 +267,7 @@ static complex deriv_ridders(expr_fn *f, double a)
     }
 #undef T
     free(tab);
-    if (!c_finite(ans) || !(err <= 1e-6 * fmax(1.0, c_abs(ans))))
-        return C_NAN;
+    *err_out = err;
     return ans;
 }
 
@@ -289,7 +316,7 @@ static void gk15(expr_fn *f, gk_seg *s)
     s->err = c_abs(diff);
 }
 
-#define GK_MAX_SEG 100
+#define GK_MAX_SEG 400 /* 16 Ko : cos(1000X) sur [0,1] en demande ~250 */
 
 static complex integrate(expr_fn *f, double a, double b)
 {
@@ -385,17 +412,17 @@ static complex eval_call(int kind, const char *const *arg, const int *alen, comp
  * 1.25*10^(-7). Le 'e' de printf serait lu comme la constante e. */
 static int fmt_abs(char *out, double v)
 {
+    /* 17 chiffres significatifs : le tokenizer relit un decimal sans
+     * notation scientifique a l'identique (somme(X^(3),1,1000) reste
+     * entier). La forme m*10^(e), qui arrondit une fois de plus, ne sert
+     * qu'aux tres grands et tres petits nombres. */
     char m[40];
-    snprintf(m, sizeof(m), "%.16e", fabs(v));
+    snprintf(m, sizeof(m), "%.17g", fabs(v));
     char *e = strchr(m, 'e');
-    int ex = 0;
-    if (e)
-    {
-        ex = atoi(e + 1);
-        *e = '\0';
-    }
-    if (ex == 0)
+    if (!e)
         return sprintf(out, "%s", m);
+    int ex = atoi(e + 1);
+    *e = '\0';
     return sprintf(out, "%s*10^(%d)", m, ex);
 }
 

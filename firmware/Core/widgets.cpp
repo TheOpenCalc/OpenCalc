@@ -3,6 +3,8 @@
 #include "ui.h"
 #include <malloc.h>
 #include "colors.h"
+#include "ui_kit.h"
+#include "Cas.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,7 +16,16 @@ static char g_custom_matrix[4096];
 fill_box *create_fill_box(int x, int y, int h, int w, int border)
 {
     fill_box *out = (fill_box *)malloc(sizeof(fill_box));
+    char *in = (char *)calloc(1000, sizeof(char));
+    if (out == nullptr || in == nullptr)
+    {
+        free(out);
+        free(in);
+        return nullptr;
+    }
     out->curso_pos = 0;
+    out->hscroll = 0;
+    out->hscroll_max = 0;
     out->x = x;
     out->y = y;
     out->h = h;
@@ -22,13 +33,16 @@ fill_box *create_fill_box(int x, int y, int h, int w, int border)
     out->border = border;
     out->color = 0xffff;
     out->t_size = 0;
-    char *in = (char *)malloc(sizeof(char) * 1000);
-    for (int i = 0; i < 1000; i++)
-    {
-        in[i] = '\0';
-    }
     out->text = in;
     return out;
+}
+
+void free_fill_box(fill_box *in)
+{
+    if (in == nullptr)
+        return;
+    free(in->text);
+    free(in);
 }
 
 text_box *create_text_box(int x, int y, int h, int w, int border, bool transparent)
@@ -118,6 +132,8 @@ static int ans_word_around(const char *text, int len, int pos, bool inside)
 
 void fill_box_left(fill_box *in)
 {
+    if (in == NULL || in->text == NULL)
+        return;
     do
     {
         in->curso_pos--;
@@ -134,6 +150,8 @@ void fill_box_left(fill_box *in)
 
 void fill_box_right(fill_box *in)
 {
+    if (in == NULL || in->text == NULL)
+        return;
     do
     {
         in->curso_pos++;
@@ -233,7 +251,11 @@ int matrix_cell_edit(fill_box *in, int key, bool text_char)
     if (!found)
         return 0;
 
-    if (key == BACK)
+    // A PC-keyboard character is an ASCII code: '0' == RIGHT, '.' == LEFT,
+    // '-' == DOWN, '7' == UP, '\'' == BACK. Only real keys navigate.
+    bool is_key = !text_char;
+
+    if (is_key && key == BACK)
     {
         if (in->curso_pos == L.start)
         {
@@ -303,7 +325,7 @@ int matrix_cell_edit(fill_box *in, int key, bool text_char)
     if (intra > cl)
         intra = cl;
 
-    if (key == LEFT || key == UP || key == RIGHT || key == DOWN)
+    if (is_key && (key == LEFT || key == UP || key == RIGHT || key == DOWN))
     {
         if (key == LEFT)
         {
@@ -377,7 +399,7 @@ int matrix_cell_edit(fill_box *in, int key, bool text_char)
         return 1;
     }
 
-    if (key == BACK)
+    if (is_key && key == BACK)
     {
         if (intra > 0)
         {
@@ -465,7 +487,7 @@ void display_text_box(text_box *in, int shift_y, int shift_text, bool is_selecte
         fill_rect(in->y + shift_y, in->x, in->h, in->w, 0xfff0);
     if (in->allign == 'c')
     {
-        draw_char(in->y + shift_text + shift_y + in->h - 10, (in->w - utf8_glyph_count(in->text, in->t_size) * in->display_text_size * 5) / 2 + in->x, in->text, 0x0000, 0xFF, in->display_text_size);
+        draw_char(in->y + shift_text + shift_y + in->h - 10, (in->w - text_width(in->text, in->t_size, in->display_text_size)) / 2 + in->x, in->text, 0x0000, 0xFF, in->display_text_size);
     }
     else if (in->allign == 'r')
     {
@@ -510,7 +532,12 @@ void display_fill_box(fill_box *in, int shift_y, bool is_selected, int pos, char
 
     // Only the selected line can scroll; a rough character-width estimate is
     // enough to skip the extra pass for the common, short inputs.
-    if (is_selected && in->t_size > 0 && in->t_size * 12 > in->w)
+    if (left)
+    {
+        /* Resultat (aligne a droite) : defilement choisi par LEFT/RIGHT. */
+        scroll = is_selected ? in->hscroll : 0;
+    }
+    else if (is_selected && in->t_size > 0 && in->t_size * 12 > in->w)
     {
         fill_rect(in->y + shift_y, in->x, in->h, in->w, fill);
         display_equation(in->text, in->t_size, in->y + shift_y, text_y, 2, in->curso_pos, left, 0, clip_lo, clip_hi);
@@ -530,6 +557,27 @@ void display_fill_box(fill_box *in, int shift_y, bool is_selected, int pos, char
     fill_rect(in->y + shift_y, in->x, in->h, in->w, fill);
 
     display_equation(in->text, in->t_size, in->y + shift_y, text_y, 2, is_selected ? in->curso_pos : -10, left, scroll, clip_lo, clip_hi);
+    if (left)
+    {
+        int mx = display_left_scroll_max();
+        in->hscroll_max = mx;
+        if (in->hscroll > mx)
+            in->hscroll = mx;
+        if (in->hscroll < 0)
+            in->hscroll = 0;
+        if (mx > 0)
+        {
+            /* Fleches : il reste du texte a gauche et/ou a droite. */
+            int row = in->y + shift_y + in->h / 2 - 3;
+            int eff = is_selected ? in->hscroll : 0;
+            if (eff > 0)
+                for (int k = 0; k < 4; k++)
+                    fill_rect(row + 3 - k, clip_lo + 1 + k, 2 * k + 1, 1, 0x0000);
+            if (eff < mx)
+                for (int k = 0; k < 4; k++)
+                    fill_rect(row + 3 - k, clip_hi - 2 - k, 2 * k + 1, 1, 0x0000);
+        }
+    }
 
     if (prefix == 'f')
     {
@@ -542,34 +590,22 @@ void display_fill_box(fill_box *in, int shift_y, bool is_selected, int pos, char
         t[5] = '\0';
         draw_char(in->y + shift_y + 25, in->x, t, 0X0000, 0X0000, 2);
     }
-    if (prefix == 'r' || prefix == 'z')
+    if (prefix == 'r' || prefix == 'x' || prefix == 'y')
     {
-        // Grapheur : courbe polaire r(t)= ou parametrique z(t)=x(t)+i*y(t).
+        // Grapheur : courbe polaire r(t)=, parametrique x(t)= et y(t)=.
         char t[6] = {prefix, '(', 't', ')', '=', '\0'};
         draw_char(in->y + shift_y + 25, in->x, t, 0X0000, 0X0000, 2);
     }
     if (prefix == 'u')
     {
-        // Suites : deux lignes par suite. Ligne paire = formule, ligne impaire
-        // = premier terme. u(n+1)= si la formule utilise U (terme precedent).
-        char lab[12];
-        char letter = 'u' + (pos / 2) % 6;
-        if (pos % 2 == 0)
-        {
-            bool rec = false;
-            for (int i = 0; i < in->t_size; i++)
-                if (in->text[i] == 'U')
-                    rec = true;
-            if (!rec && in->text &&
-                (strstr(in->text, "arith") || strstr(in->text, "geom") || strstr(in->text, "arigeo")))
-                rec = true;
-            snprintf(lab, sizeof(lab), rec ? "%c(n+1)=" : "%c(n)=", letter);
-        }
-        else
-            snprintf(lab, sizeof(lab), "%c(0)=", letter);
-        draw_char(in->y + shift_y + 25, in->x, lab, 0X0000, 0X0000, 2);
+        // Suites : l'etiquette ("u(n+1)=", "u(0)="...) est choisie par l'appli
+        // Suites, qui connait l'ordre de la suite et son premier rang.
+        (void)pos;
+        draw_char(in->y + shift_y + 25, in->x, g_seq_label, 0X0000, 0X0000, 2);
     }
 }
+
+char g_seq_label[16] = "";
 
 
 // Start index of the identifier when text[lparen] opens a structured call
@@ -1116,7 +1152,15 @@ if (event >= MATRIX_2X2 && event <= FUNC_SOLVE)    {
     int room = (event == LOG) ? 5 : 3;
     if (event != BACK && in->t_size + room > 999)
         return;
-    if (snd)
+    if (event >= KEY_LT && event <= KEY_GE)
+    {
+        /* Signe d'inequation : un caractere, avec ou sans 2nd. */
+        static const char rel[4] = {REL_LT, REL_GT, REL_LE, REL_GE};
+        in->text[in->curso_pos] = rel[event - KEY_LT];
+        in->curso_pos++;
+        in->t_size++;
+    }
+    else if (snd)
     {
         switch (event)
         {
@@ -1778,7 +1822,7 @@ if (event >= MATRIX_2X2 && event <= FUNC_SOLVE)    {
         in->curso_pos = in->t_size;
 }
 
-void draw_image(int x, int y, int h, int w, uint16_t *img, uint16_t bck)
+void draw_image(int x, int y, int h, int w, const uint16_t *img, uint16_t bck)
 {
     if (img == NULL)
         return;
@@ -1856,113 +1900,6 @@ static char keypad_to_char(int key)
         return '-';
     default:
         return 0;
-    }
-}
-
-// Full-screen form to pick the n*m size of a new matrix. Returns 1 on OK
-// (with *out_rows/*out_cols set) or 0 when cancelled.
-static int pick_matrix_size(int *out_rows, int *out_cols)
-{
-    int rows = 2, cols = 2;
-    bool touched[2] = {false, false};
-    int field = 0; // 0 = rows, 1 = cols
-    while (true)
-    {
-        fill_screen(BACKGROUND_COLOR);
-        draw_char(224, 46, (char *)"Taille de la matrice", 0x0000, BACKGROUND_COLOR, 2);
-        draw_char(176, 20, (char *)"Lignes", 0x0000, BACKGROUND_COLOR, 2);
-        draw_char(120, 20, (char *)"Colonnes", 0x0000, BACKGROUND_COLOR, 2);
-        uint16_t c0 = field == 0 ? 0xffff : FRONTGROUND_COLOR;
-        uint16_t c1 = field == 1 ? 0xffff : FRONTGROUND_COLOR;
-        fill_rect(168, 120, 40, 56, c0);
-        fill_rect(112, 120, 40, 56, c1);
-        char buf[8];
-        sprintf(buf, "%d", rows);
-        draw_char(176, 133, buf, 0x0000, c0, 2);
-        sprintf(buf, "%d", cols);
-        draw_char(120, 133, buf, 0x0000, c1, 2);
-
-        // Live preview of the resulting shape, same cell size for any n*m.
-        int cell = 10, gap = 3;
-        const int avail_h = 76, avail_w = 260;
-        int th = rows * cell + (rows > 1 ? (rows - 1) * gap : 0);
-        int tw = cols * cell + (cols > 1 ? (cols - 1) * gap : 0);
-        while (cell > 2 && (th > avail_h || tw > avail_w))
-        {
-            cell--;
-            th = rows * cell + (rows > 1 ? (rows - 1) * gap : 0);
-            tw = cols * cell + (cols > 1 ? (cols - 1) * gap : 0);
-        }
-        while (gap > 1 && (th > avail_h || tw > avail_w))
-        {
-            gap--;
-            th = rows * cell + (rows > 1 ? (rows - 1) * gap : 0);
-            tw = cols * cell + (cols > 1 ? (cols - 1) * gap : 0);
-        }
-        int x0 = 8 + (avail_h - th) / 2;
-        int y0 = 30 + (avail_w - tw) / 2;
-        for (int r = 0; r < rows; r++)
-            for (int c = 0; c < cols; c++)
-            {
-                int x = x0 + th - cell - r * (cell + gap);
-                int y = y0 + c * (cell + gap);
-                fill_rect(x, y, cell, cell, FRONTGROUND_COLOR);
-                fill_rect(x, y, 1, cell, 0x0000);
-                fill_rect(x + cell - 1, y, 1, cell, 0x0000);
-                fill_rect(x, y, cell, 1, 0x0000);
-                fill_rect(x, y + cell - 1, cell, 1, 0x0000);
-            }
-
-        draw_char(8, 10, (char *)"UP/DOWN: champ   OK: valider", 0x0000, BACKGROUND_COLOR, 1);
-
-        flush_display();
-        // The first digit typed replaces the default value; further digits
-        // append (so "12" gives 12).
-        int ch = scan_text_char();
-        if (ch >= '0' && ch <= '9')
-        {
-            int d = ch - '0';
-            int v = field == 0 ? rows : cols;
-            v = touched[field] ? min(v * 10 + d, 99) : d;
-            touched[field] = true;
-            if (field == 0)
-                rows = v;
-            else
-                cols = v;
-            continue;
-        }
-        int key = scan_keypad();
-        if (key == -1)
-            continue;
-        char c = keypad_to_char(key);
-        if (c >= '0' && c <= '9')
-        {
-            int d = c - '0';
-            int v = field == 0 ? rows : cols;
-            v = touched[field] ? min(v * 10 + d, 99) : d;
-            touched[field] = true;
-            if (field == 0)
-                rows = v;
-            else
-                cols = v;
-        }
-        else if (key == UP || key == DOWN || key == LEFT || key == RIGHT)
-        {
-            field = 1 - field;
-        }
-        else if (key == BACK)
-        {
-            return 0;
-        }
-        else if (key == OK || key == ENTER)
-        {
-            if (rows >= 1 && rows <= 99 && cols >= 1 && cols <= 99 && rows * cols <= MATRIX_EDITOR_MAX)
-            {
-                *out_rows = rows;
-                *out_cols = cols;
-                return 1;
-            }
-        }
     }
 }
 
@@ -2320,13 +2257,37 @@ static int menu_cas()
     return code_menu("Calcul formel", labels, codes, 5);
 }
 
-int menu_tools(bool with_analysis)
+/* Signes d'inequation, pour le Solveur et resoudre(). */
+static int menu_relations()
 {
-    static const char *labels[10] = {"Probabilites", "Matrices", "Arithmetique", "Hyperboliques",
-                                     "Nombres decimaux", "Nombres complexes", "Fonctions",
-                                     "Constantes physiques", "Analyse", "Calcul formel"};
+    const char *labels[4] = {"<  inferieur", ">  superieur", "\xe2\x89\xa4  inferieur ou egal",
+                             "\xe2\x89\xa5  superieur ou egal"};
+    const int codes[4] = {KEY_LT, KEY_GT, KEY_LE, KEY_GE};
+    return code_menu("Inequations", labels, codes, 4);
+}
+
+int menu_tools(bool with_analysis, bool with_relations)
+{
+    /* Rubriques dans l'ordre du menu ; les deux dernieres familles ne sont
+     * proposees que la ou la saisie les comprend. */
+    enum { T_PROBA, T_MAT, T_ARITH, T_HYP, T_DEC, T_CPLX, T_FUN, T_CONST, T_ANALYSIS, T_CAS, T_REL };
+    static const char *const names[] = {"Probabilites", "Matrices", "Arithmetique", "Hyperboliques",
+                                        "Nombres decimaux", "Nombres complexes", "Fonctions",
+                                        "Constantes physiques", "Analyse", "Calcul formel",
+                                        "Inequations"};
+    const char *labels[11];
+    int ids[11];
+    int count = 0;
+    for (int id = T_PROBA; id <= T_REL; id++)
+    {
+        if ((id == T_ANALYSIS || id == T_CAS) && !with_analysis)
+            continue;
+        if (id == T_REL && !with_relations)
+            continue;
+        labels[count] = names[id];
+        ids[count++] = id;
+    }
     static int sel = 0; // reste sur la derniere rubrique utilisee
-    int count = with_analysis ? 10 : 8;
     if (sel >= count)
         sel = 0;
     while (true)
@@ -2335,18 +2296,19 @@ int menu_tools(bool with_analysis)
         if (r == MENU_BACK)
             return END_KEYS;
         int code = END_KEYS;
-        switch (r)
+        switch (ids[r])
         {
-        case 0: code = menu_proba(); break;
-        case 1: code = menu_matrices(); break;
-        case 2: code = menu_arithmetic(); break;
-        case 3: code = menu_trigo(); break;
-        case 4: code = menu_decimals(); break;
-        case 5: code = menu_complex(); break;
-        case 6: code = menu_functions(); break;
-        case 7: code = menu_const_phy(); break;
-        case 8: code = menu_analysis(); break;
-        case 9: code = menu_cas(); break;
+        case T_PROBA: code = menu_proba(); break;
+        case T_MAT: code = menu_matrices(); break;
+        case T_ARITH: code = menu_arithmetic(); break;
+        case T_HYP: code = menu_trigo(); break;
+        case T_DEC: code = menu_decimals(); break;
+        case T_CPLX: code = menu_complex(); break;
+        case T_FUN: code = menu_functions(); break;
+        case T_CONST: code = menu_const_phy(); break;
+        case T_ANALYSIS: code = menu_analysis(); break;
+        case T_CAS: code = menu_cas(); break;
+        case T_REL: code = menu_relations(); break;
         }
         if (code != END_KEYS) // BACK dans le sous-menu : on reste dans Outils
             return code;
@@ -2432,7 +2394,7 @@ static void zero_matrix_literal(int rows, int cols)
 
 int menu_matrices()
 {
-    const char *labels[6] = {"Matrice 2x2", "Matrice 3x3", "Matrice n*m...",
+    const char *labels[6] = {"Matrice 2x2", "Matrice 3x3", "Matrice n x m...",
                              "determinant", "inverse", "transposee"};
     int sel = 0;
     while (true)
@@ -2450,8 +2412,10 @@ int menu_matrices()
             return MATRIX_CUSTOM;
         case 2:
         {
-            int rows = 2, cols = 2;
-            int ok = pick_matrix_size(&rows, &cols);
+            /* La derniere taille choisie est reproposee : pratique pour
+             * saisir deux matrices de meme format. */
+            static int rows = 2, cols = 2;
+            bool ok = uk_matrix_size(&rows, &cols);
             fill_screen(BACKGROUND_COLOR);
             if (ok)
             {

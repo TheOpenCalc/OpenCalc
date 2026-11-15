@@ -2,10 +2,12 @@
 #include "hardware/spi.h"
 #include "display.h"
 #include "font10x16.h"
+#include "font7x9.h"
 #include "colors.h"
 #include "exam_mode.h"
 #include "settings.h"
 #include <cstdio>
+#include <cstring>
 #ifndef OPENCALC_WASM
 #include "core1.h"
 #endif
@@ -13,10 +15,14 @@
 
 #include <emscripten/emscripten.h>
 static uint16_t g_framebuffer[SCREEN_HEIGHT * SCREEN_WIDTH];
+/* Image affichee par le simulateur : copiee depuis g_framebuffer a chaque
+ * flush_display(), comme l'envoi SPI du firmware. Le navigateur ne voit donc
+ * jamais une image a moitie dessinee (sinon des traits clignotent). */
+static uint16_t g_present[SCREEN_HEIGHT * SCREEN_WIDTH];
 
 extern "C"
 {
-    EMSCRIPTEN_KEEPALIVE uint16_t *opencalc_framebuffer() { return g_framebuffer; }
+    EMSCRIPTEN_KEEPALIVE uint16_t *opencalc_framebuffer() { return g_present; }
     EMSCRIPTEN_KEEPALIVE int opencalc_fb_width() { return SCREEN_WIDTH; }
     EMSCRIPTEN_KEEPALIVE int opencalc_fb_height() { return SCREEN_HEIGHT; }
     /* Luminosite 0..20 lue par le simulateur web pour assombrir le canvas. */
@@ -145,6 +151,7 @@ void flush_display()
     }
 
 #ifdef OPENCALC_WASM
+    memcpy(g_present, g_framebuffer, sizeof(g_present));
     return;
 #else
     /* Indicateur "mode examen" : petite icône carrée clignotante dans le coin
@@ -323,6 +330,18 @@ int utf8_glyph_count(const char *s, int nbytes)
     return n;
 }
 
+int text_advance(int size)
+{
+    if (size == FONT_7X9)
+        return 8;
+    return size == 2 ? 10 : 6 * size;
+}
+
+int text_width(const char *s, int nbytes, int size)
+{
+    return utf8_glyph_count(s, nbytes) * text_advance(size);
+}
+
 void draw_char(uint16_t x, uint16_t y, char *c, uint16_t color, uint16_t bg, uint8_t size)
 {
     const unsigned char *s = (const unsigned char *)c;
@@ -348,6 +367,22 @@ void draw_char(uint16_t x, uint16_t y, char *c, uint16_t color, uint16_t bg, uin
             continue;
         }
 
+        /* Police 7x9 : 9 lignes (0..6 corps, 7..8 jambages), meme ancrage
+         * que la 5x7 en taille 1 (ligne r dessinee en x - r). */
+        if (size == FONT_7X9)
+        {
+            const uint16_t *g = &font7x9[gi * 7];
+            for (int col = 0; col < 7; col++)
+            {
+                uint16_t line = g[col];
+                for (int row = 0; line; row++, line >>= 1)
+                    if (line & 0x01)
+                        fill_rect(x - row, y + col, 1, 1, color);
+            }
+            y += text_advance(size);
+            continue;
+        }
+
         const uint8_t *glyph = &font5x7[gi * 5];
 
         for (int col = 0; col < 5; col++)
@@ -362,14 +397,16 @@ void draw_char(uint16_t x, uint16_t y, char *c, uint16_t color, uint16_t bg, uin
                 line >>= 1;
             }
         }
-        y += size * 5;
+        y += text_advance(size);
     }
 }
 
 void display_battery(uint16_t x, uint16_t y, int level)
 {
-    fill_rect(x + 1, y + 1, 6 * level, 13, 0x1dc0);
-    fill_rect(x + 1, y + 6 * level, 6 * (4 - level), 13, 0xe503);
+    /* level 0..4 ; 5 = sur USB (jauge pleine, borne verte) */
+    int f = level < 0 ? 0 : (level > 4 ? 4 : level);
+    fill_rect(x + 1, y + 1, 6 * f, 13, 0x1dc0);
+    fill_rect(x + 1, y + 6 * f, 6 * (4 - f), 13, 0xe503);
 
     for (int i = 0; i < 5; i++)
     {

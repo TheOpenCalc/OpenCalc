@@ -33,6 +33,35 @@
  * et jeton interne a la fois ; affiche ';'. */
 #define CAS_SEPARATOR '\x06'
 
+/* Signes d'une inequation. Caracteres du texte de l'editeur et jetons
+ * internes a la fois (comme CAS_SEPARATOR) : '<' et '>' sont deja les jetons
+ * de min() et max(). Affiches "<", ">", "≤", "≥". */
+#define REL_LT '\x0e' /* <  */
+#define REL_GT '\x0f' /* >  */
+#define REL_LE '\x10' /* <= */
+#define REL_GE '\x11' /* >= */
+
+static inline bool is_rel_type(char t)
+{
+    return t >= REL_LT && t <= REL_GE;
+}
+
+/* Texte affiche d'un signe d'inequation (UTF-8). */
+static inline const char *rel_glyph(char t)
+{
+    switch (t)
+    {
+    case REL_LT:
+        return "<";
+    case REL_GT:
+        return ">";
+    case REL_LE:
+        return "\xe2\x89\xa4";
+    default:
+        return "\xe2\x89\xa5";
+    }
+}
+
 static inline bool is_cas_type(char t)
 {
     return t >= CAS_TOK_EXPAND && t <= CAS_TOK_SOLVE;
@@ -73,7 +102,10 @@ bool cas_has_command(const char *text, int len);
  * '\0'), vide quand il n'y a qu'un message. */
 cas_result cas_eval(const char *text, int len, char *out, int cap);
 
-/* Taille de la zone de calcul (octets). */
-#define CAS_ARENA_SIZE (48 * 1024)
+/* Taille de la zone de calcul (octets), et taille minimale acceptee quand le
+ * tas ne peut pas fournir la premiere d'un seul bloc. */
+#define CAS_ARENA_SIZE (128 * 1024)
+#define CAS_ARENA_MIN (48 * 1024)
+#define CAS_ARENA_STEP (16 * 1024)
 
 #endif

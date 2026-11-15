@@ -102,4 +102,74 @@ double law_sd(int law, const double *p);
 double normal_cdf_std(double z);
 double normal_inv_std(double q);
 
+/* Loi de Student a df degres de liberte (df > 0, pas forcement entier). */
+double student_pdf(double t, double df);
+double student_cdf(double t, double df);
+double student_inv(double q, double df);
+
+/* --------------- Tests statistiques et intervalles de confiance ---------- */
+
+enum inf_method
+{
+    INF_PROP1 = 0, /* 1 proportion (Z)           p0 ; x ; n */
+    INF_PROP2,     /* 2 proportions (Z)          x1 ; n1 ; x2 ; n2 */
+    INF_MEAN_Z,    /* 1 moyenne, sigma connu (Z) mu0 ; xbar ; sigma ; n */
+    INF_MEAN_T,    /* 1 moyenne (T de Student)   mu0 ; xbar ; s ; n */
+    INF_MEAN2_T,   /* 2 moyennes (T de Welch)    xbar1 ; s1 ; n1 ; xbar2 ; s2 ; n2 */
+    INF_COUNT
+};
+
+/* Hypothese alternative H1 : p != p0, p < p0, p > p0 (idem pour mu, ou pour
+ * p1 - p2 et mu1 - mu2 comparees a 0). */
+enum inf_alt
+{
+    ALT_NE = 0,
+    ALT_LT,
+    ALT_GT,
+    ALT_COUNT
+};
+
+#define INF_MAX_PARAMS 6
+
+typedef struct
+{
+    const char *name;
+    int nparams;
+    const char *pname[INF_MAX_PARAMS];
+    double pdef[INF_MAX_PARAMS];
+    /* Le premier parametre (p0, mu0) ne sert qu'au test, pas a l'intervalle. */
+    bool first_is_h0;
+    bool student; /* statistique T (sinon Z) */
+} inf_info;
+
+const inf_info *inf_get(int method);
+
+typedef struct
+{
+    double stat;   /* z ou t */
+    double df;     /* degres de liberte (T), NAN pour Z */
+    double pvalue;
+    double estimate; /* p chapeau, xbar, p1 - p2 ou xbar1 - xbar2 */
+} inf_test_result;
+
+typedef struct
+{
+    double lo, hi;
+    double estimate;
+    double margin;   /* demi-largeur */
+    double crit;     /* z* ou t* */
+    double df;
+    double se;       /* ecart-type de l'estimateur */
+} inf_ci_result;
+
+/* Parametres valides ? (effectifs entiers > 0, 0 <= x <= n, ecarts-types > 0,
+ * 0 < p0 < 1...) */
+bool inf_params_ok(int method, const double *p);
+
+/* p : tableau de INF_MAX_PARAMS valeurs, dans l'ordre de inf_info.pname. */
+bool inf_test(int method, const double *p, int alt, inf_test_result *out);
+
+/* level : niveau de confiance dans ]0 ; 1[ (0,95 pour 95 %). */
+bool inf_interval(int method, const double *p, double level, inf_ci_result *out);
+
 #endif
